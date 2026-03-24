@@ -351,12 +351,12 @@ class DialogCustomUiPanel extends HTMLElement {
                   <label>
                     <span>Type</span>
                     <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="type" value="${escapeHtml(scenario.type)}" placeholder="some_subcommand" />
-                    <small>Можно заполнить только type, только parent_type, или оба сразу.</small>
+                    <small>Можно заполнить только type, только parent_type, или оба сразу. Несколько значений можно указать через `;`.</small>
                   </label>
                   <label>
                     <span>Parent Type</span>
                     <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="parent_type" value="${escapeHtml(scenario.parent_type)}" placeholder="status_door" />
-                    <small>Если type пустой, сценарий будет матчиться только по parent_type.</small>
+                    <small>Если type пустой, сценарий будет матчиться только по parent_type. Несколько значений можно указать через `;`.</small>
                   </label>
                   <label class="field-span-2">
                     <span>Скрипт Home Assistant</span>

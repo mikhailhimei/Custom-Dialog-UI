@@ -185,9 +185,9 @@ def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) ->
 
         if not expected_type and not expected_parent:
             continue
-        if expected_type and expected_type != incoming_type:
+        if expected_type and not _matches_expected_value(expected_type, incoming_type):
             continue
-        if expected_parent and expected_parent != incoming_parent_type:
+        if expected_parent and not _matches_expected_value(expected_parent, incoming_parent_type):
             continue
         if not _normalize_value(scenario.get(ATTR_SCRIPT_ENTITY_ID)):
             continue
@@ -201,6 +201,21 @@ def _normalize_value(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _matches_expected_value(expected_value: str, incoming_value: str) -> bool:
+    if not expected_value:
+        return True
+
+    allowed_values = [
+        part.strip()
+        for part in expected_value.split(";")
+        if part.strip()
+    ]
+    if not allowed_values:
+        return not incoming_value
+
+    return incoming_value in allowed_values
 
 
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
