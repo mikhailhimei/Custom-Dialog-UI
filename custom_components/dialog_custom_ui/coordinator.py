@@ -192,7 +192,7 @@ def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) ->
 
         if not expected_children_type and not expected_parent:
             continue
-        if expected_children_type and not _matches_expected_value(expected_children_type, incoming_children_type):
+        if expected_children_type and not _matches_children_type(expected_children_type, incoming_children_type):
             continue
         if expected_parent and not _matches_expected_value(expected_parent, incoming_parent_type):
             continue
@@ -223,6 +223,21 @@ def _matches_expected_value(expected_value: str, incoming_value: str) -> bool:
         return not incoming_value
 
     return incoming_value in allowed_values
+
+
+def _matches_children_type(expected_value: str, incoming_value: str) -> bool:
+    allowed_values = [
+        part.strip().lower()
+        for part in expected_value.split(";")
+        if part.strip()
+    ]
+    if not allowed_values:
+        return not incoming_value
+
+    if "all" in allowed_values:
+        return bool(incoming_value)
+
+    return _matches_expected_value(expected_value, incoming_value)
 
 
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:

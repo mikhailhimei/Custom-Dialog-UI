@@ -209,7 +209,7 @@ class DialogCustomUiPanel extends HTMLElement {
     return {
       ...scenario,
       children_type: childrenType,
-      children_type_enabled: Object.hasOwn(scenario, 'children_type') || Object.hasOwn(scenario, 'type') || childrenType !== '',
+      children_type_enabled: childrenType !== '',
     };
   }
 
@@ -432,7 +432,7 @@ class DialogCustomUiPanel extends HTMLElement {
                         <button type="button" class="ghost remove-inline-button" data-action="disable-children-type" data-scenario-id="${escapeHtml(scenario.id)}">Удалить</button>
                       </span>
                       <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="children_type" value="${escapeHtml(scenario.children_type ?? '')}" placeholder="some_subcommand" />
-                      <small>Если поле добавлено, оно обязательно. Несколько значений можно указать через <code>;</code>.</small>
+                      <small>Если поле добавлено, оно обязательно. Значение <code>all</code> означает любой непустой children_type. Несколько значений можно указать через <code>;</code>.</small>
                     </label>
                   ` : `
                     <label class="field-placeholder">

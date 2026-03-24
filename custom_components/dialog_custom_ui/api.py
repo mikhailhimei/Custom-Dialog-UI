@@ -108,13 +108,16 @@ async def _ws_save_config(
 
 
 def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
-    return {
+    children_type = item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).strip()
+    scenario = {
         ATTR_SCENARIO_ID: item[ATTR_SCENARIO_ID].strip(),
         "name": item["name"].strip(),
-        ATTR_CHILDREN_TYPE: item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).strip(),
         ATTR_PARENT_TYPE: item.get(ATTR_PARENT_TYPE, "").strip(),
         ATTR_SCRIPT_ENTITY_ID: item[ATTR_SCRIPT_ENTITY_ID].strip(),
     }
+    if children_type:
+        scenario[ATTR_CHILDREN_TYPE] = children_type
+    return scenario
 
 
 def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
