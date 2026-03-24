@@ -6,7 +6,7 @@
 };
 
 const EXAMPLE_PAYLOAD = `{
-  "type": "some_subcommand",
+  "children_type": "some_subcommand",
   "parent_type": "weather_metno",
   "value": {"commands": "москва"},
   "client_id": "...",
@@ -33,9 +33,10 @@ const generateScenarioId = () => {
 const newScenario = () => ({
   id: generateScenarioId(),
   name: '',
-  type: '',
   parent_type: '',
   script_entity_id: '',
+  children_type: '',
+  children_type_enabled: false,
 });
 
 class DialogCustomUiPanel extends HTMLElement {
@@ -92,7 +93,9 @@ class DialogCustomUiPanel extends HTMLElement {
       this._config = {
         ...DEFAULT_CONFIG,
         ...result,
-        scenarios: Array.isArray(result.scenarios) ? result.scenarios : [],
+        scenarios: Array.isArray(result.scenarios)
+          ? result.scenarios.map((scenario) => this._normalizeScenarioForUi(scenario))
+          : [],
       };
       this._expandedScenarios = new Set();
       this._error = '';
@@ -201,6 +204,44 @@ class DialogCustomUiPanel extends HTMLElement {
     }
   }
 
+  _normalizeScenarioForUi(scenario) {
+    const childrenType = String(scenario.children_type ?? scenario.type ?? '').trim();
+    return {
+      ...scenario,
+      children_type: childrenType,
+      children_type_enabled: Object.hasOwn(scenario, 'children_type') || Object.hasOwn(scenario, 'type') || childrenType !== '',
+    };
+  }
+
+  _serializeScenario(scenario) {
+    const payload = {
+      id: scenario.id,
+      name: scenario.name,
+      parent_type: scenario.parent_type,
+      script_entity_id: scenario.script_entity_id,
+    };
+
+    if (scenario.children_type_enabled) {
+      payload.children_type = scenario.children_type ?? '';
+    }
+
+    return payload;
+  }
+
+  _enableChildrenType(id) {
+    this._config = {
+      ...this._config,
+      scenarios: this._config.scenarios.map((scenario) => (
+        scenario.id === id
+          ? { ...scenario, children_type_enabled: true, children_type: scenario.children_type ?? '' }
+          : scenario
+      )),
+    };
+    this._status = '';
+    this._error = '';
+    this._render();
+  }
+
   _addScenario() {
     const scenario = newScenario();
     this._expandedScenarios.add(scenario.id);
@@ -230,10 +271,21 @@ class DialogCustomUiPanel extends HTMLElement {
       return 'Укажите client_id.';
     }
     const invalidScenario = this._config.scenarios.find(
-      (scenario) => (!scenario.type.trim() && !scenario.parent_type.trim()) || !scenario.script_entity_id.trim()
+      (scenario) => {
+        const childrenType = String(scenario.children_type ?? '').trim();
+        const parentType = String(scenario.parent_type ?? '').trim();
+
+        if (!parentType && !childrenType) {
+          return true;
+        }
+        if (scenario.children_type_enabled && !childrenType) {
+          return true;
+        }
+        return !String(scenario.script_entity_id ?? '').trim();
+      }
     );
     if (invalidScenario) {
-      return 'У каждого сценария должен быть заполнен type или parent_type, и выбран script.';
+      return 'У каждого сценария должен быть заполнен parent_type или children_type. Если children_type добавлен, он не может быть пустым. Также должен быть выбран script.';
     }
     return '';
   }
@@ -258,7 +310,7 @@ class DialogCustomUiPanel extends HTMLElement {
         base_url: this._config.base_url,
         client_id: this._config.client_id,
         timeout: Number(this._config.timeout) || 10,
-        scenarios: this._config.scenarios,
+        scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
       });
       this._status = 'Настройки сохранены.';
     } catch (err) {
@@ -283,6 +335,9 @@ class DialogCustomUiPanel extends HTMLElement {
     root.querySelector('[data-action="save"]')?.addEventListener('click', () => this._save());
     root.querySelector('[data-action="add-scenario"]')?.addEventListener('click', () => this._addScenario());
     root.querySelector('[data-action="refresh-logs"]')?.addEventListener('click', () => this._loadLogs());
+    root.querySelectorAll('[data-action="enable-children-type"]').forEach((element) => {
+      element.addEventListener('click', () => this._enableChildrenType(element.dataset.scenarioId));
+    });
 
     root.querySelectorAll('[data-toggle-scenario]').forEach((element) => {
       element.addEventListener('click', () => this._toggleScenario(element.dataset.toggleScenario));
@@ -348,15 +403,23 @@ class DialogCustomUiPanel extends HTMLElement {
                     <span>Название блока</span>
                     <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="name" value="${escapeHtml(scenario.name)}" placeholder="Например: Проверить дверь" />
                   </label>
-                  <label>
-                    <span>Type</span>
-                    <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="type" value="${escapeHtml(scenario.type)}" placeholder="some_subcommand" />
-                    <small>Можно заполнить только type, только parent_type, или оба сразу. Несколько значений можно указать через `;`.</small>
-                  </label>
+                  ${scenario.children_type_enabled ? `
+                    <label>
+                      <span>Children Type</span>
+                      <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="children_type" value="${escapeHtml(scenario.children_type ?? '')}" placeholder="some_subcommand" />
+                      <small>Если поле добавлено, оно обязательно. Несколько значений можно указать через \`;\`.</small>
+                    </label>
+                  ` : `
+                    <div class="field-placeholder">
+                      <span>Children Type</span>
+                      <button type="button" class="ghost add-inline-button" data-action="enable-children-type" data-scenario-id="${escapeHtml(scenario.id)}">Создать children_type</button>
+                      <small>Пока поле не создано, оно полностью игнорируется при проверке сценария.</small>
+                    </div>
+                  `}
                   <label>
                     <span>Parent Type</span>
                     <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="parent_type" value="${escapeHtml(scenario.parent_type)}" placeholder="status_door" />
-                    <small>Если type пустой, сценарий будет матчиться только по parent_type. Несколько значений можно указать через `;`.</small>
+                    <small>Если children_type не создан или пуст, сценарий может матчиться только по parent_type. Несколько значений можно указать через `;`.</small>
                   </label>
                   <label class="field-span-2">
                     <span>Скрипт Home Assistant</span>
@@ -410,7 +473,7 @@ class DialogCustomUiPanel extends HTMLElement {
   -H "Content-Type: application/json" \
   -d '{"clientId":"user-123"}'</code></pre>
         <div style="margin-top: 12px;"><strong>Что передается в скрипт</strong></div>
-        <div>При совпадении правила вызывается выбранный <code>script.*</code> и получает переменные: <code>dialog_payload</code>, <code>dialog_type</code>, <code>dialog_parent_type</code>, <code>dialog_value</code>, <code>dialog_client_id</code>, <code>dialog_device_id</code>.</div>
+        <div>При совпадении правила вызывается выбранный <code>script.*</code> и получает переменные: <code>dialog_payload</code>, <code>dialog_children_type</code>, <code>dialog_type</code>, <code>dialog_parent_type</code>, <code>dialog_value</code>, <code>dialog_client_id</code>, <code>dialog_device_id</code>.</div>
         <pre><code>${escapeHtml(EXAMPLE_PAYLOAD)}</code></pre>
       </section>
     `;
@@ -536,6 +599,15 @@ class DialogCustomUiPanel extends HTMLElement {
         }
         .field-narrow {
           max-width: 220px;
+        }
+        .field-placeholder {
+          display: grid;
+          gap: 8px;
+          min-width: 0;
+          align-content: start;
+        }
+        .add-inline-button {
+          justify-self: start;
         }
         label {
           display: grid;

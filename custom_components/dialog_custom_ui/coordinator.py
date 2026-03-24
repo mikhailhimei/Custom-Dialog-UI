@@ -15,9 +15,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
 
 from .const import (
+    ATTR_CHILDREN_TYPE,
     ATTR_PARENT_TYPE,
     ATTR_SCRIPT_ENTITY_ID,
-    ATTR_TYPE,
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
@@ -121,7 +121,11 @@ class DialogCommandCoordinator:
         if not scenario:
             self._append_log(
                 "idle",
-                f"Нет совпадения для type={_normalize_value(payload.get('type')) or '<empty>'} parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}",
+                (
+                    "Нет совпадения для "
+                    f"children_type={_normalize_value(payload.get('children_type') or payload.get('type')) or '<empty>'} "
+                    f"parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}"
+                ),
             )
             _LOGGER.debug("No scenario matched payload: %s", payload)
             return
@@ -142,7 +146,8 @@ class DialogCommandCoordinator:
             "entity_id": script_entity_id,
             "variables": {
                 "dialog_payload": payload,
-                "dialog_type": payload.get("type"),
+                "dialog_children_type": payload.get("children_type") or payload.get("type"),
+                "dialog_type": payload.get("children_type") or payload.get("type"),
                 "dialog_parent_type": payload.get("parent_type"),
                 "dialog_value": payload.get("value"),
                 "dialog_client_id": payload.get("client_id") or payload.get("clientId"),
@@ -176,16 +181,18 @@ def _extract_payload(raw_payload: Any) -> dict[str, Any] | None:
 
 
 def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
-    incoming_type = _normalize_value(payload.get("type"))
+    incoming_children_type = _normalize_value(payload.get("children_type") or payload.get("type"))
     incoming_parent_type = _normalize_value(payload.get("parent_type"))
 
     for scenario in scenarios:
-        expected_type = _normalize_value(scenario.get(ATTR_TYPE))
+        expected_children_type = _normalize_value(
+            scenario.get(ATTR_CHILDREN_TYPE) or scenario.get("type")
+        )
         expected_parent = _normalize_value(scenario.get(ATTR_PARENT_TYPE))
 
-        if not expected_type and not expected_parent:
+        if not expected_children_type and not expected_parent:
             continue
-        if expected_type and not _matches_expected_value(expected_type, incoming_type):
+        if expected_children_type and not _matches_expected_value(expected_children_type, incoming_children_type):
             continue
         if expected_parent and not _matches_expected_value(expected_parent, incoming_parent_type):
             continue

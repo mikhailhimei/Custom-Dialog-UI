@@ -11,10 +11,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import (
+    ATTR_CHILDREN_TYPE,
     ATTR_PARENT_TYPE,
     ATTR_SCENARIO_ID,
     ATTR_SCRIPT_ENTITY_ID,
-    ATTR_TYPE,
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
@@ -76,7 +76,7 @@ async def _ws_get_logs(
             {
                 vol.Required(ATTR_SCENARIO_ID): str,
                 vol.Required("name"): str,
-                vol.Required(ATTR_TYPE): str,
+                vol.Optional(ATTR_CHILDREN_TYPE, default=""): str,
                 vol.Optional(ATTR_PARENT_TYPE, default=""): str,
                 vol.Required(ATTR_SCRIPT_ENTITY_ID): str,
             }
@@ -111,7 +111,7 @@ def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
     return {
         ATTR_SCENARIO_ID: item[ATTR_SCENARIO_ID].strip(),
         "name": item["name"].strip(),
-        ATTR_TYPE: item[ATTR_TYPE].strip(),
+        ATTR_CHILDREN_TYPE: item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).strip(),
         ATTR_PARENT_TYPE: item.get(ATTR_PARENT_TYPE, "").strip(),
         ATTR_SCRIPT_ENTITY_ID: item[ATTR_SCRIPT_ENTITY_ID].strip(),
     }
