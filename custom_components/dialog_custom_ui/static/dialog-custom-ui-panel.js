@@ -1,0 +1,751 @@
+﻿const DEFAULT_CONFIG = {
+  base_url: 'http://127.0.0.1:8000',
+  client_id: '',
+  timeout: 10,
+  scenarios: [],
+};
+
+const EXAMPLE_PAYLOAD = `{
+  "type": "some_subcommand",
+  "parent_type": "weather_metno",
+  "value": {"commands": "москва"},
+  "client_id": "...",
+  "device_id": "..."
+}`;
+
+const LOG_POLL_INTERVAL_MS = 2000;
+
+const escapeHtml = (value) => String(value ?? '')
+  .replaceAll('&', '&amp;')
+  .replaceAll('<', '&lt;')
+  .replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;')
+  .replaceAll("'", '&#39;');
+
+const generateScenarioId = () => {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `scenario_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+};
+
+const newScenario = () => ({
+  id: generateScenarioId(),
+  name: '',
+  type: '',
+  parent_type: '',
+  script_entity_id: '',
+});
+
+class DialogCustomUiPanel extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._hass = null;
+    this._config = { ...DEFAULT_CONFIG };
+    this._logs = [];
+    this._activeTab = 'settings';
+    this._expandedScenarios = new Set();
+    this._loaded = false;
+    this._loading = false;
+    this._saving = false;
+    this._loadingLogs = false;
+    this._error = '';
+    this._status = '';
+    this._logsTimer = null;
+  }
+
+  set hass(hass) {
+    const firstAttach = !this._hass;
+    this._hass = hass;
+
+    if (!this._loaded && !this._loading) {
+      this._loadConfig();
+      return;
+    }
+
+    if (firstAttach || !this.shadowRoot.innerHTML) {
+      this._render();
+    }
+  }
+
+  get hass() {
+    return this._hass;
+  }
+
+  connectedCallback() {
+    if (!this.shadowRoot.innerHTML) {
+      this._render();
+    }
+  }
+
+  disconnectedCallback() {
+    this._stopLogsPolling();
+  }
+
+  async _loadConfig() {
+    this._loading = true;
+    this._render();
+    try {
+      const result = await this._hass.callWS({ type: 'dialog_custom_ui/get_config' });
+      this._config = {
+        ...DEFAULT_CONFIG,
+        ...result,
+        scenarios: Array.isArray(result.scenarios) ? result.scenarios : [],
+      };
+      this._expandedScenarios = new Set();
+      this._error = '';
+    } catch (err) {
+      this._error = err?.message || 'Не удалось загрузить настройки. Сначала добавьте интеграцию Dialog Custom UI.';
+    } finally {
+      this._loaded = true;
+      this._loading = false;
+      this._render();
+      if (this._activeTab === 'logs') {
+        this._startLogsPolling();
+      }
+    }
+  }
+
+  async _loadLogs() {
+    if (!this._hass || this._loadingLogs) {
+      return;
+    }
+
+    this._loadingLogs = true;
+    this._render();
+    try {
+      const result = await this._hass.callWS({ type: 'dialog_custom_ui/get_logs' });
+      this._logs = Array.isArray(result.logs) ? result.logs : [];
+    } catch (err) {
+      this._error = err?.message || 'Не удалось загрузить logs.';
+    } finally {
+      this._loadingLogs = false;
+      this._render();
+    }
+  }
+
+  _startLogsPolling() {
+    this._stopLogsPolling();
+    this._loadLogs();
+    this._logsTimer = window.setInterval(() => {
+      if (this._activeTab === 'logs') {
+        this._loadLogs();
+      }
+    }, LOG_POLL_INTERVAL_MS);
+  }
+
+  _stopLogsPolling() {
+    if (this._logsTimer) {
+      window.clearInterval(this._logsTimer);
+      this._logsTimer = null;
+    }
+  }
+
+  _scripts() {
+    if (!this._hass) {
+      return [];
+    }
+
+    return Object.values(this._hass.states)
+      .filter((stateObj) => stateObj.entity_id.startsWith('script.'))
+      .sort((left, right) => {
+        const leftName = left.attributes.friendly_name || left.entity_id;
+        const rightName = right.attributes.friendly_name || right.entity_id;
+        return leftName.localeCompare(rightName, 'ru');
+      });
+  }
+
+  _setActiveTab(tab) {
+    this._activeTab = tab;
+    this._status = '';
+    this._error = '';
+    this._render();
+    if (tab === 'logs') {
+      this._startLogsPolling();
+    } else {
+      this._stopLogsPolling();
+    }
+  }
+
+  _toggleScenario(id) {
+    if (this._expandedScenarios.has(id)) {
+      this._expandedScenarios.delete(id);
+    } else {
+      this._expandedScenarios.add(id);
+    }
+    this._render();
+  }
+
+  _updateConfigField(field, value, rerender = false) {
+    this._config = { ...this._config, [field]: value };
+    this._status = '';
+    this._error = '';
+    if (rerender) {
+      this._render();
+    }
+  }
+
+  _updateScenario(id, field, value, rerender = false) {
+    this._config = {
+      ...this._config,
+      scenarios: this._config.scenarios.map((scenario) =>
+        scenario.id === id ? { ...scenario, [field]: value } : scenario
+      ),
+    };
+    this._status = '';
+    this._error = '';
+    if (rerender) {
+      this._render();
+    }
+  }
+
+  _addScenario() {
+    const scenario = newScenario();
+    this._expandedScenarios.add(scenario.id);
+    this._config = {
+      ...this._config,
+      scenarios: [...this._config.scenarios, scenario],
+    };
+    this._status = '';
+    this._render();
+  }
+
+  _removeScenario(id) {
+    this._expandedScenarios.delete(id);
+    this._config = {
+      ...this._config,
+      scenarios: this._config.scenarios.filter((scenario) => scenario.id !== id),
+    };
+    this._status = '';
+    this._render();
+  }
+
+  _validate() {
+    if (!this._config.base_url.trim()) {
+      return 'Укажите base URL для опроса.';
+    }
+    if (!this._config.client_id.trim()) {
+      return 'Укажите client_id.';
+    }
+    const invalidScenario = this._config.scenarios.find(
+      (scenario) => (!scenario.type.trim() && !scenario.parent_type.trim()) || !scenario.script_entity_id.trim()
+    );
+    if (invalidScenario) {
+      return 'У каждого сценария должен быть заполнен type или parent_type, и выбран script.';
+    }
+    return '';
+  }
+
+  async _save() {
+    const validationError = this._validate();
+    if (validationError) {
+      this._error = validationError;
+      this._status = '';
+      this._render();
+      return;
+    }
+
+    this._saving = true;
+    this._error = '';
+    this._status = '';
+    this._render();
+
+    try {
+      await this._hass.callWS({
+        type: 'dialog_custom_ui/save_config',
+        base_url: this._config.base_url,
+        client_id: this._config.client_id,
+        timeout: Number(this._config.timeout) || 10,
+        scenarios: this._config.scenarios,
+      });
+      this._status = 'Настройки сохранены.';
+    } catch (err) {
+      this._error = err?.message || 'Не удалось сохранить настройки.';
+    } finally {
+      this._saving = false;
+      this._render();
+    }
+  }
+
+  _swallowUiEvent(event) {
+    event.stopPropagation();
+  }
+
+  _bindEvents() {
+    const root = this.shadowRoot;
+
+    root.querySelectorAll('[data-tab]').forEach((element) => {
+      element.addEventListener('click', () => this._setActiveTab(element.dataset.tab));
+    });
+
+    root.querySelector('[data-action="save"]')?.addEventListener('click', () => this._save());
+    root.querySelector('[data-action="add-scenario"]')?.addEventListener('click', () => this._addScenario());
+    root.querySelector('[data-action="refresh-logs"]')?.addEventListener('click', () => this._loadLogs());
+
+    root.querySelectorAll('[data-toggle-scenario]').forEach((element) => {
+      element.addEventListener('click', () => this._toggleScenario(element.dataset.toggleScenario));
+    });
+
+    root.querySelectorAll('input, select, button, textarea').forEach((element) => {
+      ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'keypress', 'focusin'].forEach((eventName) => {
+        element.addEventListener(eventName, (event) => this._swallowUiEvent(event));
+      });
+    });
+
+    root.querySelectorAll('[data-config-field]').forEach((element) => {
+      element.addEventListener('input', (event) => {
+        this._updateConfigField(event.currentTarget.dataset.configField, event.currentTarget.value, false);
+      });
+      element.addEventListener('change', (event) => {
+        this._updateConfigField(event.currentTarget.dataset.configField, event.currentTarget.value, false);
+      });
+    });
+
+    root.querySelectorAll('[data-scenario-id]').forEach((element) => {
+      const field = element.dataset.scenarioField;
+      const id = element.dataset.scenarioId;
+      if (element.tagName === 'SELECT') {
+        element.addEventListener('change', (event) => {
+          this._updateScenario(id, field, event.currentTarget.value, true);
+        });
+      } else {
+        element.addEventListener('input', (event) => {
+          this._updateScenario(id, field, event.currentTarget.value, false);
+        });
+        element.addEventListener('change', (event) => {
+          this._updateScenario(id, field, event.currentTarget.value, true);
+        });
+      }
+    });
+
+    root.querySelectorAll('[data-remove-id]').forEach((element) => {
+      element.addEventListener('click', () => this._removeScenario(element.dataset.removeId));
+    });
+  }
+
+  _renderSettings() {
+    const scripts = this._scripts();
+    const scenarioMarkup = this._config.scenarios.length
+      ? this._config.scenarios.map((scenario, index) => {
+          const isExpanded = this._expandedScenarios.has(scenario.id);
+          return `
+            <section class="scenario-card ${isExpanded ? 'expanded' : 'collapsed'}">
+              <div class="scenario-header">
+                <button type="button" class="scenario-toggle" data-toggle-scenario="${escapeHtml(scenario.id)}">
+                  <span class="scenario-toggle-icon">${isExpanded ? '−' : '+'}</span>
+                  <span>
+                    <span class="scenario-kicker">Сценарий ${index + 1}</span>
+                    <span class="scenario-title">${escapeHtml(scenario.name || 'Без названия')}</span>
+                  </span>
+                </button>
+                <button type="button" class="ghost" data-remove-id="${escapeHtml(scenario.id)}">Удалить</button>
+              </div>
+              <div class="scenario-body ${isExpanded ? 'open' : 'hidden'}">
+                <div class="scenario-grid">
+                  <label class="field-span-2">
+                    <span>Название блока</span>
+                    <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="name" value="${escapeHtml(scenario.name)}" placeholder="Например: Проверить дверь" />
+                  </label>
+                  <label>
+                    <span>Type</span>
+                    <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="type" value="${escapeHtml(scenario.type)}" placeholder="some_subcommand" />
+                    <small>Можно заполнить только type, только parent_type, или оба сразу.</small>
+                  </label>
+                  <label>
+                    <span>Parent Type</span>
+                    <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="parent_type" value="${escapeHtml(scenario.parent_type)}" placeholder="status_door" />
+                    <small>Если type пустой, сценарий будет матчиться только по parent_type.</small>
+                  </label>
+                  <label class="field-span-2">
+                    <span>Скрипт Home Assistant</span>
+                    <select data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="script_entity_id">
+                      <option value="">Выберите script.*</option>
+                      ${scripts.map((script) => {
+                        const selected = script.entity_id === scenario.script_entity_id ? 'selected' : '';
+                        const label = script.attributes.friendly_name || script.entity_id;
+                        return `<option value="${escapeHtml(script.entity_id)}" ${selected}>${escapeHtml(label)} (${escapeHtml(script.entity_id)})</option>`;
+                      }).join('')}
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </section>
+          `;
+        }).join('')
+      : '<div class="empty">Сценарии пока не добавлены. Нажмите плюс и создайте первое правило маршрутизации.</div>';
+
+    return `
+      <section class="hero-card">
+        <h1>Dialog Router</h1>
+        <p>Отдельный блок для настройки опроса внешнего сервиса, маршрутизации команд по строгим правилам и запуска скриптов Home Assistant с переменными из входящего JSON.</p>
+        <div class="config-grid">
+          <label>
+            <span>Base URL</span>
+            <input data-config-field="base_url" value="${escapeHtml(this._config.base_url)}" placeholder="http://127.0.0.1:8000" />
+            <small>Интеграция отправляет POST на <code>{base_url}/api/dialog/command-check</code>.</small>
+          </label>
+          <label>
+            <span>Client ID</span>
+            <input data-config-field="client_id" value="${escapeHtml(this._config.client_id)}" placeholder="user-123" />
+            <small>Поле вводится вручную и уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
+          </label>
+          <label class="field-narrow">
+            <span>Timeout, секунд</span>
+            <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(this._config.timeout)}" />
+          </label>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="secondary" data-action="add-scenario">+ Добавить сценарий</button>
+          <button type="button" class="primary" data-action="save" ${this._saving ? 'disabled' : ''}>${this._saving ? 'Сохранение...' : 'Сохранить'}</button>
+        </div>
+        ${this._error ? `<div class="status error">${escapeHtml(this._error)}</div>` : ''}
+        ${this._status ? `<div class="status ok">${escapeHtml(this._status)}</div>` : ''}
+      </section>
+      <div class="scenario-list">${scenarioMarkup}</div>
+      <section class="help-card">
+        <div><strong>Внешний запрос</strong></div>
+        <pre><code>curl -X POST http://localhost:8000/api/dialog/command-check \
+  -H "Content-Type: application/json" \
+  -d '{"clientId":"user-123"}'</code></pre>
+        <div style="margin-top: 12px;"><strong>Что передается в скрипт</strong></div>
+        <div>При совпадении правила вызывается выбранный <code>script.*</code> и получает переменные: <code>dialog_payload</code>, <code>dialog_type</code>, <code>dialog_parent_type</code>, <code>dialog_value</code>, <code>dialog_client_id</code>, <code>dialog_device_id</code>.</div>
+        <pre><code>${escapeHtml(EXAMPLE_PAYLOAD)}</code></pre>
+      </section>
+    `;
+  }
+
+  _renderLogs() {
+    const logMarkup = this._logs.length
+      ? this._logs.map((item) => `
+          <div class="log-item ${escapeHtml(item.level)}">
+            <div class="log-meta">
+              <span class="log-time">${escapeHtml(item.ts)}</span>
+              <span class="log-level">${escapeHtml(item.level)}</span>
+            </div>
+            <div class="log-message">${escapeHtml(item.message)}</div>
+          </div>
+        `).join('')
+      : '<div class="empty">Логов пока нет.</div>';
+
+    return `
+      <section class="hero-card">
+        <h1>Logs</h1>
+        <p>Показываются только последние 10 событий: отправка запроса, 204, ошибки, совпадение сценария и запуск скрипта.</p>
+        <div class="toolbar">
+          <button type="button" class="secondary" data-action="refresh-logs" ${this._loadingLogs ? 'disabled' : ''}>${this._loadingLogs ? 'Обновление...' : 'Обновить'}</button>
+        </div>
+      </section>
+      <section class="help-card logs-card">
+        ${logMarkup}
+      </section>
+    `;
+  }
+
+  _render() {
+    const content = this._activeTab === 'logs' ? this._renderLogs() : this._renderSettings();
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          --panel-bg: linear-gradient(160deg, #f6efe7 0%, #eef3ff 100%);
+          --card-bg: rgba(255, 255, 255, 0.9);
+          --border: rgba(34, 45, 67, 0.14);
+          --text: #1b2432;
+          --muted: #5c667a;
+          --accent: #a64b2a;
+          --accent-2: #234f7d;
+          display: block;
+          min-height: 100%;
+          box-sizing: border-box;
+          color: var(--text);
+          background: var(--panel-bg);
+          font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+        }
+        * {
+          box-sizing: border-box;
+        }
+        .page {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 24px;
+        }
+        .hero {
+          display: grid;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        .hero-card, .scenario-card, .help-card {
+          background: var(--card-bg);
+          backdrop-filter: blur(8px);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          box-shadow: 0 18px 40px rgba(31, 41, 55, 0.08);
+        }
+        .hero-card {
+          padding: 24px;
+        }
+        .hero h1 {
+          margin: 0;
+          font-size: 34px;
+          line-height: 1.05;
+          letter-spacing: -0.03em;
+        }
+        .hero p {
+          margin: 0;
+          color: var(--muted);
+          max-width: 860px;
+        }
+        .tabs {
+          display: inline-flex;
+          gap: 8px;
+          padding: 8px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.72);
+          border: 1px solid var(--border);
+        }
+        .tab-button {
+          border: none;
+          border-radius: 999px;
+          padding: 10px 16px;
+          font: inherit;
+          cursor: pointer;
+          background: transparent;
+          color: var(--muted);
+        }
+        .tab-button.active {
+          color: white;
+          background: linear-gradient(135deg, var(--accent-2), #4c78a8);
+        }
+        .config-grid {
+          display: grid;
+          grid-template-columns: minmax(260px, 1.3fr) minmax(260px, 1.3fr) minmax(160px, 0.6fr);
+          gap: 16px;
+          margin-top: 20px;
+          align-items: start;
+        }
+        .scenario-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 16px;
+          align-items: start;
+        }
+        .field-span-2 {
+          grid-column: 1 / -1;
+        }
+        .field-narrow {
+          max-width: 220px;
+        }
+        label {
+          display: grid;
+          gap: 8px;
+          min-width: 0;
+        }
+        label span {
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--accent-2);
+        }
+        input, select {
+          width: 100%;
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 12px 14px;
+          font: inherit;
+          color: var(--text);
+          background: rgba(255, 255, 255, 0.9);
+        }
+        small {
+          color: var(--muted);
+          line-height: 1.35;
+        }
+        .toolbar {
+          margin-top: 18px;
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+        button {
+          border: none;
+          border-radius: 999px;
+          padding: 12px 18px;
+          font: inherit;
+          cursor: pointer;
+          transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+        button:hover {
+          transform: translateY(-1px);
+        }
+        button.primary {
+          color: white;
+          background: linear-gradient(135deg, var(--accent), #d4743d);
+        }
+        button.secondary {
+          color: white;
+          background: linear-gradient(135deg, var(--accent-2), #4c78a8);
+        }
+        button.ghost {
+          background: rgba(34, 45, 67, 0.06);
+          color: var(--text);
+        }
+        .scenario-toggle {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 0;
+          background: transparent;
+          color: var(--text);
+          text-align: left;
+        }
+        .scenario-toggle-icon {
+          width: 30px;
+          height: 30px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(34, 45, 67, 0.08);
+          font-size: 20px;
+          line-height: 1;
+        }
+        button:disabled {
+          opacity: 0.5;
+          cursor: progress;
+          transform: none;
+        }
+        .status {
+          margin-top: 12px;
+          padding: 12px 14px;
+          border-radius: 14px;
+          font-size: 14px;
+        }
+        .status.error {
+          background: rgba(180, 43, 43, 0.1);
+          color: #8a2323;
+        }
+        .status.ok {
+          background: rgba(35, 111, 73, 0.1);
+          color: #155c3a;
+        }
+        .scenario-list {
+          display: grid;
+          gap: 16px;
+        }
+        .scenario-card {
+          padding: 18px;
+        }
+        .scenario-header {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: center;
+          margin-bottom: 0;
+        }
+        .scenario-card.expanded .scenario-header {
+          margin-bottom: 16px;
+        }
+        .scenario-kicker {
+          display: block;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--muted);
+          margin-bottom: 4px;
+        }
+        .scenario-title {
+          display: block;
+          font-size: 20px;
+          font-weight: 700;
+        }
+        .scenario-body.hidden {
+          display: none;
+        }
+        .scenario-body.open {
+          display: block;
+        }
+        .empty, .help-card {
+          padding: 20px;
+        }
+        .help-card pre {
+          margin: 10px 0 0;
+          padding: 14px;
+          overflow: auto;
+          border-radius: 14px;
+          background: #17202b;
+          color: #f5f7fb;
+          font-size: 13px;
+        }
+        .help-card code {
+          font-family: Consolas, monospace;
+        }
+        .logs-card {
+          display: grid;
+          gap: 12px;
+        }
+        .log-item {
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 14px;
+          background: rgba(255, 255, 255, 0.6);
+        }
+        .log-item.request { border-left: 4px solid #4c78a8; }
+        .log-item.success { border-left: 4px solid #2f855a; }
+        .log-item.error { border-left: 4px solid #c53030; }
+        .log-item.match { border-left: 4px solid #805ad5; }
+        .log-item.idle { border-left: 4px solid #718096; }
+        .log-item.info { border-left: 4px solid #dd6b20; }
+        .log-meta {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 6px;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--muted);
+        }
+        .log-message {
+          font-size: 14px;
+          line-height: 1.4;
+        }
+        @media (max-width: 900px) {
+          .config-grid,
+          .scenario-grid {
+            grid-template-columns: 1fr;
+          }
+          .field-span-2 {
+            grid-column: auto;
+          }
+          .field-narrow {
+            max-width: none;
+          }
+        }
+        @media (max-width: 800px) {
+          .page {
+            padding: 16px;
+          }
+          .hero h1 {
+            font-size: 28px;
+          }
+        }
+      </style>
+      <div class="page">
+        <div class="hero">
+          <div class="tabs">
+            <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
+            <button type="button" class="tab-button ${this._activeTab === 'logs' ? 'active' : ''}" data-tab="logs">Logs</button>
+          </div>
+          ${content}
+        </div>
+      </div>
+    `;
+
+    this._bindEvents();
+  }
+}
+
+customElements.define('dialog-custom-ui-panel', DialogCustomUiPanel);
+
+
