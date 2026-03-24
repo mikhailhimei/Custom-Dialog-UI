@@ -375,7 +375,7 @@ class DialogCustomUiPanel extends HTMLElement {
       });
     });
 
-    root.querySelectorAll('[data-scenario-id]').forEach((element) => {
+    root.querySelectorAll('[data-scenario-id][data-scenario-field]').forEach((element) => {
       const field = element.dataset.scenarioField;
       const id = element.dataset.scenarioId;
       if (element.tagName === 'SELECT') {
@@ -420,26 +420,30 @@ class DialogCustomUiPanel extends HTMLElement {
                     <span>Название блока</span>
                     <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="name" value="${escapeHtml(scenario.name)}" placeholder="Например: Проверить дверь" />
                   </label>
-                  <label>
-                    <span>Parent Type</span>
+                  <div class="scenario-type-field">
+                    <div class="field-title-row">
+                      <span>Parent Type</span>
+                    </div>
                     <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="parent_type" value="${escapeHtml(scenario.parent_type)}" placeholder="status_door" />
                     <small>Если children_type не создан или пуст, сценарий может матчиться только по parent_type. Несколько значений можно указать через <code>;</code>.</small>
-                  </label>
+                  </div>
                   ${scenario.children_type_enabled ? `
-                    <label>
-                      <span class="field-title-row">
+                    <div class="scenario-type-field">
+                      <div class="field-title-row">
                         <span>Children Type</span>
                         <button type="button" class="ghost remove-inline-button" data-action="disable-children-type" data-scenario-id="${escapeHtml(scenario.id)}">Удалить</button>
-                      </span>
+                      </div>
                       <input data-scenario-id="${escapeHtml(scenario.id)}" data-scenario-field="children_type" value="${escapeHtml(scenario.children_type ?? '')}" placeholder="some_subcommand" />
                       <small>Если поле добавлено, оно обязательно. Значение <code>all</code> означает любой непустой children_type. Несколько значений можно указать через <code>;</code>.</small>
-                    </label>
+                    </div>
                   ` : `
-                    <label class="field-placeholder">
-                      <span>Children Type</span>
+                    <div class="scenario-type-field field-placeholder">
+                      <div class="field-title-row">
+                        <span>Children Type</span>
+                      </div>
                       <button type="button" class="ghost add-inline-button" data-action="enable-children-type" data-scenario-id="${escapeHtml(scenario.id)}">Создать children_type</button>
                       <small>Пока поле не создано, оно полностью игнорируется при проверке сценария.</small>
-                    </label>
+                    </div>
                   `}
                   <label class="field-span-2">
                     <span>Скрипт Home Assistant</span>
@@ -618,7 +622,7 @@ class DialogCustomUiPanel extends HTMLElement {
         }
         .scenario-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 16px;
           align-items: start;
         }
@@ -634,12 +638,22 @@ class DialogCustomUiPanel extends HTMLElement {
           min-width: 0;
           align-content: start;
         }
+        .scenario-type-field {
+          display: grid;
+          gap: 8px;
+          min-width: 0;
+          align-content: start;
+        }
         .field-title-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 8px;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
+          min-height: 24px;
+        }
+        .field-title-row > span {
+          min-width: 0;
         }
         .add-inline-button {
           justify-self: start;
@@ -658,6 +672,13 @@ class DialogCustomUiPanel extends HTMLElement {
           min-width: 0;
         }
         label span {
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--accent-2);
+        }
+        .field-title-row > span {
           font-size: 13px;
           font-weight: 700;
           text-transform: uppercase;
@@ -726,12 +747,12 @@ class DialogCustomUiPanel extends HTMLElement {
           width: 30px;
           height: 30px;
           border-radius: 999px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+          display: inline-grid;
+          place-items: center;
           background: rgba(34, 45, 67, 0.08);
           font-size: 20px;
           line-height: 1;
+          transform: translateY(-1px);
         }
         button:disabled {
           opacity: 0.5;
@@ -839,6 +860,9 @@ class DialogCustomUiPanel extends HTMLElement {
           line-height: 1.4;
         }
         @media (max-width: 900px) {
+          .scenario-grid {
+            grid-template-columns: 1fr;
+          }
           .field-span-2 {
             grid-column: auto;
           }
