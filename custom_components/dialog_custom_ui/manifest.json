@@ -1,9 +1,9 @@
-﻿{
+{
   "domain": "dialog_custom_ui",
   "name": "Dialog Custom UI",
   "codeowners": [],
   "config_flow": true,
-  "documentation": "https://example.invalid/dialog_custom_ui",
+  "documentation": "https://github.com/mikhailhimei/Custom-Dialog-UI",
   "integration_type": "service",
   "iot_class": "local_polling",
   "requirements": [],
