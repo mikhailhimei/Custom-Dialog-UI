@@ -2,7 +2,7 @@
 
 DOMAIN = "dialog_custom_ui"
 PANEL_URL_PATH = "dialog-custom-ui"
-PANEL_TITLE = "Dialog"
+PANEL_TITLE = "Диалог"
 PANEL_ICON = "mdi:message-cog"
 PANEL_COMPONENT_NAME = "dialog-custom-ui-panel"
 PANEL_MODULE_PATH = "/dialog_custom_ui_static/dialog-custom-ui-panel.js"
