@@ -5,7 +5,8 @@ PANEL_URL_PATH = "dialog-custom-ui"
 PANEL_TITLE = "Диалог"
 PANEL_ICON = "mdi:message-cog"
 PANEL_COMPONENT_NAME = "dialog-custom-ui-panel"
-PANEL_MODULE_PATH = "/dialog_custom_ui_static/dialog-custom-ui-panel.js"
+PANEL_MODULE_BASENAME = "dialog-custom-ui-panel.js"
+PANEL_MODULE_PATH = f"/dialog_custom_ui_static/{PANEL_MODULE_BASENAME}"
 UPDATE_INTERVAL_SECONDS = 1
 MAX_LOG_ENTRIES = 10
 

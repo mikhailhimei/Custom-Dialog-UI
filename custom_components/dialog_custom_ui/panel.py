@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 from pathlib import Path
 
 from homeassistant.components import panel_custom
@@ -13,6 +14,7 @@ from .const import (
     DOMAIN,
     PANEL_COMPONENT_NAME,
     PANEL_ICON,
+    PANEL_MODULE_BASENAME,
     PANEL_MODULE_PATH,
     PANEL_TITLE,
     PANEL_URL_PATH,
@@ -21,6 +23,23 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 _STATIC_REGISTERED_KEY = f"{DOMAIN}_static_registered"
 _PANEL_REGISTERED_KEY = f"{DOMAIN}_panel_registered"
+
+
+def _module_url_with_version() -> str:
+    """Return module URL with version query to avoid stale frontend cache."""
+    manifest_path = Path(__file__).parent / "manifest.json"
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        version = str(manifest.get("version", "")).strip()
+    except Exception:
+        _LOGGER.exception("Failed to read manifest version for dialog_custom_ui panel")
+        version = ""
+
+    if not version:
+        return PANEL_MODULE_PATH
+
+    return f"/dialog_custom_ui_static/{PANEL_MODULE_BASENAME}?v={version}"
 
 
 async def async_register_panel(hass: HomeAssistant) -> None:
@@ -46,7 +65,7 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         frontend_url_path=PANEL_URL_PATH,
         sidebar_title=PANEL_TITLE,
         sidebar_icon=PANEL_ICON,
-        module_url=PANEL_MODULE_PATH,
+        module_url=_module_url_with_version(),
         require_admin=True,
         config={"domain": DOMAIN},
     )
