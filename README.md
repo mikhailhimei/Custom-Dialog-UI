@@ -4,7 +4,7 @@
 
 - указать `Base URL` сервиса, который опрашивается каждые 1 секунду;
 - указать `client_id` вручную;
-- добавить любое количество сценариев по строгому `type` и опционально строгому `parent_type`;
+- добавить любое количество сценариев, внутри которых можно создать одно или несколько отдельных условий `parent_type` + опциональный `children_type`;
 - выбрать `script.*` из Home Assistant для запуска;
 - передать весь входящий payload в скрипт через переменные.
 
@@ -59,12 +59,13 @@ curl -X POST http://localhost:8000/api/dialog/command-check \
 
 ## Логика сценариев
 
-Сценарии проверяются сверху вниз. Выполняется первый сценарий, у которого:
+Сценарии проверяются сверху вниз. Выполняется первый сценарий, у которого совпало хотя бы одно условие внутри сценария:
 
-- `scenario.type == payload.type`
-- `scenario.parent_type == payload.parent_type`, если `parent_type` задан в сценарии
+- `condition.parent_type == payload.parent_type`, если `parent_type` задан в условии
+- `condition.children_type == payload.children_type`, если `children_type` задан в условии
 
-Если `parent_type` у сценария пустой, проверяется только `type`.
+Если `children_type` у условия не задан, условие проверяется только по `parent_type`.
+Значение `all` в `children_type` означает любой непустой `payload.children_type`.
 
 ## Что получает скрипт
 

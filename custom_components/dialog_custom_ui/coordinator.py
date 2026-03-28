@@ -185,16 +185,14 @@ def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) ->
     incoming_parent_type = _normalize_value(payload.get("parent_type"))
 
     for scenario in scenarios:
-        expected_children_type = _normalize_value(
-            scenario.get(ATTR_CHILDREN_TYPE) or scenario.get("type")
-        )
-        expected_parent = _normalize_value(scenario.get(ATTR_PARENT_TYPE))
+        conditions = _get_scenario_conditions(scenario)
 
-        if not expected_children_type and not expected_parent:
+        if not conditions:
             continue
-        if expected_children_type and not _matches_children_type(expected_children_type, incoming_children_type):
-            continue
-        if expected_parent and not _matches_expected_value(expected_parent, incoming_parent_type):
+        if not any(
+            _matches_condition(condition, incoming_parent_type, incoming_children_type)
+            for condition in conditions
+        ):
             continue
         if not _normalize_value(scenario.get(ATTR_SCRIPT_ENTITY_ID)):
             continue
@@ -238,6 +236,75 @@ def _matches_children_type(expected_value: str, incoming_value: str) -> bool:
         return bool(incoming_value)
 
     return _matches_expected_value(expected_value, incoming_value)
+
+
+def _get_scenario_conditions(scenario: dict[str, Any]) -> list[dict[str, str]]:
+    raw_conditions = scenario.get("conditions")
+    if isinstance(raw_conditions, list):
+        conditions = [
+            normalized
+            for item in raw_conditions
+            if isinstance(item, dict)
+            if (normalized := _normalize_condition(item))
+        ]
+        if conditions:
+            return conditions
+
+    return _normalize_legacy_conditions(scenario)
+
+
+def _normalize_condition(condition: dict[str, Any]) -> dict[str, str] | None:
+    parent_type = _normalize_value(condition.get(ATTR_PARENT_TYPE))
+    children_type = _normalize_value(condition.get(ATTR_CHILDREN_TYPE) or condition.get("type"))
+
+    if not parent_type and not children_type:
+        return None
+
+    normalized = {
+        ATTR_PARENT_TYPE: parent_type,
+    }
+    if children_type:
+        normalized[ATTR_CHILDREN_TYPE] = children_type
+
+    return normalized
+
+
+def _normalize_legacy_conditions(scenario: dict[str, Any]) -> list[dict[str, str]]:
+    parent_values = [part.strip() for part in _normalize_value(scenario.get(ATTR_PARENT_TYPE)).split(";")]
+    children_values = [
+        part.strip()
+        for part in _normalize_value(scenario.get(ATTR_CHILDREN_TYPE) or scenario.get("type")).split(";")
+    ]
+    max_length = max(len(parent_values), len(children_values), 1)
+    conditions: list[dict[str, str]] = []
+
+    for index in range(max_length):
+        condition = _normalize_condition(
+            {
+                ATTR_PARENT_TYPE: parent_values[index] if index < len(parent_values) else "",
+                ATTR_CHILDREN_TYPE: (
+                    children_values[index] if index < len(children_values) else ""
+                ),
+            }
+        )
+        if condition:
+            conditions.append(condition)
+
+    return conditions
+
+
+def _matches_condition(
+    condition: dict[str, str], incoming_parent_type: str, incoming_children_type: str
+) -> bool:
+    expected_parent = _normalize_value(condition.get(ATTR_PARENT_TYPE))
+    expected_children_type = _normalize_value(condition.get(ATTR_CHILDREN_TYPE))
+
+    if expected_parent and not _matches_expected_value(expected_parent, incoming_parent_type):
+        return False
+    if expected_children_type and not _matches_children_type(expected_children_type, incoming_children_type):
+        return False
+
+    return True
 
 
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
