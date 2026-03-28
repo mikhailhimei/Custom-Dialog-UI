@@ -227,7 +227,7 @@ class DialogCustomUiPanel extends HTMLElement {
 
   _serializeScenario(scenario) {
     const conditions = (Array.isArray(scenario.conditions) ? scenario.conditions : [])
-      .map((condition) => this._serializeCondition(condition))
+      .flatMap((condition) => this._serializeCondition(condition))
       .filter(Boolean);
     const payload = {
       id: scenario.id,
@@ -287,18 +287,37 @@ class DialogCustomUiPanel extends HTMLElement {
     const parentType = String(condition.parent_type ?? '').trim();
     const childrenType = String(condition.children_type ?? '').trim();
     if (!parentType && !childrenType) {
-      return null;
+      return [];
     }
 
-    const payload = {
-      parent_type: parentType,
-    };
+    const parentValues = parentType
+      .split(';')
+      .map((value) => value.trim());
+    const childrenValues = childrenType
+      .split(';')
+      .map((value) => value.trim());
+    const size = Math.max(parentValues.length, childrenValues.length, 1);
+    const payloads = [];
 
-    if (condition.children_type_enabled && childrenType) {
-      payload.children_type = childrenType;
+    for (let index = 0; index < size; index += 1) {
+      const nextParentType = parentValues[index] ?? '';
+      const nextChildrenType = childrenValues[index] ?? '';
+      if (!nextParentType && !nextChildrenType) {
+        continue;
+      }
+
+      const payload = {
+        parent_type: nextParentType,
+      };
+
+      if (condition.children_type_enabled && nextChildrenType) {
+        payload.children_type = nextChildrenType;
+      }
+
+      payloads.push(payload);
     }
 
-    return payload;
+    return payloads;
   }
 
   _updateCondition(scenarioId, conditionId, field, value, rerender = false) {
@@ -468,13 +487,18 @@ class DialogCustomUiPanel extends HTMLElement {
     this._render();
 
     try {
+      const serializedScenarios = this._config.scenarios.map((scenario) => this._serializeScenario(scenario));
       await this._hass.callWS({
         type: 'dialog_custom_ui/save_config',
         base_url: this._config.base_url,
         client_id: this._config.client_id,
         timeout: Number(this._config.timeout) || 10,
-        scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
+        scenarios: serializedScenarios,
       });
+      this._config = {
+        ...this._config,
+        scenarios: serializedScenarios.map((scenario) => this._normalizeScenarioForUi(scenario)),
+      };
       this._status = 'Настройки сохранены.';
     } catch (err) {
       this._error = err?.message || 'Не удалось сохранить настройки.';
@@ -668,7 +692,7 @@ class DialogCustomUiPanel extends HTMLElement {
                     <div class="conditions-toolbar">
                       <div>
                         <span class="section-label">Условия</span>
-                        <small>Каждое условие хранится отдельной парой. Старые значения через <code>;</code> автоматически разложатся на отдельные строки.</small>
+                        <small>Через <code>+</code> можно добавить ещё пару <code>Parent Type</code> + <code>Children Type</code>. Если в <code>Parent Type</code> указать несколько значений через <code>;</code>, после сохранения они автоматически разложатся на отдельные условия.</small>
                       </div>
                       <button type="button" class="secondary compact-button" data-action="add-condition" data-scenario-id="${escapeHtml(scenario.id)}">+ Добавить условие</button>
                     </div>
