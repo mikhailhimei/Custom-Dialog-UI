@@ -61,6 +61,7 @@ class DialogCustomUiPanel extends HTMLElement {
     this._logs = [];
     this._activeTab = 'settings';
     this._expandedScenarios = new Set();
+    this._expandedConditions = new Set();
     this._loaded = false;
     this._loading = false;
     this._saving = false;
@@ -190,6 +191,15 @@ class DialogCustomUiPanel extends HTMLElement {
       this._expandedScenarios.delete(id);
     } else {
       this._expandedScenarios.add(id);
+    }
+    this._render();
+  }
+
+  _toggleCondition(id) {
+    if (this._expandedConditions.has(id)) {
+      this._expandedConditions.delete(id);
+    } else {
+      this._expandedConditions.add(id);
     }
     this._render();
   }
@@ -384,11 +394,13 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _addCondition(scenarioId) {
+    const condition = newCondition();
+    this._expandedConditions.add(condition.id);
     this._config = {
       ...this._config,
       scenarios: this._config.scenarios.map((scenario) => (
         scenario.id === scenarioId
-          ? { ...scenario, conditions: [...scenario.conditions, newCondition()] }
+          ? { ...scenario, conditions: [...scenario.conditions, condition] }
           : scenario
       )),
     };
@@ -398,6 +410,7 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _removeCondition(scenarioId, conditionId) {
+    this._expandedConditions.delete(conditionId);
     this._config = {
       ...this._config,
       scenarios: this._config.scenarios.map((scenario) => {
@@ -602,6 +615,9 @@ class DialogCustomUiPanel extends HTMLElement {
     root.querySelectorAll('[data-toggle-scenario]').forEach((element) => {
       element.addEventListener('click', () => this._toggleScenario(element.dataset.toggleScenario));
     });
+    root.querySelectorAll('[data-toggle-condition]').forEach((element) => {
+      element.addEventListener('click', () => this._toggleCondition(element.dataset.toggleCondition));
+    });
 
     root.querySelectorAll('input, select, button, textarea').forEach((element) => {
       ['click', 'mousedown', 'mouseup', 'keydown', 'keyup', 'keypress', 'focusin'].forEach((eventName) => {
@@ -661,12 +677,35 @@ class DialogCustomUiPanel extends HTMLElement {
   _renderSettings() {
     const scripts = this._scripts();
     const scenarioMarkup = this._config.scenarios.length
-      ? this._config.scenarios.map((scenario, index) => {
+        ? this._config.scenarios.map((scenario, index) => {
           const isExpanded = this._expandedScenarios.has(scenario.id);
           const conditionsMarkup = scenario.conditions.map((condition, conditionIndex) => `
-            <div class="condition-card">
-              <div class="condition-header">
-                <span class="condition-title">Условие ${conditionIndex + 1}</span>
+            ${(() => {
+              const isConditionExpanded = this._expandedConditions.has(condition.id);
+              const previewParts = [];
+              if (condition.parent_type) {
+                previewParts.push(`Parent: ${escapeHtml(condition.parent_type)}`);
+              }
+              if (condition.children_type_enabled && condition.children_type) {
+                previewParts.push(`Children: ${escapeHtml(condition.children_type)}`);
+              }
+              const preview = previewParts.join(' • ') || 'Пустое условие';
+              return `
+            <div class="condition-card ${isConditionExpanded ? 'expanded' : 'collapsed'}">
+              <button
+                type="button"
+                class="condition-header"
+                data-toggle-condition="${escapeHtml(condition.id)}"
+              >
+                <span class="condition-heading">
+                  <span class="condition-title">Условие ${conditionIndex + 1}</span>
+                  <span class="condition-preview">${preview}</span>
+                </span>
+                <span class="condition-header-side">
+                  <span class="condition-accordion-icon">${isConditionExpanded ? '−' : '+'}</span>
+                </span>
+              </button>
+              <div class="condition-body ${isConditionExpanded ? 'open' : 'hidden'}">
                 <div class="condition-actions">
                   ${scenario.conditions.length > 1 ? `
                     <button
@@ -677,59 +716,61 @@ class DialogCustomUiPanel extends HTMLElement {
                     >Удалить условие</button>
                   ` : ''}
                 </div>
-              </div>
-              <div class="condition-grid">
-                <div class="scenario-type-field">
-                  <div class="field-title-row">
-                    <span>Parent Type</span>
-                  </div>
-                  <input
-                    data-scenario-id="${escapeHtml(scenario.id)}"
-                    data-condition-id="${escapeHtml(condition.id)}"
-                    data-condition-field="parent_type"
-                    value="${escapeHtml(condition.parent_type)}"
-                    placeholder="status_door"
-                  />
-                  <small>Обязателен только если не задан children_type в этом же условии.</small>
-                </div>
-                ${condition.children_type_enabled ? `
+                <div class="condition-grid">
                   <div class="scenario-type-field">
                     <div class="field-title-row">
-                      <span>Children Type</span>
-                      <button
-                        type="button"
-                        class="ghost remove-inline-button"
-                        data-action="disable-condition-children-type"
-                        data-scenario-id="${escapeHtml(scenario.id)}"
-                        data-condition-id="${escapeHtml(condition.id)}"
-                      >Удалить</button>
+                      <span>Parent Type</span>
                     </div>
                     <input
                       data-scenario-id="${escapeHtml(scenario.id)}"
                       data-condition-id="${escapeHtml(condition.id)}"
-                      data-condition-field="children_type"
-                      value="${escapeHtml(condition.children_type ?? '')}"
-                      placeholder="some_subcommand"
+                      data-condition-field="parent_type"
+                      value="${escapeHtml(condition.parent_type)}"
+                      placeholder="status_door"
                     />
-                    <small>Необязателен. <code>all</code> означает любой непустой children_type именно для этого условия.</small>
+                    <small>Обязателен только если не задан children_type в этом же условии.</small>
                   </div>
-                ` : `
-                  <div class="scenario-type-field field-placeholder">
-                    <div class="field-title-row">
-                      <span>Children Type</span>
+                  ${condition.children_type_enabled ? `
+                    <div class="scenario-type-field">
+                      <div class="field-title-row">
+                        <span>Children Type</span>
+                        <button
+                          type="button"
+                          class="ghost remove-inline-button"
+                          data-action="disable-condition-children-type"
+                          data-scenario-id="${escapeHtml(scenario.id)}"
+                          data-condition-id="${escapeHtml(condition.id)}"
+                        >Удалить</button>
+                      </div>
+                      <input
+                        data-scenario-id="${escapeHtml(scenario.id)}"
+                        data-condition-id="${escapeHtml(condition.id)}"
+                        data-condition-field="children_type"
+                        value="${escapeHtml(condition.children_type ?? '')}"
+                        placeholder="some_subcommand"
+                      />
+                      <small>Необязателен. <code>all</code> означает любой непустой children_type именно для этого условия.</small>
                     </div>
-                    <button
-                      type="button"
-                      class="ghost add-inline-button"
-                      data-action="enable-condition-children-type"
-                      data-scenario-id="${escapeHtml(scenario.id)}"
-                      data-condition-id="${escapeHtml(condition.id)}"
-                    >Добавить children_type</button>
-                    <small>Если не добавлять, условие будет проверяться только по parent_type.</small>
-                  </div>
-                `}
+                  ` : `
+                    <div class="scenario-type-field field-placeholder">
+                      <div class="field-title-row">
+                        <span>Children Type</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="ghost add-inline-button"
+                        data-action="enable-condition-children-type"
+                        data-scenario-id="${escapeHtml(scenario.id)}"
+                        data-condition-id="${escapeHtml(condition.id)}"
+                      >Добавить children_type</button>
+                      <small>Если не добавлять, условие будет проверяться только по parent_type.</small>
+                    </div>
+                  `}
+                </div>
               </div>
             </div>
+              `;
+            })()}
           `).join('');
           return `
             <section class="scenario-card ${isExpanded ? 'expanded' : 'collapsed'}">
@@ -1012,12 +1053,56 @@ class DialogCustomUiPanel extends HTMLElement {
           justify-content: space-between;
           align-items: center;
           gap: 12px;
-          flex-wrap: wrap;
+          width: 100%;
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: inherit;
+          text-align: left;
+        }
+        .condition-heading {
+          display: grid;
+          gap: 4px;
+          min-width: 0;
+          flex: 1 1 auto;
+        }
+        .condition-header-side {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          flex: 0 0 auto;
+        }
+        .condition-preview {
+          font-size: 13px;
+          color: var(--muted);
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+        .condition-accordion-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          background: rgba(35, 79, 125, 0.08);
+          color: var(--accent-2);
+          font-size: 18px;
+          line-height: 1;
+          flex: 0 0 auto;
         }
         .condition-actions {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .condition-body.hidden {
+          display: none;
+        }
+        .condition-body.open {
+          display: grid;
+          gap: 12px;
         }
         .condition-title,
         .section-label {
