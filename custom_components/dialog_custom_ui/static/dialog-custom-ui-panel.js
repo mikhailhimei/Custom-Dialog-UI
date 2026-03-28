@@ -472,6 +472,63 @@ class DialogCustomUiPanel extends HTMLElement {
     return '';
   }
 
+  _buildConfigPayload() {
+    return {
+      base_url: this._config.base_url,
+      client_id: this._config.client_id,
+      timeout: Number(this._config.timeout) || 10,
+      scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
+    };
+  }
+
+  _downloadJson() {
+    const payload = this._buildConfigPayload();
+    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'dialog-custom-ui-config.json';
+    link.click();
+    URL.revokeObjectURL(url);
+    this._status = 'JSON скачан.';
+    this._error = '';
+    this._render();
+  }
+
+  _openJsonFilePicker() {
+    this.shadowRoot.querySelector('[data-action="import-json-input"]')?.click();
+  }
+
+  async _importJsonFile(file) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw);
+      const scenarios = Array.isArray(parsed.scenarios) ? parsed.scenarios : [];
+      this._config = {
+        ...DEFAULT_CONFIG,
+        ...parsed,
+        timeout: Number(parsed.timeout) || 10,
+        scenarios: scenarios.map((scenario) => this._normalizeScenarioForUi(scenario)),
+      };
+      this._expandedScenarios = new Set(this._config.scenarios.map((scenario) => scenario.id));
+      this._status = 'JSON загружен в форму.';
+      this._error = '';
+    } catch (err) {
+      this._error = err?.message || 'Не удалось загрузить JSON.';
+      this._status = '';
+    }
+
+    const input = this.shadowRoot.querySelector('[data-action="import-json-input"]');
+    if (input) {
+      input.value = '';
+    }
+    this._render();
+  }
+
   async _save() {
     const validationError = this._validate();
     if (validationError) {
@@ -487,13 +544,11 @@ class DialogCustomUiPanel extends HTMLElement {
     this._render();
 
     try {
-      const serializedScenarios = this._config.scenarios.map((scenario) => this._serializeScenario(scenario));
+      const payload = this._buildConfigPayload();
+      const serializedScenarios = payload.scenarios;
       await this._hass.callWS({
         type: 'dialog_custom_ui/save_config',
-        base_url: this._config.base_url,
-        client_id: this._config.client_id,
-        timeout: Number(this._config.timeout) || 10,
-        scenarios: serializedScenarios,
+        ...payload,
       });
       this._config = {
         ...this._config,
@@ -522,6 +577,12 @@ class DialogCustomUiPanel extends HTMLElement {
     root.querySelector('[data-action="save"]')?.addEventListener('click', () => this._save());
     root.querySelector('[data-action="add-scenario"]')?.addEventListener('click', () => this._addScenario());
     root.querySelector('[data-action="refresh-logs"]')?.addEventListener('click', () => this._loadLogs());
+    root.querySelector('[data-action="download-json"]')?.addEventListener('click', () => this._downloadJson());
+    root.querySelector('[data-action="upload-json"]')?.addEventListener('click', () => this._openJsonFilePicker());
+    root.querySelector('[data-action="import-json-input"]')?.addEventListener('change', (event) => {
+      const [file] = event.currentTarget.files || [];
+      this._importJsonFile(file);
+    });
     root.querySelectorAll('[data-action="add-condition"]').forEach((element) => {
       element.addEventListener('click', () => this._addCondition(element.dataset.scenarioId));
     });
@@ -783,8 +844,34 @@ class DialogCustomUiPanel extends HTMLElement {
     `;
   }
 
+  _renderJsonTools() {
+    const payload = this._buildConfigPayload();
+
+    return `
+      <section class="hero-card">
+        <h1>JSON</h1>
+        <p>Можно скачать текущую конфигурацию в файл или загрузить свой JSON обратно в форму.</p>
+        <div class="toolbar">
+          <button type="button" class="secondary" data-action="download-json">Скачать JSON</button>
+          <button type="button" class="primary" data-action="upload-json">Загрузить JSON</button>
+          <input type="file" accept=".json,application/json" data-action="import-json-input" hidden />
+        </div>
+        ${this._error ? `<div class="status error">${escapeHtml(this._error)}</div>` : ''}
+        ${this._status ? `<div class="status ok">${escapeHtml(this._status)}</div>` : ''}
+      </section>
+      <section class="help-card">
+        <div><strong>Предпросмотр текущего JSON</strong></div>
+        <pre><code>${escapeHtml(JSON.stringify(payload, null, 2))}</code></pre>
+      </section>
+    `;
+  }
+
   _render() {
-    const content = this._activeTab === 'logs' ? this._renderLogs() : this._renderSettings();
+    const content = this._activeTab === 'logs'
+      ? this._renderLogs()
+      : this._activeTab === 'json'
+        ? this._renderJsonTools()
+        : this._renderSettings();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -1190,6 +1277,7 @@ class DialogCustomUiPanel extends HTMLElement {
         <div class="hero">
           <div class="tabs">
             <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
+            <button type="button" class="tab-button ${this._activeTab === 'json' ? 'active' : ''}" data-tab="json">JSON</button>
             <button type="button" class="tab-button ${this._activeTab === 'logs' ? 'active' : ''}" data-tab="logs">Logs</button>
           </div>
           ${content}
@@ -1202,5 +1290,3 @@ class DialogCustomUiPanel extends HTMLElement {
 }
 
 customElements.define('dialog-custom-ui-panel', DialogCustomUiPanel);
-
-
