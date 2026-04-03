@@ -123,7 +123,7 @@ class DialogCommandCoordinator:
                 "idle",
                 (
                     "Нет совпадения для "
-                    f"children_type={_normalize_value(payload.get('children_type') or payload.get('type')) or '<empty>'} "
+                    f"children_type={_describe_payload_type(payload.get('children_type') or payload.get('type'))} "
                     f"parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}"
                 ),
             )
@@ -181,8 +181,8 @@ def _extract_payload(raw_payload: Any) -> dict[str, Any] | None:
 
 
 def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
-    incoming_children_type = _normalize_value(payload.get("children_type") or payload.get("type"))
-    incoming_parent_type = _normalize_value(payload.get("parent_type"))
+    incoming_children_type = payload.get("children_type") or payload.get("type")
+    incoming_parent_type = payload.get("parent_type")
 
     for scenario in scenarios:
         conditions = _get_scenario_conditions(scenario)
@@ -208,7 +208,31 @@ def _normalize_value(value: Any) -> str:
     return str(value).strip()
 
 
-def _matches_expected_value(expected_value: str, incoming_value: str) -> bool:
+def _normalize_values(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        values = value
+    else:
+        values = [value]
+
+    return [
+        normalized
+        for normalized in (_normalize_value(item) for item in values)
+        if normalized
+    ]
+
+
+def _describe_payload_type(value: Any) -> str:
+    values = _normalize_values(value)
+    if not values:
+        return "<empty>"
+    if len(values) == 1:
+        return values[0]
+    return "[" + ", ".join(values) + "]"
+
+
+def _matches_expected_value(expected_value: str, incoming_value: Any) -> bool:
     if not expected_value:
         return True
 
@@ -218,22 +242,22 @@ def _matches_expected_value(expected_value: str, incoming_value: str) -> bool:
         if part.strip()
     ]
     if not allowed_values:
-        return not incoming_value
+        return not _normalize_values(incoming_value)
 
-    return incoming_value in allowed_values
+    return any(value in allowed_values for value in _normalize_values(incoming_value))
 
 
-def _matches_children_type(expected_value: str, incoming_value: str) -> bool:
+def _matches_children_type(expected_value: str, incoming_value: Any) -> bool:
     allowed_values = [
         part.strip().lower()
         for part in expected_value.split(";")
         if part.strip()
     ]
     if not allowed_values:
-        return not incoming_value
+        return not _normalize_values(incoming_value)
 
     if "all" in allowed_values:
-        return bool(incoming_value)
+        return bool(_normalize_values(incoming_value))
 
     return _matches_expected_value(expected_value, incoming_value)
 
@@ -294,7 +318,7 @@ def _normalize_legacy_conditions(scenario: dict[str, Any]) -> list[dict[str, str
 
 
 def _matches_condition(
-    condition: dict[str, str], incoming_parent_type: str, incoming_children_type: str
+    condition: dict[str, str], incoming_parent_type: Any, incoming_children_type: Any
 ) -> bool:
     expected_parent = _normalize_value(condition.get(ATTR_PARENT_TYPE))
     expected_children_type = _normalize_value(condition.get(ATTR_CHILDREN_TYPE))

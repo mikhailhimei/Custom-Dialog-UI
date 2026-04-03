@@ -62,10 +62,11 @@ curl -X POST http://localhost:8000/api/dialog/command-check \
 Сценарии проверяются сверху вниз. Выполняется первый сценарий, у которого совпало хотя бы одно условие внутри сценария:
 
 - `condition.parent_type == payload.parent_type`, если `parent_type` задан в условии
-- `condition.children_type == payload.children_type`, если `children_type` задан в условии
+- `condition.children_type` совпадает с любым значением из `payload.children_type`, если `children_type` задан в условии
 
 Если `children_type` у условия не задан, условие проверяется только по `parent_type`.
 Значение `all` в `children_type` означает любой непустой `payload.children_type`.
+Если `payload.children_type` приходит массивом, совпадение ищется по каждому элементу.
 
 ## Что получает скрипт
 
