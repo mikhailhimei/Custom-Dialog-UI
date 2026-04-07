@@ -7,6 +7,7 @@
 
 const EXAMPLE_PAYLOAD = `{
   "children_type": "some_subcommand",
+  "children_direct_type": [{"type": "some_direct_subcommand"}],
   "parent_type": "weather_metno",
   "value": {"commands": "москва"},
   "client_id": "...",
@@ -43,6 +44,8 @@ const newCondition = () => ({
   parent_type: '',
   children_type: '',
   children_type_enabled: false,
+  children_direct_type: '',
+  children_direct_type_enabled: false,
 });
 
 const newScenario = () => ({
@@ -251,6 +254,9 @@ class DialogCustomUiPanel extends HTMLElement {
       if (conditions[0].children_type) {
         payload.children_type = conditions[0].children_type;
       }
+      if (conditions[0].children_direct_type) {
+        payload.children_direct_type = conditions[0].children_direct_type;
+      }
     }
 
     return payload;
@@ -267,15 +273,19 @@ class DialogCustomUiPanel extends HTMLElement {
     const children = String(scenario.children_type ?? scenario.type ?? '')
       .split(';')
       .map((value) => value.trim());
-    const size = Math.max(parents.length, children.length, 1);
+    const directChildren = String(scenario.children_direct_type ?? '')
+      .split(';')
+      .map((value) => value.trim());
+    const size = Math.max(parents.length, children.length, directChildren.length, 1);
     const conditions = [];
 
     for (let index = 0; index < size; index += 1) {
       const condition = this._normalizeConditionForUi({
         parent_type: parents[index] ?? '',
         children_type: children[index] ?? '',
+        children_direct_type: directChildren[index] ?? '',
       });
-      if (condition.parent_type || condition.children_type_enabled) {
+      if (condition.parent_type || condition.children_type_enabled || condition.children_direct_type_enabled) {
         conditions.push(condition);
       }
     }
@@ -285,18 +295,22 @@ class DialogCustomUiPanel extends HTMLElement {
 
   _normalizeConditionForUi(condition) {
     const childrenType = String(condition.children_type ?? condition.type ?? '').trim();
+    const childrenDirectType = String(condition.children_direct_type ?? '').trim();
     return {
       id: String(condition.id ?? generateConditionId()),
       parent_type: String(condition.parent_type ?? '').trim(),
       children_type: childrenType,
       children_type_enabled: childrenType !== '',
+      children_direct_type: childrenDirectType,
+      children_direct_type_enabled: childrenDirectType !== '',
     };
   }
 
   _serializeCondition(condition) {
     const parentType = String(condition.parent_type ?? '').trim();
     const childrenType = String(condition.children_type ?? '').trim();
-    if (!parentType && !childrenType) {
+    const childrenDirectType = String(condition.children_direct_type ?? '').trim();
+    if (!parentType && !childrenType && !childrenDirectType) {
       return [];
     }
 
@@ -322,6 +336,9 @@ class DialogCustomUiPanel extends HTMLElement {
 
       if (condition.children_type_enabled && nextChildrenType) {
         payload.children_type = nextChildrenType;
+      }
+      if (condition.children_direct_type_enabled && childrenDirectType) {
+        payload.children_direct_type = childrenDirectType;
       }
 
       payloads.push(payload);
@@ -393,6 +410,52 @@ class DialogCustomUiPanel extends HTMLElement {
     this._render();
   }
 
+  _enableConditionChildrenDirectType(scenarioId, conditionId) {
+    this._config = {
+      ...this._config,
+      scenarios: this._config.scenarios.map((scenario) => (
+        scenario.id === scenarioId
+          ? {
+              ...scenario,
+              conditions: scenario.conditions.map((condition) => (
+                condition.id === conditionId
+                  ? {
+                      ...condition,
+                      children_direct_type_enabled: true,
+                      children_direct_type: condition.children_direct_type ?? '',
+                    }
+                  : condition
+              )),
+            }
+          : scenario
+      )),
+    };
+    this._status = '';
+    this._error = '';
+    this._render();
+  }
+
+  _disableConditionChildrenDirectType(scenarioId, conditionId) {
+    this._config = {
+      ...this._config,
+      scenarios: this._config.scenarios.map((scenario) => (
+        scenario.id === scenarioId
+          ? {
+              ...scenario,
+              conditions: scenario.conditions.map((condition) => (
+                condition.id === conditionId
+                  ? { ...condition, children_direct_type_enabled: false, children_direct_type: '' }
+                  : condition
+              )),
+            }
+          : scenario
+      )),
+    };
+    this._status = '';
+    this._error = '';
+    this._render();
+  }
+
   _addCondition(scenarioId) {
     const condition = newCondition();
     this._expandedConditions.add(condition.id);
@@ -438,6 +501,13 @@ class DialogCustomUiPanel extends HTMLElement {
     };
     this._status = '';
     this._render();
+    window.requestAnimationFrame(() => this._scrollScenarioIntoView(scenario.id));
+  }
+
+  _scrollScenarioIntoView(id) {
+    const selectorId = globalThis.CSS?.escape ? globalThis.CSS.escape(id) : id;
+    const element = this.shadowRoot.querySelector(`[data-scenario-card-id="${selectorId}"]`);
+    element?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   }
 
   _removeScenario(id) {
@@ -465,12 +535,16 @@ class DialogCustomUiPanel extends HTMLElement {
         }
         const invalidCondition = conditions.find((condition) => {
           const childrenType = String(condition.children_type ?? '').trim();
+          const childrenDirectType = String(condition.children_direct_type ?? '').trim();
           const parentType = String(condition.parent_type ?? '').trim();
 
-          if (!parentType && !childrenType) {
+          if (!parentType && !childrenType && !childrenDirectType) {
             return true;
           }
           if (condition.children_type_enabled && !childrenType) {
+            return true;
+          }
+          if (condition.children_direct_type_enabled && !childrenDirectType) {
             return true;
           }
           return false;
@@ -480,7 +554,7 @@ class DialogCustomUiPanel extends HTMLElement {
       }
     );
     if (invalidScenario) {
-      return 'У каждого сценария должно быть хотя бы одно условие. В условии должен быть заполнен parent_type или children_type. Если children_type добавлен, он не может быть пустым. Также должен быть выбран script.';
+      return 'У каждого сценария должно быть хотя бы одно условие. В условии должен быть заполнен parent_type, children_type или children_direct_type. Если children_type или children_direct_type добавлены, они не могут быть пустыми. Также должен быть выбран script.';
     }
     return '';
   }
@@ -611,6 +685,18 @@ class DialogCustomUiPanel extends HTMLElement {
         element.dataset.conditionId,
       ));
     });
+    root.querySelectorAll('[data-action="enable-condition-children-direct-type"]').forEach((element) => {
+      element.addEventListener('click', () => this._enableConditionChildrenDirectType(
+        element.dataset.scenarioId,
+        element.dataset.conditionId,
+      ));
+    });
+    root.querySelectorAll('[data-action="disable-condition-children-direct-type"]').forEach((element) => {
+      element.addEventListener('click', () => this._disableConditionChildrenDirectType(
+        element.dataset.scenarioId,
+        element.dataset.conditionId,
+      ));
+    });
 
     root.querySelectorAll('[data-toggle-scenario]').forEach((element) => {
       element.addEventListener('click', () => this._toggleScenario(element.dataset.toggleScenario));
@@ -689,6 +775,9 @@ class DialogCustomUiPanel extends HTMLElement {
               if (condition.children_type_enabled && condition.children_type) {
                 previewParts.push(`Children: ${escapeHtml(condition.children_type)}`);
               }
+              if (condition.children_direct_type_enabled && condition.children_direct_type) {
+                previewParts.push(`Children Direct: ${escapeHtml(condition.children_direct_type)}`);
+              }
               const preview = previewParts.join(' • ') || 'Пустое условие';
               return `
             <div class="condition-card ${isConditionExpanded ? 'expanded' : 'collapsed'}">
@@ -766,6 +855,42 @@ class DialogCustomUiPanel extends HTMLElement {
                       <small>Если не добавлять, условие будет проверяться только по parent_type.</small>
                     </div>
                   `}
+                  ${condition.children_direct_type_enabled ? `
+                    <div class="scenario-type-field">
+                      <div class="field-title-row">
+                        <span>Children Direct Type</span>
+                        <button
+                          type="button"
+                          class="ghost remove-inline-button"
+                          data-action="disable-condition-children-direct-type"
+                          data-scenario-id="${escapeHtml(scenario.id)}"
+                          data-condition-id="${escapeHtml(condition.id)}"
+                        >Удалить</button>
+                      </div>
+                      <input
+                        data-scenario-id="${escapeHtml(scenario.id)}"
+                        data-condition-id="${escapeHtml(condition.id)}"
+                        data-condition-field="children_direct_type"
+                        value="${escapeHtml(condition.children_direct_type ?? '')}"
+                        placeholder="direct_subcommand"
+                      />
+                      <small>Необязателен. Если direct type не пришел во входящем payload, это условие просто не ограничивается по нему.</small>
+                    </div>
+                  ` : `
+                    <div class="scenario-type-field field-placeholder">
+                      <div class="field-title-row">
+                        <span>Children Direct Type</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="ghost add-inline-button"
+                        data-action="enable-condition-children-direct-type"
+                        data-scenario-id="${escapeHtml(scenario.id)}"
+                        data-condition-id="${escapeHtml(condition.id)}"
+                      >Добавить children_direct_type</button>
+                      <small>Если не добавлять, условие будет проверяться без учета direct type.</small>
+                    </div>
+                  `}
                 </div>
               </div>
             </div>
@@ -773,7 +898,7 @@ class DialogCustomUiPanel extends HTMLElement {
             })()}
           `).join('');
           return `
-            <section class="scenario-card ${isExpanded ? 'expanded' : 'collapsed'}">
+            <section class="scenario-card ${isExpanded ? 'expanded' : 'collapsed'}" data-scenario-card-id="${escapeHtml(scenario.id)}">
               <div class="scenario-header">
                 <button type="button" class="scenario-toggle" data-toggle-scenario="${escapeHtml(scenario.id)}">
                   <span class="scenario-toggle-icon">${isExpanded ? '−' : '+'}</span>
@@ -794,7 +919,7 @@ class DialogCustomUiPanel extends HTMLElement {
                     <div class="conditions-toolbar">
                       <div>
                         <span class="section-label">Условия</span>
-                        <small>Через <code>+</code> можно добавить ещё пару <code>Parent Type</code> + <code>Children Type</code>. Если в <code>Parent Type</code> указать несколько значений через <code>;</code>, после сохранения они автоматически разложатся на отдельные условия.</small>
+                        <small>Через <code>+</code> можно добавить ещё пару <code>Parent Type</code> + <code>Children Type</code> + <code>Children Direct Type</code>. Если в <code>Parent Type</code> указать несколько значений через <code>;</code>, после сохранения они автоматически разложатся на отдельные условия.</small>
                       </div>
                       <button type="button" class="secondary compact-button" data-action="add-condition" data-scenario-id="${escapeHtml(scenario.id)}">+ Добавить условие</button>
                     </div>
@@ -852,7 +977,7 @@ class DialogCustomUiPanel extends HTMLElement {
   -H "Content-Type: application/json" \
   -d '{"clientId":"user-123"}'</code></pre>
         <div style="margin-top: 12px;"><strong>Что передается в скрипт</strong></div>
-        <div>При совпадении правила вызывается выбранный <code>script.*</code> и получает переменные: <code>dialog_payload</code>, <code>dialog_children_type</code>, <code>dialog_type</code>, <code>dialog_parent_type</code>, <code>dialog_value</code>, <code>dialog_client_id</code>, <code>dialog_device_id</code>.</div>
+        <div>При совпадении правила вызывается выбранный <code>script.*</code> и получает переменные: <code>dialog_payload</code>, <code>dialog_children_type</code>, <code>dialog_children_direct_type</code>, <code>dialog_type</code>, <code>dialog_parent_type</code>, <code>dialog_value</code>, <code>dialog_client_id</code>, <code>dialog_device_id</code>.</div>
         <pre><code>${escapeHtml(EXAMPLE_PAYLOAD)}</code></pre>
       </section>
     `;

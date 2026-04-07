@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     ATTR_CHILDREN_TYPE,
+    ATTR_CHILDREN_DIRECT_TYPE,
     ATTR_PARENT_TYPE,
     ATTR_SCENARIO_ID,
     ATTR_SCRIPT_ENTITY_ID,
@@ -80,9 +81,11 @@ async def _ws_get_logs(
                     {
                         vol.Optional(ATTR_PARENT_TYPE, default=""): str,
                         vol.Optional(ATTR_CHILDREN_TYPE, default=""): str,
+                        vol.Optional(ATTR_CHILDREN_DIRECT_TYPE, default=""): str,
                     }
                 ],
                 vol.Optional(ATTR_CHILDREN_TYPE, default=""): str,
+                vol.Optional(ATTR_CHILDREN_DIRECT_TYPE, default=""): str,
                 vol.Optional(ATTR_PARENT_TYPE, default=""): str,
                 vol.Required(ATTR_SCRIPT_ENTITY_ID): str,
             }
@@ -139,8 +142,9 @@ def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
 def _normalize_condition(item: dict[str, Any]) -> dict[str, str] | None:
     parent_type = item.get(ATTR_PARENT_TYPE, "").strip()
     children_type = item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).strip()
+    children_direct_type = item.get(ATTR_CHILDREN_DIRECT_TYPE, "").strip()
 
-    if not parent_type and not children_type:
+    if not parent_type and not children_type and not children_direct_type:
         return None
 
     condition = {
@@ -148,6 +152,8 @@ def _normalize_condition(item: dict[str, Any]) -> dict[str, str] | None:
     }
     if children_type:
         condition[ATTR_CHILDREN_TYPE] = children_type
+    if children_direct_type:
+        condition[ATTR_CHILDREN_DIRECT_TYPE] = children_direct_type
 
     return condition
 
@@ -158,7 +164,11 @@ def _normalize_legacy_conditions(item: dict[str, Any]) -> list[dict[str, str]]:
         part.strip()
         for part in item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).split(";")
     ]
-    max_length = max(len(parent_values), len(children_values), 1)
+    direct_values = [
+        part.strip()
+        for part in item.get(ATTR_CHILDREN_DIRECT_TYPE, "").split(";")
+    ]
+    max_length = max(len(parent_values), len(children_values), len(direct_values), 1)
     conditions: list[dict[str, str]] = []
 
     for index in range(max_length):
@@ -167,6 +177,9 @@ def _normalize_legacy_conditions(item: dict[str, Any]) -> list[dict[str, str]]:
                 ATTR_PARENT_TYPE: parent_values[index] if index < len(parent_values) else "",
                 ATTR_CHILDREN_TYPE: (
                     children_values[index] if index < len(children_values) else ""
+                ),
+                ATTR_CHILDREN_DIRECT_TYPE: (
+                    direct_values[index] if index < len(direct_values) else ""
                 ),
             }
         )
