@@ -1,6 +1,7 @@
 const GET_WS = 'dialog_custom_ui/get_timer_alarm_config';
 const SAVE_WS = 'dialog_custom_ui/save_timer_alarm_config';
 const POLL_MS = 1000;
+const TICK_MS = 1000;
 const DAYS = { 1: 'Пн', 2: 'Вт', 3: 'Ср', 4: 'Чт', 5: 'Пт', 6: 'Сб', 7: 'Вс' };
 const QUICK_STARTS = [10, 15, 30, 60];
 
@@ -103,7 +104,10 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     this._cfg = { base_url: 'http://127.0.0.1:8000', client_id: '', interval: 1 };
     this._items = [];
     this._activeItems = [];
-    this._timer = null;
+    this._pollTimer = null;
+    this._tickTimer = null;
+    this._pollInFlight = false;
+    this._stateSignature = '';
   }
 
   set hass(hass) {
@@ -140,14 +144,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     this._render();
     try {
       const result = await this._hass.callWS({ type: GET_WS });
-      this._cfg = {
-        base_url: result.base_url ?? this._cfg.base_url,
-        client_id: result.client_id ?? this._cfg.client_id,
-        interval: n(result.interval, this._cfg.interval),
-      };
-      this._items = Array.isArray(result.items) ? result.items.map((item) => this._norm(item)) : [];
-      this._activeItems = Array.isArray(result.active_items) ? result.active_items.map((item) => this._norm(item)) : this._items.filter((item) => item.status === 'on');
-      this._status = result.last_updated ? `Обновлено: ${result.last_updated}` : '';
+      this._applyLoadedState(result, true);
       this._error = '';
       this._dirty = false;
       this._loaded = true;
@@ -162,39 +159,78 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
 
   _start() {
     this._stop();
-    this._timer = window.setInterval(() => this._loadStateOnly(), POLL_MS);
+    this._pollTimer = window.setInterval(() => this._loadStateOnly(), POLL_MS);
+    this._tickTimer = window.setInterval(() => this._renderActiveTimerProgress(), TICK_MS);
   }
 
   _stop() {
-    if (this._timer) {
-      window.clearInterval(this._timer);
-      this._timer = null;
+    if (this._pollTimer) {
+      window.clearInterval(this._pollTimer);
+      this._pollTimer = null;
+    }
+    if (this._tickTimer) {
+      window.clearInterval(this._tickTimer);
+      this._tickTimer = null;
     }
   }
 
-  async _loadStateOnly() {
-    if (!this._hass || this._saving) {
+  _renderActiveTimerProgress() {
+    if (!this._loaded || this._saving || this._dirty) {
       return;
     }
+    if (!this._activeTimers().length) {
+      return;
+    }
+    this._syncActiveTimerCards();
+  }
+
+  async _loadStateOnly() {
+    if (!this._hass || this._saving || this._pollInFlight) {
+      return;
+    }
+    this._pollInFlight = true;
     try {
       if (this._dirty) {
         return;
       }
       const result = await this._hass.callWS({ type: GET_WS });
-      this._cfg = {
-        base_url: result.base_url ?? this._cfg.base_url,
-        client_id: result.client_id ?? this._cfg.client_id,
-        interval: n(result.interval, this._cfg.interval),
-      };
-      this._items = Array.isArray(result.items) ? result.items.map((item) => this._norm(item)) : [];
-      this._activeItems = Array.isArray(result.active_items) ? result.active_items.map((item) => this._norm(item)) : this._items.filter((item) => item.status === 'on');
-      this._status = result.last_updated ? `Обновлено: ${result.last_updated}` : '';
-      this._error = '';
-      this._render();
+      this._applyLoadedState(result, false);
     } catch (err) {
       this._error = err?.message || 'Не удалось обновить список.';
       this._render();
+    } finally {
+      this._pollInFlight = false;
     }
+  }
+
+  _applyLoadedState(result, forceRender = false) {
+    const previousError = this._error;
+    const nextCfg = {
+      base_url: result.base_url ?? this._cfg.base_url,
+      client_id: result.client_id ?? this._cfg.client_id,
+      interval: n(result.interval, this._cfg.interval),
+    };
+    const nextItems = Array.isArray(result.items) ? result.items.map((item) => this._norm(item)) : [];
+    const nextActiveItems = Array.isArray(result.active_items)
+      ? result.active_items.map((item) => this._norm(item))
+      : nextItems.filter((item) => item.status === 'on');
+    const nextSignature = JSON.stringify({
+      cfg: nextCfg,
+      items: nextItems,
+      activeItems: nextActiveItems,
+    });
+
+    const changed = forceRender || nextSignature !== this._stateSignature || Boolean(previousError);
+    this._cfg = nextCfg;
+    this._items = nextItems;
+    this._activeItems = nextActiveItems;
+    this._error = '';
+    if (changed) {
+      this._status = result.last_updated ? `Обновлено: ${result.last_updated}` : '';
+      this._stateSignature = nextSignature;
+      this._render();
+    }
+    return changed;
   }
 
   _norm(item) {
@@ -581,7 +617,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     const ringOffset = ringCircumference * (1 - (progress.percent / 100));
     const ringGradientId = `timer-ring-gradient-${String(item.id).replaceAll(/[^a-zA-Z0-9_-]/g, '-')}`;
     return `
-      <article class="item-card timer-card">
+      <article class="item-card timer-card" data-item-id="${esc(item.id)}">
         <div class="item-head">
           <div>
             <div class="item-kicker">Таймер</div>
@@ -649,6 +685,41 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         </div>
       </article>
     `;
+  }
+
+  _syncActiveTimerCards() {
+    const timers = this._activeTimers();
+    for (const item of timers) {
+      const card = this.shadowRoot.querySelector(`.timer-card[data-item-id="${CSS.escape(String(item.id))}"]`);
+      if (!card) {
+        continue;
+      }
+
+      const progress = this._timerProgress(item);
+      const duration = item.time.count_timer || '00:30:00';
+      const remainingLabel = progress.totalSeconds ? `${humanDuration(progress.leftSeconds)} осталось` : 'ожидание';
+      const ringRadius = 45;
+      const ringCircumference = 2 * Math.PI * ringRadius;
+      const ringOffset = ringCircumference * (1 - (progress.percent / 100));
+
+      const valueEl = card.querySelector('.timer-value');
+      if (valueEl) {
+        valueEl.textContent = progress.left;
+      }
+      const noteEl = card.querySelector('.timer-note');
+      if (noteEl) {
+        noteEl.textContent = remainingLabel;
+      }
+      const summaryEl = card.querySelector('.item-summary');
+      if (summaryEl) {
+        summaryEl.textContent = `${duration} • ${this._deviceName(item.deviceId)}`;
+      }
+      const progressEl = card.querySelector('.timer-ring-progress');
+      if (progressEl) {
+        progressEl.style.strokeDasharray = `${ringCircumference}`;
+        progressEl.style.strokeDashoffset = `${ringOffset}`;
+      }
+    }
   }
 
   _renderTimerTab() {

@@ -35,7 +35,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_TIMER_ALARM_PATH = "/api/timer-alarm"
+_TIMER_ALARM_PATH = "/api/timer-alarm-info"
 _TIMER_ALARM_DELETE_PATH = "/api/timer-alarm-delete"
 _REQUEST_TIMEOUT_SECONDS = 10
 _COORDINATOR_SUFFIX = ":timer_alarm"
