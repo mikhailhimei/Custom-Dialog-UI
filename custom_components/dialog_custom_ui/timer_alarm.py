@@ -226,7 +226,7 @@ class TimerAlarmCoordinator:
         await self._run_timer_actions(item)
 
     async def _run_alarm_actions(self, item: dict[str, Any]) -> None:
-        device_id = _normalize_value(item.get("device_id"))
+        device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
         if not device_id or not self.hass.states.get(device_id):
             self._append_log("error", f"Alarm device not found: {device_id or '<empty>'}")
             return
@@ -247,7 +247,7 @@ class TimerAlarmCoordinator:
         self._append_log("success", f"Alarm started on {device_id}")
 
     async def _run_timer_actions(self, item: dict[str, Any]) -> None:
-        device_id = _normalize_value(item.get("device_id"))
+        device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
         if not device_id or not self.hass.states.get(device_id):
             self._append_log("error", f"Timer device not found: {device_id or '<empty>'}")
         else:
@@ -329,6 +329,9 @@ async def _ws_get_timer_alarm_config(
     connection.send_result(
         msg["id"],
         {
+            "base_url": options[CONF_BASE_URL],
+            "client_id": options[CONF_CLIENT_ID],
+            "interval": options[CONF_TIMEOUT],
             "items": state.get("items", list(options[CONF_TIMER_ALARM_ITEMS])),
             "active_items": state.get("active_items", []),
             "last_updated": state.get("last_updated"),
@@ -398,8 +401,14 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
         "id": _normalize_value(item.get("id")) or _generate_id(),
         "name": _normalize_value(item.get("name")),
         "type": _normalize_value(item.get("type")).lower() or "alarm",
+        "clientId": _normalize_value(
+            item.get("clientId")
+            or item.get("client_id")
+            or item.get("userId")
+            or item.get("user_id")
+        ),
         "userId": _normalize_value(item.get("userId") or item.get("user_id") or item.get("client_id")),
-        "device_id": _normalize_value(item.get("device_id")),
+        "deviceId": _normalize_value(item.get("deviceId") or item.get("device_id")),
         "status": "on" if _is_on(item) else "off",
     }
 
@@ -486,6 +495,7 @@ def _normalize_timer_time(item: dict[str, Any], value: Any) -> dict[str, Any]:
     return {
         "count_timer": count_timer,
         "date_end": date_end,
+        "timezone": time_zone,
         "time_zone": time_zone,
     }
 
