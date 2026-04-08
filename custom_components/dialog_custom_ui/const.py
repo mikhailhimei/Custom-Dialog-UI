@@ -12,11 +12,18 @@ MAX_LOG_ENTRIES = 10
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMEOUT = 10
+DEFAULT_TIMER_ALARM_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_TIMER_ALARM_CLIENT_ID = ""
+DEFAULT_TIMER_ALARM_INTERVAL_SECONDS = 1
 
 CONF_BASE_URL = "base_url"
 CONF_CLIENT_ID = "client_id"
 CONF_TIMEOUT = "timeout"
 CONF_SCENARIOS = "scenarios"
+CONF_TIMER_ALARM_BASE_URL = "timer_alarm_base_url"
+CONF_TIMER_ALARM_CLIENT_ID = "timer_alarm_client_id"
+CONF_TIMER_ALARM_INTERVAL_SECONDS = "timer_alarm_interval_seconds"
+CONF_TIMER_ALARM_ITEMS = "timer_alarm_items"
 
 ATTR_SCENARIO_ID = "id"
 ATTR_SCENARIO_NAME = "name"
@@ -28,3 +35,5 @@ ATTR_SCRIPT_ENTITY_ID = "script_entity_id"
 WS_GET_CONFIG = "dialog_custom_ui/get_config"
 WS_SAVE_CONFIG = "dialog_custom_ui/save_config"
 WS_GET_LOGS = "dialog_custom_ui/get_logs"
+WS_GET_TIMER_ALARM_CONFIG = "dialog_custom_ui/get_timer_alarm_config"
+WS_SAVE_TIMER_ALARM_CONFIG = "dialog_custom_ui/save_timer_alarm_config"

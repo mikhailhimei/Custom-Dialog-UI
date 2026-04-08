@@ -15,6 +15,10 @@ const EXAMPLE_PAYLOAD = `{
 }`;
 
 const LOG_POLL_INTERVAL_MS = 2000;
+const MODULE_VERSION = new URL(import.meta.url).searchParams.get('v') || '';
+const TIMER_ALARM_MODULE_URL = MODULE_VERSION
+  ? `/dialog_custom_ui_static/dialog-custom-ui-timer-alarm.js?v=${encodeURIComponent(MODULE_VERSION)}`
+  : '/dialog_custom_ui_static/dialog-custom-ui-timer-alarm.js';
 
 const escapeHtml = (value) => String(value ?? '')
   .replaceAll('&', '&amp;')
@@ -72,6 +76,9 @@ class DialogCustomUiPanel extends HTMLElement {
     this._error = '';
     this._status = '';
     this._logsTimer = null;
+    this._timerAlarmLoaded = false;
+    this._timerAlarmLoading = false;
+    this._timerAlarmLoadPromise = null;
   }
 
   set hass(hass) {
@@ -100,6 +107,32 @@ class DialogCustomUiPanel extends HTMLElement {
 
   disconnectedCallback() {
     this._stopLogsPolling();
+  }
+
+  async _ensureTimerAlarmModule() {
+    if (this._timerAlarmLoaded) {
+      return;
+    }
+    if (!this._timerAlarmLoadPromise) {
+      this._timerAlarmLoading = true;
+      this._timerAlarmLoadPromise = import(TIMER_ALARM_MODULE_URL)
+        .then(() => {
+          this._timerAlarmLoaded = true;
+          this._error = '';
+          this._status = '';
+        })
+        .catch((err) => {
+          this._error = err?.message || 'Не удалось загрузить модуль timer/alarm.';
+          this._timerAlarmLoaded = false;
+        })
+        .finally(() => {
+          this._timerAlarmLoading = false;
+          this._timerAlarmLoadPromise = null;
+          this._render();
+        });
+    }
+
+    return this._timerAlarmLoadPromise;
   }
 
   async _loadConfig() {
@@ -186,6 +219,9 @@ class DialogCustomUiPanel extends HTMLElement {
       this._startLogsPolling();
     } else {
       this._stopLogsPolling();
+      if (tab === 'timer-alarm') {
+        this._ensureTimerAlarmModule();
+      }
     }
   }
 
@@ -1010,6 +1046,30 @@ class DialogCustomUiPanel extends HTMLElement {
     `;
   }
 
+  _renderTimerAlarm() {
+    if (!this._timerAlarmLoaded) {
+      if (!this._timerAlarmLoading) {
+        this._ensureTimerAlarmModule();
+      }
+
+      return `
+        <section class="hero-card">
+          <h1>Timer / Alarm</h1>
+          <p>Загружаем отдельный модуль с двумя вкладками: будильник и таймер.</p>
+          <div class="status ok">Модуль timer/alarm загружается...</div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="hero-card">
+        <h1>Timer / Alarm</h1>
+        <p>Вкладки таймера и будильника вынесены в отдельный модуль, чтобы основной файл не разрастался.</p>
+      </section>
+      <dialog-custom-ui-timer-alarm></dialog-custom-ui-timer-alarm>
+    `;
+  }
+
   _renderJsonTools() {
     const payload = this._buildConfigPayload();
 
@@ -1035,6 +1095,8 @@ class DialogCustomUiPanel extends HTMLElement {
   _render() {
     const content = this._activeTab === 'logs'
       ? this._renderLogs()
+      : this._activeTab === 'timer-alarm'
+        ? this._renderTimerAlarm()
       : this._activeTab === 'json'
         ? this._renderJsonTools()
         : this._renderSettings();
@@ -1487,6 +1549,7 @@ class DialogCustomUiPanel extends HTMLElement {
         <div class="hero">
           <div class="tabs">
             <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
+            <button type="button" class="tab-button ${this._activeTab === 'timer-alarm' ? 'active' : ''}" data-tab="timer-alarm">Timer / Alarm</button>
             <button type="button" class="tab-button ${this._activeTab === 'json' ? 'active' : ''}" data-tab="json">JSON</button>
             <button type="button" class="tab-button ${this._activeTab === 'logs' ? 'active' : ''}" data-tab="logs">Logs</button>
           </div>
