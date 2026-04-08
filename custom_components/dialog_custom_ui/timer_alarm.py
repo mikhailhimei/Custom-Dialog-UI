@@ -17,6 +17,7 @@ from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -226,44 +227,46 @@ class TimerAlarmCoordinator:
         await self._run_timer_actions(item)
 
     async def _run_alarm_actions(self, item: dict[str, Any]) -> None:
-        device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
-        if not device_id or not self.hass.states.get(device_id):
-            self._append_log("error", f"Alarm device not found: {device_id or '<empty>'}")
+        device_ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
+        media_player_entity_id = _resolve_media_player_entity_id(self.hass, device_ref)
+        if not media_player_entity_id:
+            self._append_log("error", f"Alarm device not found: {device_ref or '<empty>'}")
             return
 
         await self.hass.services.async_call(
             "media_player",
             "media_play",
-            {"entity_id": device_id},
+            {"entity_id": media_player_entity_id},
             blocking=False,
         )
         await self.hass.services.async_call(
             "media_player",
             "volume_set",
-            {"entity_id": device_id, "volume_level": 0.10},
+            {"entity_id": media_player_entity_id, "volume_level": 0.10},
             blocking=False,
         )
-        self.hass.async_create_task(_ramp_volume(self.hass, device_id, 0.10, 0.50, 5, 5))
-        self._append_log("success", f"Alarm started on {device_id}")
+        self.hass.async_create_task(_ramp_volume(self.hass, media_player_entity_id, 0.10, 0.50, 5, 5))
+        self._append_log("success", f"Alarm started on {media_player_entity_id}")
 
     async def _run_timer_actions(self, item: dict[str, Any]) -> None:
-        device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
-        if not device_id or not self.hass.states.get(device_id):
-            self._append_log("error", f"Timer device not found: {device_id or '<empty>'}")
+        device_ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
+        media_player_entity_id = _resolve_media_player_entity_id(self.hass, device_ref)
+        if not media_player_entity_id:
+            self._append_log("error", f"Timer device not found: {device_ref or '<empty>'}")
         else:
             await self.hass.services.async_call(
                 "media_player",
                 "volume_set",
-                {"entity_id": device_id, "volume_level": 0.40},
+                {"entity_id": media_player_entity_id, "volume_level": 0.40},
                 blocking=False,
             )
             await self.hass.services.async_call(
                 "media_player",
                 "media_play",
-                {"entity_id": device_id},
+                {"entity_id": media_player_entity_id},
                 blocking=False,
             )
-            self._append_log("success", f"Timer started on {device_id}")
+            self._append_log("success", f"Timer started on {media_player_entity_id}")
 
         await self._async_delete_timer(item)
 
@@ -384,6 +387,27 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
     }
+
+
+def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str:
+    if not device_ref:
+        return ""
+
+    if hass.states.get(device_ref):
+        state = hass.states.get(device_ref)
+        if state is not None and state.entity_id.startswith("media_player."):
+            return device_ref
+
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_device(registry, device_ref)
+    media_players = [entry.entity_id for entry in entities if entry.entity_id.startswith("media_player.")]
+    if media_players:
+        return media_players[0]
+
+    if hass.states.get(device_ref):
+        return device_ref
+
+    return ""
 
 
 def _coordinator_key(entry: ConfigEntry) -> str:
