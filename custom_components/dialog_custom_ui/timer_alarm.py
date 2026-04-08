@@ -500,6 +500,10 @@ def _extract_items(raw_payload: Any) -> list[dict[str, Any]]:
     if isinstance(raw_payload, dict):
         if isinstance(raw_payload.get("body"), list):
             return [item for item in raw_payload["body"] if isinstance(item, dict)]
+        if isinstance(raw_payload.get("body"), dict):
+            body = raw_payload["body"]
+            if isinstance(body.get("items"), list):
+                return [item for item in body["items"] if isinstance(item, dict)]
         if isinstance(raw_payload.get("items"), list):
             return [item for item in raw_payload["items"] if isinstance(item, dict)]
     return []

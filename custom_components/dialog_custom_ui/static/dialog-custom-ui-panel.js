@@ -1565,10 +1565,10 @@ class DialogCustomUiPanel extends HTMLElement {
         <div class="hero">
           <div class="tabs">
             <button type="button" class="tab-button ${this._activeTab === 'scenarios' ? 'active' : ''}" data-tab="scenarios">Scenarios</button>
-            <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
             <button type="button" class="tab-button ${this._activeTab === 'timer-alarm' ? 'active' : ''}" data-tab="timer-alarm">Timer / Alarm</button>
             <button type="button" class="tab-button ${this._activeTab === 'json' ? 'active' : ''}" data-tab="json">JSON</button>
             <button type="button" class="tab-button ${this._activeTab === 'logs' ? 'active' : ''}" data-tab="logs">Logs</button>
+            <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
           </div>
           ${content}
         </div>
