@@ -18,6 +18,7 @@ const formatDateTimeForApi = (date) => {
 
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`;
 };
+const getBrowserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || '';
 const now = () => new Date();
 const dt = (v) => {
   if (!v) {
@@ -50,6 +51,7 @@ const timerItem = () => ({
   time: {
     date_end: formatDateTimeForApi(new Date(Date.now() + 30 * 60 * 1000)),
     count_timer: '00:30:00',
+    time_zone: getBrowserTimeZone(),
   },
 });
 
@@ -134,6 +136,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     if (type === 'timer') {
       const countTimer = String(time.count_timer ?? time.duration ?? item?.count_timer ?? item?.duration ?? '00:30:00');
       const dateEnd = String(time.date_end ?? time.end_at ?? time.finish_at ?? item?.date_end ?? item?.end_at ?? '');
+      const timeZone = String(time.time_zone ?? time.timezone ?? item?.time_zone ?? item?.timezone ?? getBrowserTimeZone());
       return {
         id: String(item?.id ?? id()),
         name: String(item?.name ?? ''),
@@ -141,7 +144,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         userId: String(item?.userId ?? item?.user_id ?? item?.client_id ?? this._cfg.client_id ?? ''),
         device_id: String(item?.device_id ?? ''),
         status: String(item?.status ?? 'on') === 'off' ? 'off' : 'on',
-        time: { date_end: dateEnd, count_timer: countTimer },
+        time: { date_end: dateEnd, count_timer: countTimer, time_zone: timeZone },
       };
     }
     const repeat = ['every_day', 'once', 'custom'].includes(String(time.repeat_mode ?? item?.repeat_mode ?? 'every_day')) ? String(time.repeat_mode ?? item?.repeat_mode ?? 'every_day') : 'every_day';
@@ -237,16 +240,17 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
   _remove(itemId) { this._items = this._items.filter((item) => item.id !== itemId); this._markDirty(); this._render(); }
   _serialize(item) {
     return item.type === 'timer'
-      ? {
-          id: item.id,
-          type: 'timer',
-          device_id: item.device_id,
-          status: item.status,
-          time: {
-            date_end: String(item.time.date_end ?? item.time.end_at ?? ''),
-            count_timer: String(item.time.count_timer ?? item.time.duration ?? '00:30:00'),
-          },
-        }
+        ? {
+            id: item.id,
+            type: 'timer',
+            device_id: item.device_id,
+            status: item.status,
+            time: {
+              date_end: String(item.time.date_end ?? item.time.end_at ?? ''),
+              count_timer: String(item.time.count_timer ?? item.time.duration ?? '00:30:00'),
+              time_zone: String(item.time.time_zone ?? item.time.timezone ?? getBrowserTimeZone()),
+            },
+          }
       : { id: item.id, name: item.name, type: 'alarm', device_id: item.device_id, status: item.status, time: { time: String(item.time.time ?? '08:00'), repeat_mode: String(item.time.repeat_mode ?? 'every_day'), days: item.time.repeat_mode === 'every_day' ? [1, 2, 3, 4, 5, 6, 7] : item.time.repeat_mode === 'once' ? [] : days(item.time.days) } };
   }
 
@@ -255,9 +259,6 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     try {
       await this._hass.callWS({
         type: SAVE_WS,
-        base_url: String(this._cfg.base_url ?? '').trim(),
-        client_id: String(this._cfg.client_id ?? '').trim(),
-        timer_alarm_interval_seconds: n(this._cfg.interval, 1),
         items: this._items.map((item) => this._serialize(item)),
       });
       this._status = 'Timer/alarm настройки сохранены.';
@@ -310,7 +311,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
           ` : `
             <label><span>count_timer</span><input data-item-id="${esc(item.id)}" data-field="count_timer" value="${esc(item.time.count_timer ?? '')}" placeholder="00:10:00" /></label>
             <label><span>date_end</span><input type="text" data-item-id="${esc(item.id)}" data-field="date_end" value="${esc(item.time.date_end ?? '')}" placeholder="2026-04-08 09:21:34" /></label>
-            <div style="grid-column: 1 / -1;" class="days-box"><div class="days-title">Осталось</div><div>${esc(progress?.left ?? '00:00:00')}</div><div class="timer-progress-track"><div class="timer-progress-fill" style="width: ${esc(progress?.percent ?? 0)}%;"></div></div><small>Формат: <code>{"date_end":"2026-04-08 09:21:34","count_timer":"00:10:00"}</code></small></div>
+            <div style="grid-column: 1 / -1;" class="days-box"><div class="days-title">Осталось</div><div>${esc(progress?.left ?? '00:00:00')}</div><div class="timer-progress-track"><div class="timer-progress-fill" style="width: ${esc(progress?.percent ?? 0)}%;"></div></div><small>Формат: <code>{"date_end":"2026-04-08 09:21:34","count_timer":"00:10:00","time_zone":"Europe/Moscow"}</code></small></div>
           `}
         </div>
         <div class="item-footer"><span class="badge ${item.status === 'on' ? 'badge-on' : 'badge-off'}">${esc(item.status)}</span><span class="badge">${esc(item.type === 'timer' ? this._timerLabel(item) : this._alarmLabel(item))}</span></div>

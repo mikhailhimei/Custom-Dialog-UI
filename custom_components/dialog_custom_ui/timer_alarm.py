@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Iterable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, tzinfo
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import async_timeout
@@ -466,16 +467,26 @@ def _normalize_timer_time(item: dict[str, Any], value: Any) -> dict[str, Any]:
             or item.get("date_end")
             or item.get("end_at")
         )
+        time_zone = _normalize_value(
+            value.get("time_zone")
+            or value.get("timezone")
+            or item.get("time_zone")
+            or item.get("timezone")
+        )
     else:
         count_timer = _normalize_value(item.get("count_timer") or item.get("duration"))
         date_end = _normalize_value(item.get("date_end") or item.get("end_at"))
+        time_zone = _normalize_value(item.get("time_zone") or item.get("timezone"))
 
     if not count_timer:
         count_timer = "00:30:00"
+    if not time_zone:
+        time_zone = _default_timezone_name()
 
     return {
         "count_timer": count_timer,
         "date_end": date_end,
+        "time_zone": time_zone,
     }
 
 
@@ -606,9 +617,11 @@ def _parse_datetime_from_item(item: dict[str, Any]) -> datetime | None:
         return None
     parsed = dt_util.parse_datetime(end_at)
     if parsed is None:
-        return None
+        parsed = _parse_naive_datetime(end_at, time_data.get("time_zone") or time_data.get("timezone") or item.get("time_zone") or item.get("timezone"))
+        if parsed is None:
+            return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=dt_util.now().tzinfo)
+        parsed = parsed.replace(tzinfo=_get_zoneinfo(time_data.get("time_zone") or time_data.get("timezone") or item.get("time_zone") or item.get("timezone")))
     return dt_util.as_local(parsed)
 
 
@@ -654,6 +667,32 @@ def _timer_trigger_key(item: dict[str, Any]) -> str:
 
 def _generate_id() -> str:
     return f"timer_alarm_{int(dt_util.now().timestamp() * 1000)}"
+
+
+def _default_timezone_name() -> str:
+    tzinfo = dt_util.now().tzinfo
+    return getattr(tzinfo, "key", None) or str(tzinfo or "")
+
+
+def _get_zoneinfo(value: Any) -> ZoneInfo | tzinfo | None:
+    tz_name = _normalize_value(value)
+    if tz_name:
+        try:
+            return ZoneInfo(tz_name)
+        except Exception:
+            pass
+    return dt_util.now().tzinfo
+
+
+def _parse_naive_datetime(value: str, timezone: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(value.replace(" ", "T"))
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=_get_zoneinfo(timezone))
+    return parsed
 
 
 async def _ramp_volume(
