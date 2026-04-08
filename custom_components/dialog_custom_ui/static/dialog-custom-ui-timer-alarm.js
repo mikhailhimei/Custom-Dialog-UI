@@ -239,7 +239,6 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     return item.type === 'timer'
       ? {
           id: item.id,
-          userId: String(item.userId ?? this._cfg.client_id ?? ''),
           type: 'timer',
           device_id: item.device_id,
           status: item.status,
@@ -363,12 +362,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
       <div class="panel">
         <section class="hero">
           <h1 class="title">Timer / Alarm</h1>
-          <p class="subtitle">Отдельные вкладки для будильников и таймеров. Настройки запроса для <code>/api/timer-alarm</code> и список объектов хранятся отдельно.</p>
-          <div class="grid" style="margin-top:20px;">
-            <label><span>IP / Base URL</span><input data-settings-field="base_url" value="${esc(this._cfg.base_url)}" /></label>
-            <label><span>userId</span><input data-settings-field="client_id" value="${esc(this._cfg.client_id)}" /></label>
-            <label><span>Interval, sec</span><input type="number" min="1" data-settings-field="interval" value="${esc(this._cfg.interval)}" /></label>
-          </div>
+          <p class="subtitle">Отдельные вкладки для будильников и таймеров. Подключение и общий <code>time</code> теперь берутся из вкладки настроек, как и у сценариев.</p>
           <div class="toolbar">
             <div class="tabs">
               <button type="button" class="tab ${this._tab === 'alarm' ? 'active' : ''}" data-tab="alarm">Будильник</button>

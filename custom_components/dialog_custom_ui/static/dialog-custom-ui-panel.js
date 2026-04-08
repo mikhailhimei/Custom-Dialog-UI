@@ -66,7 +66,7 @@ class DialogCustomUiPanel extends HTMLElement {
     this._hass = null;
     this._config = { ...DEFAULT_CONFIG };
     this._logs = [];
-    this._activeTab = 'settings';
+    this._activeTab = 'scenarios';
     this._expandedScenarios = new Set();
     this._expandedConditions = new Set();
     this._loaded = false;
@@ -223,6 +223,36 @@ class DialogCustomUiPanel extends HTMLElement {
         this._ensureTimerAlarmModule();
       }
     }
+  }
+
+  _renderSettings() {
+    return `
+      <section class="hero-card">
+        <h1>Settings</h1>
+        <p>Общие параметры подключения для сценариев и timer/alarm: IP, client_id и timeout.</p>
+        <div class="config-grid">
+          <label>
+            <span>Base URL</span>
+            <input data-config-field="base_url" value="${escapeHtml(this._config.base_url)}" placeholder="http://127.0.0.1:8000" />
+            <small>Интеграция отправляет POST на <code>{base_url}/api/dialog/command-check</code>.</small>
+          </label>
+          <label>
+            <span>Client ID</span>
+            <input data-config-field="client_id" value="${escapeHtml(this._config.client_id)}" placeholder="user-123" />
+            <small>Поле вводится вручную и уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
+          </label>
+          <label class="field-narrow">
+            <span>Timeout, секунд</span>
+            <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(this._config.timeout)}" />
+          </label>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="primary" data-action="save" ${this._saving ? 'disabled' : ''}>${this._saving ? 'Сохранение...' : 'Сохранить'}</button>
+        </div>
+        ${this._error ? `<div class="status error">${escapeHtml(this._error)}</div>` : ''}
+        ${this._status ? `<div class="status ok">${escapeHtml(this._status)}</div>` : ''}
+      </section>
+    `;
   }
 
   _toggleScenario(id) {
@@ -796,7 +826,7 @@ class DialogCustomUiPanel extends HTMLElement {
     });
   }
 
-  _renderSettings() {
+  _renderScenarios() {
     const scripts = this._scripts();
     const scenarioMarkup = this._config.scenarios.length
         ? this._config.scenarios.map((scenario, index) => {
@@ -981,24 +1011,8 @@ class DialogCustomUiPanel extends HTMLElement {
 
     return `
       <section class="hero-card">
-        <h1>Dialog Router</h1>
-        <p>Отдельный блок для настройки опроса внешнего сервиса, маршрутизации команд по строгим правилам и запуска скриптов Home Assistant с переменными из входящего JSON.</p>
-        <div class="config-grid">
-          <label>
-            <span>Base URL</span>
-            <input data-config-field="base_url" value="${escapeHtml(this._config.base_url)}" placeholder="http://127.0.0.1:8000" />
-            <small>Интеграция отправляет POST на <code>{base_url}/api/dialog/command-check</code>.</small>
-          </label>
-          <label>
-            <span>Client ID</span>
-            <input data-config-field="client_id" value="${escapeHtml(this._config.client_id)}" placeholder="user-123" />
-            <small>Поле вводится вручную и уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
-          </label>
-          <label class="field-narrow">
-            <span>Timeout, секунд</span>
-            <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(this._config.timeout)}" />
-          </label>
-        </div>
+        <h1>Scenarios</h1>
+        <p>Здесь редактируются правила сценариев. Подключение вынесено во вкладку настроек.</p>
         <div class="toolbar">
           <button type="button" class="secondary" data-action="add-scenario">+ Добавить сценарий</button>
           <button type="button" class="primary" data-action="save" ${this._saving ? 'disabled' : ''}>${this._saving ? 'Сохранение...' : 'Сохранить'}</button>
@@ -1095,6 +1109,8 @@ class DialogCustomUiPanel extends HTMLElement {
   _render() {
     const content = this._activeTab === 'logs'
       ? this._renderLogs()
+      : this._activeTab === 'scenarios'
+        ? this._renderScenarios()
       : this._activeTab === 'timer-alarm'
         ? this._renderTimerAlarm()
       : this._activeTab === 'json'
@@ -1548,6 +1564,7 @@ class DialogCustomUiPanel extends HTMLElement {
       <div class="page">
         <div class="hero">
           <div class="tabs">
+            <button type="button" class="tab-button ${this._activeTab === 'scenarios' ? 'active' : ''}" data-tab="scenarios">Scenarios</button>
             <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
             <button type="button" class="tab-button ${this._activeTab === 'timer-alarm' ? 'active' : ''}" data-tab="timer-alarm">Timer / Alarm</button>
             <button type="button" class="tab-button ${this._activeTab === 'json' ? 'active' : ''}" data-tab="json">JSON</button>

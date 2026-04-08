@@ -19,13 +19,14 @@ from homeassistant.helpers import aiohttp_client
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CONF_BASE_URL,
+    CONF_CLIENT_ID,
+    CONF_TIMEOUT,
     CONF_TIMER_ALARM_BASE_URL,
     CONF_TIMER_ALARM_CLIENT_ID,
-    CONF_TIMER_ALARM_INTERVAL_SECONDS,
     CONF_TIMER_ALARM_ITEMS,
-    DEFAULT_TIMER_ALARM_BASE_URL,
-    DEFAULT_TIMER_ALARM_CLIENT_ID,
-    DEFAULT_TIMER_ALARM_INTERVAL_SECONDS,
+    DEFAULT_BASE_URL,
+    DEFAULT_TIMEOUT,
     DOMAIN,
     WS_GET_TIMER_ALARM_CONFIG,
     WS_SAVE_TIMER_ALARM_CONFIG,
@@ -86,21 +87,22 @@ class TimerAlarmCoordinator:
                 self._append_log("error", f"Timer/alarm polling failed: {err}")
                 _LOGGER.exception("Unexpected error while polling timer/alarm")
 
-            interval = max(1, int(_get_options(self.entry)[CONF_TIMER_ALARM_INTERVAL_SECONDS]))
-            await asyncio.sleep(interval)
+            await asyncio.sleep(1)
 
     async def _async_poll_once(self) -> None:
         options = _get_options(self.entry)
-        base_url = options[CONF_TIMER_ALARM_BASE_URL].rstrip("/")
-        client_id = options[CONF_TIMER_ALARM_CLIENT_ID].strip()
+        base_url = options[CONF_BASE_URL].rstrip("/")
+        client_id = options[CONF_CLIENT_ID].strip()
 
         if not client_id:
-            saved_items = [_normalize_item(item) for item in options[CONF_TIMER_ALARM_ITEMS]]
+            saved_items = [
+                _normalize_item({**item, "userId": _normalize_value(item.get("userId") or client_id)})
+                for item in options[CONF_TIMER_ALARM_ITEMS]
+            ]
             self._store_state(
                 {
-                    "base_url": options[CONF_TIMER_ALARM_BASE_URL],
+                    "base_url": options[CONF_BASE_URL],
                     "client_id": client_id,
-                    "interval": options[CONF_TIMER_ALARM_INTERVAL_SECONDS],
                     "items": saved_items,
                     "active_items": [item for item in saved_items if _is_on(item)],
                     "last_updated": None,
@@ -111,8 +113,10 @@ class TimerAlarmCoordinator:
         url = f"{base_url}{_TIMER_ALARM_PATH}"
         self._append_log("request", f"POST {url} clientId={client_id}")
 
+        request_timeout = max(1, int(options[CONF_TIMEOUT]))
+
         try:
-            async with async_timeout.timeout(_REQUEST_TIMEOUT_SECONDS):
+            async with async_timeout.timeout(request_timeout):
                 response = await self._session.post(
                     url,
                     json={"clientId": client_id},
@@ -124,12 +128,14 @@ class TimerAlarmCoordinator:
             return
 
         if response.status == 204:
-            saved_items = [_normalize_item(item) for item in options[CONF_TIMER_ALARM_ITEMS]]
+            saved_items = [
+                _normalize_item({**item, "userId": _normalize_value(item.get("userId") or client_id)})
+                for item in options[CONF_TIMER_ALARM_ITEMS]
+            ]
             self._store_state(
                 {
-                    "base_url": options[CONF_TIMER_ALARM_BASE_URL],
+                    "base_url": options[CONF_BASE_URL],
                     "client_id": client_id,
-                    "interval": options[CONF_TIMER_ALARM_INTERVAL_SECONDS],
                     "items": saved_items,
                     "active_items": [item for item in saved_items if _is_on(item)],
                     "last_updated": dt_util.now().isoformat(),
@@ -169,9 +175,8 @@ class TimerAlarmCoordinator:
         )
 
         state = {
-            "base_url": options[CONF_TIMER_ALARM_BASE_URL],
+            "base_url": options[CONF_BASE_URL],
             "client_id": client_id,
-            "interval": options[CONF_TIMER_ALARM_INTERVAL_SECONDS],
             "items": normalized_items,
             "active_items": active_items,
             "last_updated": dt_util.now().isoformat(),
@@ -263,15 +268,17 @@ class TimerAlarmCoordinator:
 
     async def _async_delete_timer(self, item: dict[str, Any]) -> None:
         options = _get_options(self.entry)
-        client_id = _normalize_value(item.get("userId") or item.get("user_id") or options[CONF_TIMER_ALARM_CLIENT_ID])
+        client_id = _normalize_value(item.get("userId") or item.get("user_id") or options[CONF_CLIENT_ID])
         item_id = _normalize_value(item.get("id"))
         if not client_id or not item_id:
             self._append_log("error", "Timer delete skipped because client_id or id is empty")
             return
 
-        url = f"{options[CONF_TIMER_ALARM_BASE_URL].rstrip('/')}{_TIMER_ALARM_DELETE_PATH}"
+        url = f"{options[CONF_BASE_URL].rstrip('/')}{_TIMER_ALARM_DELETE_PATH}"
+        request_timeout = max(1, int(options[CONF_TIMEOUT]))
+
         try:
-            async with async_timeout.timeout(_REQUEST_TIMEOUT_SECONDS):
+            async with async_timeout.timeout(request_timeout):
                 response = await self._session.post(
                     url,
                     json={"client_id": client_id, "id": item_id},
@@ -321,9 +328,6 @@ async def _ws_get_timer_alarm_config(
     connection.send_result(
         msg["id"],
         {
-            "base_url": options[CONF_TIMER_ALARM_BASE_URL],
-            "client_id": options[CONF_TIMER_ALARM_CLIENT_ID],
-            "interval": options[CONF_TIMER_ALARM_INTERVAL_SECONDS],
             "items": state.get("items", list(options[CONF_TIMER_ALARM_ITEMS])),
             "active_items": state.get("active_items", []),
             "last_updated": state.get("last_updated"),
@@ -334,9 +338,6 @@ async def _ws_get_timer_alarm_config(
 @websocket_api.websocket_command(
     {
         vol.Required("type"): WS_SAVE_TIMER_ALARM_CONFIG,
-        vol.Required(CONF_TIMER_ALARM_BASE_URL): str,
-        vol.Required(CONF_TIMER_ALARM_CLIENT_ID): str,
-        vol.Required(CONF_TIMER_ALARM_INTERVAL_SECONDS): vol.Any(int, float),
         vol.Optional(CONF_TIMER_ALARM_ITEMS, default=[]): [dict],
     }
 )
@@ -350,14 +351,13 @@ async def _ws_save_timer_alarm_config(
         connection.send_error(msg["id"], "not_configured", "Integration entry not found")
         return
 
-    timer_alarm_items = [_normalize_item(item) for item in msg[CONF_TIMER_ALARM_ITEMS]]
-    options = {
-        **dict(entry.options),
-        CONF_TIMER_ALARM_BASE_URL: msg[CONF_TIMER_ALARM_BASE_URL].strip(),
-        CONF_TIMER_ALARM_CLIENT_ID: msg[CONF_TIMER_ALARM_CLIENT_ID].strip(),
-        CONF_TIMER_ALARM_INTERVAL_SECONDS: max(1, int(msg[CONF_TIMER_ALARM_INTERVAL_SECONDS])),
-        CONF_TIMER_ALARM_ITEMS: timer_alarm_items,
-    }
+    options = dict(entry.options)
+    shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID) or options.get(CONF_TIMER_ALARM_CLIENT_ID))
+    timer_alarm_items = [
+        _normalize_item({**item, "userId": _normalize_value(item.get("userId") or shared_client_id)})
+        for item in msg[CONF_TIMER_ALARM_ITEMS]
+    ]
+    options[CONF_TIMER_ALARM_ITEMS] = timer_alarm_items
 
     hass.config_entries.async_update_entry(entry, options=options)
     coordinator = hass.data[DOMAIN].get(_coordinator_key(entry))
@@ -375,11 +375,9 @@ def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     stored = dict(entry.options)
     return {
-        CONF_TIMER_ALARM_BASE_URL: stored.get(CONF_TIMER_ALARM_BASE_URL, DEFAULT_TIMER_ALARM_BASE_URL),
-        CONF_TIMER_ALARM_CLIENT_ID: stored.get(CONF_TIMER_ALARM_CLIENT_ID, DEFAULT_TIMER_ALARM_CLIENT_ID),
-        CONF_TIMER_ALARM_INTERVAL_SECONDS: int(
-            stored.get(CONF_TIMER_ALARM_INTERVAL_SECONDS, DEFAULT_TIMER_ALARM_INTERVAL_SECONDS)
-        ),
+        CONF_BASE_URL: stored.get(CONF_BASE_URL, stored.get(CONF_TIMER_ALARM_BASE_URL, DEFAULT_BASE_URL)),
+        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, stored.get(CONF_TIMER_ALARM_CLIENT_ID, "")),
+        CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
     }
 
