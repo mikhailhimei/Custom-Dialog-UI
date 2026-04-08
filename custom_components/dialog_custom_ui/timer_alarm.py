@@ -252,7 +252,8 @@ class TimerAlarmCoordinator:
 
     async def _run_timer_actions(self, item: dict[str, Any]) -> None:
         device_ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
-        if not device_ref:
+        media_player_entity_id = _resolve_media_player_entity_id(self.hass, device_ref)
+        if not media_player_entity_id:
             self._append_log("error", f"Timer device not found: {device_ref or '<empty>'}")
         else:
             media_content_id = _normalize_value(
@@ -260,6 +261,7 @@ class TimerAlarmCoordinator:
                 or item.get("mediaContentId")
                 or _DEFAULT_TIMER_MEDIA_CONTENT_ID
             )
+            media_title = media_content_id.rsplit("/", 1)[-1] or "timer"
             media_content_type = _normalize_value(
                 item.get("media_content_type")
                 or item.get("mediaContentType")
@@ -269,14 +271,14 @@ class TimerAlarmCoordinator:
             await self.hass.services.async_call(
                 "media_player",
                 "turn_on",
-                target={"device_id": device_ref},
+                target={"entity_id": media_player_entity_id},
                 blocking=False,
             )
             await self.hass.services.async_call(
                 "media_player",
                 "volume_set",
                 {"volume_level": 0.40},
-                target={"device_id": device_ref},
+                target={"entity_id": media_player_entity_id},
                 blocking=False,
             )
             await self.hass.services.async_call(
@@ -284,16 +286,20 @@ class TimerAlarmCoordinator:
                 "play_media",
                 {
                     "media_content_id": media_content_id,
-                    "media_content_type": media_content_type,
-                    "metadata": {
-                        "title": media_content_id.rsplit("/", 1)[-1] or "timer",
-                        "media_class": "music",
+                    "media_content_type": "music",
+                    "enqueue": "replace",
+                    "extra": {
+                        "title": media_title,
+                        "metadata": {
+                            "title": media_title,
+                            "media_class": "music",
+                        },
                     },
                 },
-                target={"device_id": device_ref},
+                target={"entity_id": media_player_entity_id},
                 blocking=False,
             )
-            self._append_log("success", f"Timer started on {device_ref}")
+            self._append_log("success", f"Timer started on {media_player_entity_id}")
 
         await self._async_delete_timer(item)
 
