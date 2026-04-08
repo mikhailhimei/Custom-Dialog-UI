@@ -39,6 +39,8 @@ _TIMER_ALARM_PATH = "/api/timer-alarm"
 _TIMER_ALARM_DELETE_PATH = "/api/timer-alarm-delete"
 _REQUEST_TIMEOUT_SECONDS = 10
 _COORDINATOR_SUFFIX = ":timer_alarm"
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
+_DEFAULT_TIMER_MEDIA_CONTENT_TYPE = "music"
 
 
 def async_register_timer_alarm_websockets(hass: HomeAssistant) -> None:
@@ -250,23 +252,48 @@ class TimerAlarmCoordinator:
 
     async def _run_timer_actions(self, item: dict[str, Any]) -> None:
         device_ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
-        media_player_entity_id = _resolve_media_player_entity_id(self.hass, device_ref)
-        if not media_player_entity_id:
+        if not device_ref:
             self._append_log("error", f"Timer device not found: {device_ref or '<empty>'}")
         else:
+            media_content_id = _normalize_value(
+                item.get("media_content_id")
+                or item.get("mediaContentId")
+                or _DEFAULT_TIMER_MEDIA_CONTENT_ID
+            )
+            media_content_type = _normalize_value(
+                item.get("media_content_type")
+                or item.get("mediaContentType")
+                or _DEFAULT_TIMER_MEDIA_CONTENT_TYPE
+            ) or _DEFAULT_TIMER_MEDIA_CONTENT_TYPE
+
+            await self.hass.services.async_call(
+                "media_player",
+                "turn_on",
+                target={"device_id": device_ref},
+                blocking=False,
+            )
             await self.hass.services.async_call(
                 "media_player",
                 "volume_set",
-                {"entity_id": media_player_entity_id, "volume_level": 0.40},
+                {"volume_level": 0.40},
+                target={"device_id": device_ref},
                 blocking=False,
             )
             await self.hass.services.async_call(
                 "media_player",
-                "media_play",
-                {"entity_id": media_player_entity_id},
+                "play_media",
+                {
+                    "media_content_id": media_content_id,
+                    "media_content_type": media_content_type,
+                    "metadata": {
+                        "title": media_content_id.rsplit("/", 1)[-1] or "timer",
+                        "media_class": "music",
+                    },
+                },
+                target={"device_id": device_ref},
                 blocking=False,
             )
-            self._append_log("success", f"Timer started on {media_player_entity_id}")
+            self._append_log("success", f"Timer started on {device_ref}")
 
         await self._async_delete_timer(item)
 
