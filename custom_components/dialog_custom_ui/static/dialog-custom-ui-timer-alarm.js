@@ -102,6 +102,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     this._tab = 'timer';
     this._cfg = { base_url: 'http://127.0.0.1:8000', client_id: '', interval: 1 };
     this._items = [];
+    this._activeItems = [];
     this._timer = null;
   }
 
@@ -145,6 +146,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         interval: n(result.interval, this._cfg.interval),
       };
       this._items = Array.isArray(result.items) ? result.items.map((item) => this._norm(item)) : [];
+      this._activeItems = Array.isArray(result.active_items) ? result.active_items.map((item) => this._norm(item)) : this._items.filter((item) => item.status === 'on');
       this._status = result.last_updated ? `Обновлено: ${result.last_updated}` : '';
       this._error = '';
       this._dirty = false;
@@ -185,6 +187,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         interval: n(result.interval, this._cfg.interval),
       };
       this._items = Array.isArray(result.items) ? result.items.map((item) => this._norm(item)) : [];
+      this._activeItems = Array.isArray(result.active_items) ? result.active_items.map((item) => this._norm(item)) : this._items.filter((item) => item.status === 'on');
       this._status = result.last_updated ? `Обновлено: ${result.last_updated}` : '';
       this._error = '';
       this._render();
@@ -245,7 +248,8 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
   }
 
   _activeTimers() {
-    return this._items
+    const source = this._activeItems.length ? this._activeItems : this._items;
+    return source
       .filter((item) => item.type === 'timer' && item.status === 'on')
       .sort((a, b) => (this._moment(a)?.getTime() ?? Number.MAX_SAFE_INTEGER) - (this._moment(b)?.getTime() ?? Number.MAX_SAFE_INTEGER));
   }
