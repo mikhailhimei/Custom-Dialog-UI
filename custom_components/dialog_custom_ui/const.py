@@ -22,6 +22,7 @@ CONF_TIMEOUT = "timeout"
 CONF_SCENARIOS = "scenarios"
 CONF_TIMER_ALARM_BASE_URL = "timer_alarm_base_url"
 CONF_TIMER_ALARM_CLIENT_ID = "timer_alarm_client_id"
+CONF_TIMER_ALARM_TOKEN = "timer_alarm_token"
 CONF_TIMER_ALARM_INTERVAL_SECONDS = "timer_alarm_interval_seconds"
 CONF_TIMER_ALARM_ITEMS = "timer_alarm_items"
 

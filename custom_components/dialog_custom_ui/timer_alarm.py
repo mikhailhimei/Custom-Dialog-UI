@@ -27,6 +27,7 @@ from .const import (
     CONF_TIMER_ALARM_BASE_URL,
     CONF_TIMER_ALARM_CLIENT_ID,
     CONF_TIMER_ALARM_ITEMS,
+    CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
@@ -35,8 +36,9 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_TIMER_ALARM_PATH = "/api/timer-alarm-info"
-_TIMER_ALARM_DELETE_PATH = "/api/timer-alarm-delete"
+_TIMER_ALARM_PATH = "/api/timer-alarm/info"
+_TIMER_ALARM_ADD_PATH = "/api/timer-alarm/add"
+_TIMER_ALARM_DELETE_PATH = "/api/timer-alarm/delete"
 _REQUEST_TIMEOUT_SECONDS = 10
 _COORDINATOR_SUFFIX = ":timer_alarm"
 _DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
@@ -116,6 +118,7 @@ class TimerAlarmCoordinator:
 
         url = f"{base_url}{_TIMER_ALARM_PATH}"
         self._append_log("request", f"POST {url} clientId={client_id}")
+        headers = _timer_alarm_headers(options[CONF_TIMER_ALARM_TOKEN])
 
         request_timeout = max(1, int(options[CONF_TIMEOUT]))
 
@@ -124,7 +127,7 @@ class TimerAlarmCoordinator:
                 response = await self._session.post(
                     url,
                     json={"clientId": client_id},
-                    headers={"Accept": "application/json"},
+                    headers=headers,
                 )
         except (aiohttp.ClientError, TimeoutError) as err:
             self._append_log("error", f"Timer/alarm request failed: {err}")
@@ -313,13 +316,14 @@ class TimerAlarmCoordinator:
 
         url = f"{options[CONF_BASE_URL].rstrip('/')}{_TIMER_ALARM_DELETE_PATH}"
         request_timeout = max(1, int(options[CONF_TIMEOUT]))
+        headers = _timer_alarm_headers(options[CONF_TIMER_ALARM_TOKEN])
 
         try:
             async with async_timeout.timeout(request_timeout):
                 response = await self._session.post(
                     url,
                     json={"client_id": client_id, "id": item_id},
-                    headers={"Accept": "application/json"},
+                    headers=headers,
                 )
         except (aiohttp.ClientError, TimeoutError) as err:
             self._append_log("error", f"Timer delete request failed: {err}")
@@ -333,6 +337,112 @@ class TimerAlarmCoordinator:
             return
 
         self._append_log("success", f"Timer deleted on server: {item_id}")
+
+    async def _async_add_timer(self, item: dict[str, Any], shared_client_id: str) -> dict[str, Any] | None:
+        options = _get_options(self.entry)
+        client_id = _normalize_value(item.get("userId") or item.get("user_id") or shared_client_id or options[CONF_CLIENT_ID])
+        if not client_id:
+            self._append_log("error", "Timer add skipped because client_id is empty")
+            return None
+
+        url = f"{options[CONF_BASE_URL].rstrip('/')}{_TIMER_ALARM_ADD_PATH}"
+        request_timeout = max(1, int(options[CONF_TIMEOUT]))
+        headers = _timer_alarm_headers(options[CONF_TIMER_ALARM_TOKEN])
+        payload = _timer_add_payload(item, client_id)
+
+        try:
+            async with async_timeout.timeout(request_timeout):
+                response = await self._session.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                )
+        except (aiohttp.ClientError, TimeoutError) as err:
+            self._append_log("error", f"Timer add request failed: {err}")
+            _LOGGER.debug("Timer add failed for %s: %s", client_id, err)
+            return None
+
+        if response.status >= 400:
+            body = await response.text()
+            self._append_log("error", f"Timer add endpoint returned {response.status}")
+            _LOGGER.warning("Timer add endpoint returned %s: %s", response.status, body[:300])
+            return None
+
+        if response.status == 204:
+            self._append_log("success", f"Timer added on server for {client_id}")
+            return None
+
+        try:
+            raw_payload = await response.json(content_type=None)
+        except (aiohttp.ContentTypeError, ValueError) as err:
+            body = await response.text()
+            self._append_log("error", "Timer add endpoint returned invalid JSON")
+            _LOGGER.warning(
+                "Timer add endpoint returned invalid JSON: %s; body=%s",
+                err,
+                body[:300],
+            )
+            return None
+
+        created_item = _extract_timer_item(raw_payload)
+        if created_item is None:
+            self._append_log("success", f"Timer added on server for {client_id}")
+            return None
+
+        normalized_created_item = _normalize_item(created_item)
+        created_item_id = _normalize_value(normalized_created_item.get("id"))
+        if not created_item_id:
+            self._append_log("success", f"Timer added on server for {client_id}")
+            return None
+
+        self._append_log("success", f"Timer added on server: {created_item_id}")
+        return normalized_created_item
+
+    async def async_sync_timer_alarm_items(
+        self,
+        previous_items: list[dict[str, Any]],
+        next_items: list[dict[str, Any]],
+        shared_client_id: str,
+    ) -> list[dict[str, Any]]:
+        previous_timers = {
+            _normalize_value(item.get("id")): item
+            for item in previous_items
+            if _normalize_value(item.get("type")).lower() == "timer" and _normalize_value(item.get("id"))
+        }
+        synced_items = list(next_items)
+        seen_timer_ids: set[str] = set()
+
+        for index, item in enumerate(next_items):
+            if _normalize_value(item.get("type")).lower() != "timer":
+                continue
+
+            item_id = _normalize_value(item.get("id"))
+            if not item_id:
+                continue
+            seen_timer_ids.add(item_id)
+
+            previous_item = previous_timers.get(item_id)
+            if previous_item is None:
+                if _is_on(item):
+                    created_item = await self._async_add_timer(item, shared_client_id)
+                    if created_item is not None:
+                        synced_items[index] = created_item
+                continue
+
+            if _timer_items_equal(previous_item, item, shared_client_id):
+                continue
+
+            await self._async_delete_timer(previous_item)
+            if _is_on(item):
+                created_item = await self._async_add_timer(item, shared_client_id)
+                if created_item is not None:
+                    synced_items[index] = created_item
+
+        for previous_id, previous_item in previous_timers.items():
+            if previous_id not in seen_timer_ids:
+                await self._async_delete_timer(previous_item)
+
+        return synced_items
 
     def _store_state(self, state: dict[str, Any]) -> None:
         domain_data = self.hass.data.setdefault(DOMAIN, {})
@@ -393,14 +503,21 @@ async def _ws_save_timer_alarm_config(
 
     options = dict(entry.options)
     shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID) or options.get(CONF_TIMER_ALARM_CLIENT_ID))
+    previous_items = [item for item in options.get(CONF_TIMER_ALARM_ITEMS, []) if isinstance(item, dict)]
     timer_alarm_items = [
         _normalize_item({**item, "userId": _normalize_value(item.get("userId") or shared_client_id)})
         for item in msg[CONF_TIMER_ALARM_ITEMS]
     ]
+    coordinator = hass.data[DOMAIN].get(_coordinator_key(entry))
+    if coordinator is not None:
+        timer_alarm_items = await coordinator.async_sync_timer_alarm_items(
+            previous_items,
+            timer_alarm_items,
+            shared_client_id,
+        )
     options[CONF_TIMER_ALARM_ITEMS] = timer_alarm_items
 
     hass.config_entries.async_update_entry(entry, options=options)
-    coordinator = hass.data[DOMAIN].get(_coordinator_key(entry))
     if coordinator is not None:
         await coordinator.async_reload()
 
@@ -417,9 +534,92 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, stored.get(CONF_TIMER_ALARM_BASE_URL, DEFAULT_BASE_URL)),
         CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, stored.get(CONF_TIMER_ALARM_CLIENT_ID, "")),
+        CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
     }
+
+
+def _timer_alarm_headers(token: Any) -> dict[str, str]:
+    headers = {"Accept": "application/json"}
+    authorization = _normalize_value(token)
+    if authorization:
+        headers["Authorization"] = authorization
+    return headers
+
+
+def _timer_add_payload(item: dict[str, Any], client_id: str) -> dict[str, Any]:
+    normalized = _normalize_item(item)
+    time_data = normalized.get("time") if isinstance(normalized.get("time"), dict) else {}
+    date_end = _normalize_value(
+        time_data.get("date_end")
+        or time_data.get("end_at")
+        or time_data.get("finish_at")
+        or item.get("date_end")
+        or item.get("end_at")
+        or item.get("finish_at")
+    )
+    count_timer = _normalize_value(time_data.get("count_timer") or time_data.get("duration") or "00:30:00") or "00:30:00"
+    timezone = _normalize_value(
+        time_data.get("timezone")
+        or time_data.get("time_zone")
+        or item.get("timezone")
+        or item.get("time_zone")
+        or _default_timezone_name()
+    ) or _default_timezone_name()
+
+    return {
+        "userId": client_id,
+        "type": "timer",
+        "time": {
+            "date_end": date_end,
+            "count_timer": count_timer,
+            "timezone": timezone,
+        },
+        "status": "on" if _is_on(item) else "off",
+        "deviceId": _normalize_value(normalized.get("deviceId") or normalized.get("device_id")),
+    }
+
+
+def _timer_items_equal(left: dict[str, Any], right: dict[str, Any], shared_client_id: str) -> bool:
+    return _timer_add_payload(left, _normalize_value(left.get("userId") or left.get("clientId") or shared_client_id)) == _timer_add_payload(
+        right,
+        _normalize_value(right.get("userId") or right.get("clientId") or shared_client_id),
+    )
+
+
+def _timer_item_fingerprint(item: dict[str, Any]) -> tuple[Any, ...]:
+    payload = _timer_add_payload(item, _normalize_value(item.get("userId") or item.get("clientId") or item.get("client_id")))
+    return (
+        payload.get("userId", ""),
+        payload.get("type", ""),
+        payload.get("status", ""),
+        payload.get("deviceId", ""),
+        payload.get("time", {}).get("date_end", ""),
+        payload.get("time", {}).get("count_timer", ""),
+        payload.get("time", {}).get("timezone", ""),
+    )
+
+
+def _extract_timer_item(raw_payload: Any) -> dict[str, Any] | None:
+    if isinstance(raw_payload, dict):
+        body = raw_payload.get("body")
+        if isinstance(body, dict):
+            if isinstance(body.get("item"), dict):
+                return body["item"]
+            if isinstance(body.get("data"), dict):
+                return body["data"]
+            return body
+        if isinstance(raw_payload.get("item"), dict):
+            return raw_payload["item"]
+        if isinstance(raw_payload.get("data"), dict):
+            return raw_payload["data"]
+        return raw_payload
+
+    if isinstance(raw_payload, list) and len(raw_payload) == 1 and isinstance(raw_payload[0], dict):
+        return raw_payload[0]
+
+    return None
 
 
 def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str:
@@ -559,14 +759,25 @@ def _normalize_timer_time(item: dict[str, Any], value: Any) -> dict[str, Any]:
 
 def _merge_saved_items(remote_items: list[dict[str, Any]], saved_items: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     merged: dict[str, dict[str, Any]] = {}
+    timer_fingerprints: dict[str, str] = {}
+
     for item in remote_items:
         normalized = _normalize_item(item)
         merged[normalized["id"]] = normalized
+        if normalized["type"] == "timer":
+            timer_fingerprints[_timer_item_fingerprint(normalized)] = normalized["id"]
 
     for item in saved_items:
         if not isinstance(item, dict):
             continue
         normalized = _normalize_item(item)
+        if normalized["type"] == "timer":
+            fingerprint = _timer_item_fingerprint(normalized)
+            existing_id = timer_fingerprints.get(fingerprint)
+            if existing_id:
+                merged[existing_id] = {**merged.get(existing_id, {}), **normalized, "id": existing_id}
+                continue
+            timer_fingerprints[fingerprint] = normalized["id"]
         merged[normalized["id"]] = normalized
 
     return list(merged.values())

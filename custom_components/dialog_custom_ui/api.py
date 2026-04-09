@@ -20,6 +20,7 @@ from .const import (
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
     CONF_TIMEOUT,
+    CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
@@ -51,6 +52,7 @@ async def _ws_get_config(
         {
             "base_url": entry.options.get(CONF_BASE_URL, DEFAULT_BASE_URL),
             "client_id": entry.options.get(CONF_CLIENT_ID, ""),
+            "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
             "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
             "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
         },
@@ -72,6 +74,7 @@ async def _ws_get_logs(
         vol.Required("type"): WS_SAVE_CONFIG,
         vol.Required(CONF_BASE_URL): str,
         vol.Required(CONF_CLIENT_ID): str,
+        vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
         vol.Required(CONF_TIMEOUT): vol.Any(int, float),
         vol.Required(CONF_SCENARIOS): [
             {
@@ -106,6 +109,7 @@ async def _ws_save_config(
     options = {
         CONF_BASE_URL: msg[CONF_BASE_URL].strip(),
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
+        CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
         CONF_TIMEOUT: max(1, int(msg[CONF_TIMEOUT])),
         CONF_SCENARIOS: scenarios,
     }

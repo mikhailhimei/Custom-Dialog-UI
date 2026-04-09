@@ -284,9 +284,18 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
   }
 
   _activeTimers() {
-    const source = this._activeItems.length ? this._activeItems : this._items;
-    return source
-      .filter((item) => item.type === 'timer' && item.status === 'on')
+    const timers = new Map();
+    for (const item of this._items) {
+      if (item.type === 'timer') {
+        timers.set(item.id, item);
+      }
+    }
+    for (const item of this._activeItems) {
+      if (item.type === 'timer') {
+        timers.set(item.id, { ...(timers.get(item.id) ?? {}), ...item });
+      }
+    }
+    return [...timers.values()]
       .sort((a, b) => (this._moment(a)?.getTime() ?? Number.MAX_SAFE_INTEGER) - (this._moment(b)?.getTime() ?? Number.MAX_SAFE_INTEGER));
   }
 
@@ -726,7 +735,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
     const timers = this._activeTimers();
     const body = timers.length
       ? timers.map((item) => this._renderTimerItem(item)).join('')
-      : `<div class="empty">Активных таймеров пока нет.</div>`;
+      : `<div class="empty">Таймеров пока нет.</div>`;
 
     return `
       <section class="hero">

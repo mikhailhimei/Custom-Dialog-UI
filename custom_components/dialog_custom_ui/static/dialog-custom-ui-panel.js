@@ -1,6 +1,7 @@
 ﻿const DEFAULT_CONFIG = {
   base_url: 'http://127.0.0.1:8000',
   client_id: '',
+  timer_alarm_token: '',
   timeout: 10,
   scenarios: [],
 };
@@ -229,22 +230,27 @@ class DialogCustomUiPanel extends HTMLElement {
     return `
       <section class="hero-card">
         <h1>Settings</h1>
-        <p>Общие параметры подключения для сценариев и timer/alarm: IP, client_id и timeout.</p>
+        <p>Общие параметры подключения для сценариев и timer/alarm: IP, client_id, token и timeout.</p>
         <div class="config-grid">
           <label>
             <span>Base URL</span>
             <input data-config-field="base_url" value="${escapeHtml(this._config.base_url)}" placeholder="http://127.0.0.1:8000" />
             <small>Интеграция отправляет POST на <code>{base_url}/api/dialog/command-check</code>.</small>
           </label>
-          <label>
-            <span>Client ID</span>
-            <input data-config-field="client_id" value="${escapeHtml(this._config.client_id)}" placeholder="user-123" />
-            <small>Поле вводится вручную и уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
-          </label>
-          <label class="field-narrow">
-            <span>Timeout, секунд</span>
-            <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(this._config.timeout)}" />
-          </label>
+        <label>
+          <span>Client ID</span>
+          <input data-config-field="client_id" value="${escapeHtml(this._config.client_id)}" placeholder="user-123" />
+          <small>Поле вводится вручную и уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
+        </label>
+        <label>
+          <span>Authorization token</span>
+          <input data-config-field="timer_alarm_token" value="${escapeHtml(this._config.timer_alarm_token)}" placeholder="Bearer xxx" />
+          <small>Значение отправляется в заголовке <code>Authorization</code> как есть.</small>
+        </label>
+        <label class="field-narrow">
+          <span>Timeout, секунд</span>
+          <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(this._config.timeout)}" />
+        </label>
         </div>
         <div class="toolbar">
           <button type="button" class="primary" data-action="save" ${this._saving ? 'disabled' : ''}>${this._saving ? 'Сохранение...' : 'Сохранить'}</button>
@@ -629,6 +635,7 @@ class DialogCustomUiPanel extends HTMLElement {
     return {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
+      timer_alarm_token: this._config.timer_alarm_token,
       timeout: Number(this._config.timeout) || 10,
       scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
     };
