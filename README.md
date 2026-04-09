@@ -4,6 +4,7 @@
 
 - указать `Base URL` сервиса, который опрашивается каждые 1 секунду;
 - указать `client_id` вручную;
+- добавить несколько `device_id` для timer/alarm и передавать их массивом в запросе;
 - добавить любое количество сценариев, внутри которых можно создать одно или несколько отдельных условий `parent_type` + опциональный `children_type`;
 - выбрать `script.*` из Home Assistant для запуска;
 - передать весь входящий payload в скрипт через переменные.
@@ -53,7 +54,7 @@ curl -X POST http://localhost:8000/api/dialog/command-check \
   "parent_type": "weather_metno",
   "value": {"commands": "москва"},
   "client_id": "user-123",
-  "device_id": "speaker_1"
+  "device_id": ["speaker_1", "speaker_2"]
 }
 ```
 

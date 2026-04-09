@@ -25,6 +25,7 @@ CONF_TIMER_ALARM_CLIENT_ID = "timer_alarm_client_id"
 CONF_TIMER_ALARM_TOKEN = "timer_alarm_token"
 CONF_TIMER_ALARM_INTERVAL_SECONDS = "timer_alarm_interval_seconds"
 CONF_TIMER_ALARM_ITEMS = "timer_alarm_items"
+CONF_TIMER_ALARM_DEVICE_IDS = "timer_alarm_device_ids"
 
 ATTR_SCENARIO_ID = "id"
 ATTR_SCENARIO_NAME = "name"

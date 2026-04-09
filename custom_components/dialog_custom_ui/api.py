@@ -20,6 +20,7 @@ from .const import (
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
     CONF_TIMEOUT,
+    CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
@@ -54,6 +55,9 @@ async def _ws_get_config(
             "client_id": entry.options.get(CONF_CLIENT_ID, ""),
             "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
             "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
+            "timer_alarm_device_ids": _normalize_device_ids(
+                entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
+            ),
             "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
         },
     )
@@ -76,6 +80,7 @@ async def _ws_get_logs(
         vol.Required(CONF_CLIENT_ID): str,
         vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
         vol.Required(CONF_TIMEOUT): vol.Any(int, float),
+        vol.Optional(CONF_TIMER_ALARM_DEVICE_IDS, default=[]): [str],
         vol.Required(CONF_SCENARIOS): [
             {
                 vol.Required(ATTR_SCENARIO_ID): str,
@@ -111,6 +116,11 @@ async def _ws_save_config(
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
         CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
         CONF_TIMEOUT: max(1, int(msg[CONF_TIMEOUT])),
+        CONF_TIMER_ALARM_DEVICE_IDS: [
+            device_id.strip()
+            for device_id in msg[CONF_TIMER_ALARM_DEVICE_IDS]
+            if device_id.strip()
+        ],
         CONF_SCENARIOS: scenarios,
     }
 
@@ -141,6 +151,14 @@ def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
         scenario["conditions"] = conditions
 
     return scenario
+
+
+def _normalize_device_ids(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    return [device_id.strip() for device_id in value if device_id.strip()]
 
 
 def _normalize_condition(item: dict[str, Any]) -> dict[str, str] | None:

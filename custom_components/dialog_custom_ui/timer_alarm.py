@@ -24,6 +24,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_TIMEOUT,
+    CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_BASE_URL,
     CONF_TIMER_ALARM_CLIENT_ID,
     CONF_TIMER_ALARM_ITEMS,
@@ -39,7 +40,6 @@ _LOGGER = logging.getLogger(__name__)
 _TIMER_ALARM_PATH = "/api/timer-alarm/info"
 _TIMER_ALARM_ADD_PATH = "/api/timer-alarm/add"
 _TIMER_ALARM_DELETE_PATH = "/api/timer-alarm/delete"
-_REQUEST_TIMEOUT_SECONDS = 10
 _COORDINATOR_SUFFIX = ":timer_alarm"
 _DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
 _DEFAULT_TIMER_MEDIA_CONTENT_TYPE = "music"
@@ -99,6 +99,7 @@ class TimerAlarmCoordinator:
         options = _get_options(self.entry)
         base_url = options[CONF_BASE_URL].rstrip("/")
         client_id = options[CONF_CLIENT_ID].strip()
+        device_ids = _normalize_device_ids(options[CONF_TIMER_ALARM_DEVICE_IDS])
 
         if not client_id:
             saved_items = [
@@ -117,7 +118,10 @@ class TimerAlarmCoordinator:
             return
 
         url = f"{base_url}{_TIMER_ALARM_PATH}"
-        self._append_log("request", f"POST {url} clientId={client_id}")
+        self._append_log(
+            "request",
+            f"POST {url} clientId={client_id} deviceIds={device_ids or []}",
+        )
         headers = _timer_alarm_headers(options[CONF_TIMER_ALARM_TOKEN])
 
         request_timeout = max(1, int(options[CONF_TIMEOUT]))
@@ -126,7 +130,7 @@ class TimerAlarmCoordinator:
             async with async_timeout.timeout(request_timeout):
                 response = await self._session.post(
                     url,
-                    json={"clientId": client_id},
+                    json={"clientId": client_id, "device_id": device_ids},
                     headers=headers,
                 )
         except (aiohttp.ClientError, TimeoutError) as err:
@@ -478,6 +482,7 @@ async def _ws_get_timer_alarm_config(
             "base_url": options[CONF_BASE_URL],
             "client_id": options[CONF_CLIENT_ID],
             "interval": options[CONF_TIMEOUT],
+            "device_ids": options[CONF_TIMER_ALARM_DEVICE_IDS],
             "items": state.get("items", list(options[CONF_TIMER_ALARM_ITEMS])),
             "active_items": state.get("active_items", []),
             "last_updated": state.get("last_updated"),
@@ -536,6 +541,9 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
         CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, stored.get(CONF_TIMER_ALARM_CLIENT_ID, "")),
         CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
+        CONF_TIMER_ALARM_DEVICE_IDS: _normalize_device_ids(
+            stored.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
+        ),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
     }
 
@@ -651,6 +659,14 @@ def _normalize_value(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _normalize_device_ids(values: Any) -> list[str]:
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, Iterable):
+        return []
+    return [device_id for device_id in (_normalize_value(value) for value in values) if device_id]
 
 
 def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:

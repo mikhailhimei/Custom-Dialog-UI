@@ -2,6 +2,7 @@
   base_url: 'http://127.0.0.1:8000',
   client_id: '',
   timer_alarm_token: '',
+  timer_alarm_device_ids: [''],
   timeout: 10,
   scenarios: [],
 };
@@ -80,6 +81,7 @@ class DialogCustomUiPanel extends HTMLElement {
     this._timerAlarmLoaded = false;
     this._timerAlarmLoading = false;
     this._timerAlarmLoadPromise = null;
+    this._deviceAccordionOpen = true;
   }
 
   set hass(hass) {
@@ -144,6 +146,9 @@ class DialogCustomUiPanel extends HTMLElement {
       this._config = {
         ...DEFAULT_CONFIG,
         ...result,
+        timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(
+          result.timer_alarm_device_ids ?? []
+        ),
         scenarios: Array.isArray(result.scenarios)
           ? result.scenarios.map((scenario) => this._normalizeScenarioForUi(scenario))
           : [],
@@ -227,10 +232,32 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _renderSettings() {
+    const deviceIds = this._normalizeTimerAlarmDeviceIdsForUi(this._config.timer_alarm_device_ids);
+    const isDeviceAccordionOpen = this._deviceAccordionOpen;
+    const deviceRows = deviceIds.map((deviceId, index) => `
+      <div class="device-row">
+        <label class="field-grow">
+          <span>device_id ${index + 1}</span>
+          <input
+            data-timer-device-index="${index}"
+            value="${escapeHtml(deviceId)}"
+            placeholder="media_player.living_room"
+          />
+        </label>
+        <button
+          type="button"
+          class="ghost device-remove-button"
+          data-action="remove-device-id"
+          data-timer-device-index="${index}"
+          ${deviceIds.length === 1 ? 'disabled' : ''}
+        >Удалить</button>
+      </div>
+    `).join('');
+
     return `
       <section class="hero-card">
         <h1>Settings</h1>
-        <p>Общие параметры подключения для сценариев и timer/alarm: IP, client_id, token и timeout.</p>
+        <p>Общие параметры подключения для сценариев и timer/alarm: IP, client_id, token, timeout и список device_id.</p>
         <div class="config-grid">
           <label>
             <span>Base URL</span>
@@ -252,6 +279,19 @@ class DialogCustomUiPanel extends HTMLElement {
           <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(this._config.timeout)}" />
         </label>
         </div>
+        <section class="settings-accordion">
+          <button type="button" class="settings-accordion-header" data-action="toggle-device-accordion">
+            <span>Device</span>
+            <span class="settings-accordion-icon">${isDeviceAccordionOpen ? '−' : '+'}</span>
+          </button>
+          <div class="settings-accordion-body ${isDeviceAccordionOpen ? 'open' : 'hidden'}">
+            <p class="settings-accordion-note">Добавьте один или несколько <code>device_id</code>. В запрос на timer/alarm они уйдут массивом.</p>
+            <div class="device-list">
+              ${deviceRows}
+            </div>
+            <button type="button" class="secondary add-inline-button" data-action="add-device-id">+ Добавить device_id</button>
+          </div>
+        </section>
         <div class="toolbar">
           <button type="button" class="primary" data-action="save" ${this._saving ? 'disabled' : ''}>${this._saving ? 'Сохранение...' : 'Сохранить'}</button>
         </div>
@@ -286,6 +326,64 @@ class DialogCustomUiPanel extends HTMLElement {
     if (rerender) {
       this._render();
     }
+  }
+
+  _normalizeTimerAlarmDeviceIdsForUi(deviceIds) {
+    const source = Array.isArray(deviceIds)
+      ? deviceIds
+      : typeof deviceIds === 'string'
+        ? [deviceIds]
+        : [];
+    const values = source.map((deviceId) => String(deviceId ?? '').trim());
+    return values.length ? values : [''];
+  }
+
+  _timerAlarmDeviceIdsForSave() {
+    return this._normalizeTimerAlarmDeviceIdsForUi(this._config.timer_alarm_device_ids)
+      .filter((deviceId) => deviceId);
+  }
+
+  _toggleDeviceAccordion() {
+    this._deviceAccordionOpen = !this._deviceAccordionOpen;
+    this._render();
+  }
+
+  _addTimerAlarmDeviceId() {
+    const deviceIds = Array.isArray(this._config.timer_alarm_device_ids)
+      ? [...this._config.timer_alarm_device_ids]
+      : [];
+    deviceIds.push('');
+    this._config = { ...this._config, timer_alarm_device_ids: deviceIds };
+    this._status = '';
+    this._error = '';
+    this._render();
+  }
+
+  _updateTimerAlarmDeviceId(index, value) {
+    const deviceIds = Array.isArray(this._config.timer_alarm_device_ids)
+      ? [...this._config.timer_alarm_device_ids]
+      : [''];
+    deviceIds[index] = value;
+    this._config = {
+      ...this._config,
+      timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(deviceIds),
+    };
+    this._status = '';
+    this._error = '';
+  }
+
+  _removeTimerAlarmDeviceId(index) {
+    const deviceIds = Array.isArray(this._config.timer_alarm_device_ids)
+      ? [...this._config.timer_alarm_device_ids]
+      : [''];
+    const nextDeviceIds = deviceIds.filter((_, currentIndex) => currentIndex !== index);
+    this._config = {
+      ...this._config,
+      timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(nextDeviceIds),
+    };
+    this._status = '';
+    this._error = '';
+    this._render();
   }
 
   _updateScenario(id, field, value, rerender = false) {
@@ -636,6 +734,7 @@ class DialogCustomUiPanel extends HTMLElement {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
       timer_alarm_token: this._config.timer_alarm_token,
+      timer_alarm_device_ids: this._timerAlarmDeviceIdsForSave(),
       timeout: Number(this._config.timeout) || 10,
       scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
     };
@@ -672,6 +771,9 @@ class DialogCustomUiPanel extends HTMLElement {
         ...DEFAULT_CONFIG,
         ...parsed,
         timeout: Number(parsed.timeout) || 10,
+        timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(
+          parsed.timer_alarm_device_ids ?? []
+        ),
         scenarios: scenarios.map((scenario) => this._normalizeScenarioForUi(scenario)),
       };
       this._expandedScenarios = new Set(this._config.scenarios.map((scenario) => scenario.id));
@@ -712,6 +814,9 @@ class DialogCustomUiPanel extends HTMLElement {
       });
       this._config = {
         ...this._config,
+        timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(
+          payload.timer_alarm_device_ids
+        ),
         scenarios: serializedScenarios.map((scenario) => this._normalizeScenarioForUi(scenario)),
       };
       this._status = 'Настройки сохранены.';
@@ -743,6 +848,8 @@ class DialogCustomUiPanel extends HTMLElement {
       const [file] = event.currentTarget.files || [];
       this._importJsonFile(file);
     });
+    root.querySelector('[data-action="toggle-device-accordion"]')?.addEventListener('click', () => this._toggleDeviceAccordion());
+    root.querySelector('[data-action="add-device-id"]')?.addEventListener('click', () => this._addTimerAlarmDeviceId());
     root.querySelectorAll('[data-action="add-condition"]').forEach((element) => {
       element.addEventListener('click', () => this._addCondition(element.dataset.scenarioId));
     });
@@ -791,6 +898,20 @@ class DialogCustomUiPanel extends HTMLElement {
       element.addEventListener('change', (event) => {
         this._updateConfigField(event.currentTarget.dataset.configField, event.currentTarget.value, false);
       });
+    });
+
+    root.querySelectorAll('[data-timer-device-index]').forEach((element) => {
+      const index = Number(element.dataset.timerDeviceIndex);
+      element.addEventListener('input', (event) => {
+        this._updateTimerAlarmDeviceId(index, event.currentTarget.value);
+      });
+      element.addEventListener('change', (event) => {
+        this._updateTimerAlarmDeviceId(index, event.currentTarget.value);
+        this._render();
+      });
+    });
+    root.querySelectorAll('[data-action="remove-device-id"]').forEach((element) => {
+      element.addEventListener('click', () => this._removeTimerAlarmDeviceId(Number(element.dataset.timerDeviceIndex)));
     });
 
     root.querySelectorAll('[data-scenario-id][data-scenario-field]').forEach((element) => {
@@ -1076,7 +1197,6 @@ class DialogCustomUiPanel extends HTMLElement {
       return `
         <section class="hero-card">
           <h1>Timer / Alarm</h1>
-          <p>Загружаем отдельный модуль с двумя вкладками: будильник и таймер.</p>
           <div class="status ok">Модуль timer/alarm загружается...</div>
         </section>
       `;
@@ -1085,7 +1205,6 @@ class DialogCustomUiPanel extends HTMLElement {
     return `
       <section class="hero-card">
         <h1>Timer / Alarm</h1>
-        <p>Вкладки таймера и будильника вынесены в отдельный модуль, чтобы основной файл не разрастался.</p>
       </section>
       <dialog-custom-ui-timer-alarm></dialog-custom-ui-timer-alarm>
     `;
@@ -1223,6 +1342,9 @@ class DialogCustomUiPanel extends HTMLElement {
         .field-narrow {
           max-width: 220px;
         }
+        .field-grow {
+          flex: 1 1 auto;
+        }
         .field-placeholder {
           display: grid;
           gap: 8px;
@@ -1234,6 +1356,65 @@ class DialogCustomUiPanel extends HTMLElement {
           gap: 8px;
           min-width: 0;
           align-content: start;
+        }
+        .settings-accordion {
+          margin-top: 20px;
+          padding: 16px;
+          border: 1px solid var(--border);
+          border-radius: 18px;
+          background: rgba(255, 255, 255, 0.72);
+          display: grid;
+          gap: 14px;
+        }
+        .settings-accordion-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 0;
+          border: none;
+          background: transparent;
+          color: inherit;
+          text-align: left;
+          font: inherit;
+          cursor: pointer;
+        }
+        .settings-accordion-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 28px;
+          height: 28px;
+          border-radius: 999px;
+          background: rgba(35, 79, 125, 0.08);
+          color: var(--accent-2);
+          font-size: 18px;
+          line-height: 1;
+          flex: 0 0 auto;
+        }
+        .settings-accordion-body {
+          display: grid;
+          gap: 14px;
+        }
+        .settings-accordion-body.hidden {
+          display: none;
+        }
+        .settings-accordion-note {
+          margin: 0;
+          color: var(--muted);
+        }
+        .device-list {
+          display: grid;
+          gap: 10px;
+        }
+        .device-row {
+          display: flex;
+          gap: 10px;
+          align-items: end;
+        }
+        .device-remove-button {
+          flex: 0 0 auto;
+          align-self: end;
         }
         .conditions-block {
           display: grid;
@@ -1557,6 +1738,10 @@ class DialogCustomUiPanel extends HTMLElement {
           }
           .field-narrow {
             max-width: none;
+          }
+          .device-row {
+            flex-direction: column;
+            align-items: stretch;
           }
         }
         @media (max-width: 800px) {
