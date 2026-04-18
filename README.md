@@ -17,6 +17,57 @@
 4. Найти `Dialog Custom UI` и добавить интеграцию.
 5. После этого в боковом меню появится вкладка `Dialog`.
 
+## Frontend (React): dev/prod
+
+JS панели переведен на React-рендер с бандлингом через `esbuild`.
+Исходники лежат в `frontend/src`, а Home Assistant по-прежнему загружает файлы из `custom_components/dialog_custom_ui/static`.
+
+1. Установить зависимости:
+
+```bash
+npm install
+```
+
+2. Локальный dev-сервер (как обычный React localhost):
+
+```bash
+npm run dev
+```
+
+Откройте в браузере:
+
+```text
+http://127.0.0.1:5173
+```
+
+Для локальной разработки конкретной вкладки можно передать `tab` в query:
+
+```text
+http://127.0.0.1:5173/?tab=scenarios
+```
+
+Для вкладки создания сценариев:
+
+```text
+http://127.0.0.1:5173/?tab=create-scenario
+```
+
+Поддерживаемые значения: `scenarios`, `create-scenario`, `timer-alarm`, `json`, `logs`, `settings`.
+Также работают короткие алиасы: `create`, `timer`, `alarm`, `log`, `setting`.
+Если `tab` не указан, dev-стенд открывает `scenarios` по умолчанию.
+
+3. Dev для Home Assistant (watch-сборка в `custom_components/.../static`):
+
+```bash
+npm run dev:ha
+```
+
+4. Прод-сборка (минификация):
+
+```bash
+npm run build
+```
+
 ## Как работает опрос
 
 Интеграция делает POST-запрос раз в 1 секунду на:
@@ -79,3 +130,28 @@ curl -X POST http://localhost:8000/api/dialog/command-check \
 - `dialog_value`
 - `dialog_client_id`
 - `dialog_device_id`
+
+
+# 1) Проверить текущее состояние
+git status
+
+# 2) Поднять версию интеграции (пример: 0.3.2 -> 0.3.3)
+# открой custom_components/dialog_custom_ui/manifest.json и поменяй "version"
+
+# 3) Прод-сборка фронта
+npm ci
+npm run build
+
+# 4) Проверка что собралось
+git status
+git diff -- custom_components/dialog_custom_ui/static/dialog-custom-ui-panel.js
+git diff -- custom_components/dialog_custom_ui/static/dialog-custom-ui-timer-alarm.js
+
+# 5) Коммит релиза
+git add custom_components/dialog_custom_ui/manifest.json README.md package.json package-lock.json frontend custom_components/dialog_custom_ui/static
+git commit -m "release: prepare v0.3.3 (react ui + localhost dev + scenario tab)"
+
+# 6) Тег и пуш
+git tag v0.3.3
+git push origin HEAD
+git push origin v0.3.3

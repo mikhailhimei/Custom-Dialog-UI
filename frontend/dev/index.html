@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dialog Custom UI - Local Dev</title>
+    <style>
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: #f2f4f8;
+        font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      }
+      .shell {
+        display: grid;
+        gap: 14px;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 14px;
+      }
+      .hint {
+        background: #fff;
+        border: 1px solid #d8deea;
+        border-radius: 12px;
+        padding: 10px 12px;
+        color: #2c374a;
+      }
+      #app {
+        min-height: calc(100vh - 90px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="hint">
+        Локальный dev-стенд панели. Для API укажи Base URL во вкладке Settings.
+      </div>
+      <div id="app"></div>
+    </div>
+    <script type="module" src="./main.jsx"></script>
+  </body>
+</html>
+
