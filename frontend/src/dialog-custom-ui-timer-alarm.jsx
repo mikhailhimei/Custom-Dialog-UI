@@ -538,7 +538,8 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
       });
       this._status = 'Timer/alarm настройки сохранены.';
       this._dirty = false;
-      await this._loadStateOnly();
+      const refreshed = await this._hass.callWS({ type: GET_WS });
+      this._applyLoadedState(refreshed, true);
     } catch (err) {
       this._error = err?.message || 'Не удалось сохранить timer/alarm.';
     } finally {
