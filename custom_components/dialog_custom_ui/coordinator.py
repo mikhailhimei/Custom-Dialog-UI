@@ -89,7 +89,10 @@ class DialogCommandCoordinator:
                 response = await self._session.post(
                     url,
                     json={"clientId": client_id},
-                    headers={"Accept": "application/json"},
+                    headers={
+                        "Accept": "application/json",
+                        "Authorization": "Bearer erqwlkrqelkjqweklqwjeqwlejkqw"
+                        },
                 )
         except (aiohttp.ClientError, TimeoutError) as err:
             self._append_log("error", f"Запрос не выполнен: {err}")
