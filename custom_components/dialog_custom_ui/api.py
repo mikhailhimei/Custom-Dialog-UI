@@ -163,7 +163,9 @@ def _normalize_device_ids(value: Any) -> list[str]:
 
 def _normalize_condition(item: dict[str, Any]) -> dict[str, str] | None:
     parent_type = item.get(ATTR_PARENT_TYPE, "").strip()
-    children_type = item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).strip()
+    children_type = item.get(
+        ATTR_CHILDREN_TYPE, item.get("actionType", item.get("type", ""))
+    ).strip()
     children_direct_type = item.get(ATTR_CHILDREN_DIRECT_TYPE, "").strip()
 
     if not parent_type and not children_type and not children_direct_type:
@@ -184,7 +186,9 @@ def _normalize_legacy_conditions(item: dict[str, Any]) -> list[dict[str, str]]:
     parent_values = [part.strip() for part in item.get(ATTR_PARENT_TYPE, "").split(";")]
     children_values = [
         part.strip()
-        for part in item.get(ATTR_CHILDREN_TYPE, item.get("type", "")).split(";")
+        for part in item.get(
+            ATTR_CHILDREN_TYPE, item.get("actionType", item.get("type", ""))
+        ).split(";")
     ]
     direct_values = [
         part.strip()

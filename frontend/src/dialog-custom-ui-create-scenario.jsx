@@ -6,24 +6,43 @@ import {
   DEFAULT_COMMAND_CONFIGS,
   DEFAULT_COMMANDS_API_PATH,
   DIRECT_SUBTABS,
-  DIRECT_TYPE_DATA_OPTIONS,
   TABS,
-  TYPE_COMPONENT_OPTIONS,
 } from './create-scenario/constants.jsx';
-import { CREATE_SCENARIO_STYLES } from './create-scenario/styles.jsx';
 import {
+  buildCommandPayloadFromDraft,
+  buildDefaultsPayloadFromDraft,
+  buildDirectPayloadFromDraft,
+  buildTemplatePayloadFromDraft,
+  createCommandDraft,
   createDirectControlItem,
+  createDefaultsDraft,
+  createDefaultsState,
+  createDirectCommandDraft,
   createDirectSubControlItem,
   createNextActionItem,
+  createTemplateCommandDraft,
   createVoiceResponseItem,
   createUuid,
-  escapeHtml,
+  getDefaultCommandConfig,
 } from './create-scenario/utils.jsx';
-
+import {
+  renderActiveTabBody,
+  renderCommandsTab,
+  renderDirectBasicSection,
+  renderDirectCommandsTab,
+  renderDirectTemplatesSection,
+  renderDefaultsTab,
+  renderPrimaryCommandsPage,
+  renderSecondaryCommandsPage,
+  renderStub,
+} from './create-scenario/tabs/render-tabs.jsx';
+import { bindEvents } from './create-scenario/events/bind-events.jsx';
+import { renderDefaultsModal, renderDirectModal, renderItemActionsModal, renderTemplateModal } from './create-scenario/modals/render-secondary-modals.jsx';
+import { renderMainModal } from './create-scenario/modals/render-main-modal.jsx';
+import { renderRoot } from './create-scenario/render/render-root.jsx';
 const ShadowMarkup = ({ html }) => (
   <div dangerouslySetInnerHTML={{ __html: html }} />
 );
-
 class DialogCustomUiCreateScenario extends HTMLElement {
   constructor() {
     super();
@@ -31,7 +50,6 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._reactRoot = null;
     this._hass = null;
     this._config = { base_url: '', timer_alarm_token: '' };
-
     // Add global style for modal backdrop
     if (typeof document !== 'undefined') {
       let modalStyle = document.getElementById('dialog-custom-ui-modal-style');
@@ -42,7 +60,6 @@ class DialogCustomUiCreateScenario extends HTMLElement {
         document.head.appendChild(modalStyle);
       }
     }
-
     this._tab = TABS.primary;
     this._commands = [];
     this._pageByTab = {
@@ -70,6 +87,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._modalMode = 'create';
     this._modalSaving = false;
     this._editingId = '';
+    this._editingStatus = false;
     this._openResponseItemIds = new Set();
     this._openDirectControlItemIds = new Set();
     this._openNextActionItemIds = new Set();
@@ -93,6 +111,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._directModalMode = 'create';
     this._directModalSaving = false;
     this._directEditingId = '';
+    this._directEditingStatus = false;
     this._openDirectSubControlItemIds = new Set();
     this._directDraft = this._newDirectDraft();
 
@@ -114,6 +133,13 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._defaultsByType = this._newDefaultsState();
     this._defaultsActiveType = DEFAULT_COMMAND_CONFIGS[0].type;
     this._defaultsActiveId = '';
+    this._itemActionsModalOpen = false;
+    this._itemActionsSaving = false;
+    this._itemActionsId = '';
+    this._itemActionsKind = '';
+    this._itemActionsCollection = '';
+    this._itemActionsStatus = false;
+    this._itemActionsTitle = '';
     this._modalCount = 0;
   }
 
@@ -192,7 +218,6 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       newModal.scrollTop = this._modalScrollTop;
     }
   }
-
   _addModalBackdrop() {
     this._modalCount++;
     if (this._modalCount === 1 && typeof document !== 'undefined' && document.body) {
@@ -208,108 +233,27 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _newDraft(source = null) {
-    const item = source ?? {};
-    const componentDialog = typeof item.componentDialog === 'object' && item.componentDialog
-      ? item.componentDialog
-      : {};
-    const responseItems = Array.isArray(componentDialog.voiceResponseArray)
-      ? componentDialog.voiceResponseArray
-        .filter((entry) => entry && typeof entry === 'object')
-        .map((entry) => createVoiceResponseItem(entry))
-      : [];
-    const directControlItems = Array.isArray(componentDialog.nextDirectControl)
-      ? componentDialog.nextDirectControl
-        .filter((entry) => entry && typeof entry === 'object')
-        .map((entry) => createDirectControlItem(entry))
-      : [];
-    const nextActionItems = Array.isArray(componentDialog.nextAction)
-      ? componentDialog.nextAction
-        .filter((entry) => entry && typeof entry === 'object')
-        .map((entry) => createNextActionItem(entry))
-      : [];
-
-    return {
-      title: String(item.title ?? ''),
-      uuidDialog: String(item.uuidDialog ?? ''),
-      type: String(componentDialog.type ?? ''),
-      endStatus: Boolean(componentDialog.endStatus),
-      forwardText: Boolean(componentDialog.forwardText),
-      answerType: String(componentDialog.answerType ?? 'default'),
-      voiceCommands: Array.isArray(componentDialog.voiceCommands)
-        ? componentDialog.voiceCommands.join('; ')
-        : String(componentDialog.voiceCommands ?? ''),
-      responseItems,
-      directControlItems,
-      nextActionItems,
-    };
+    return createCommandDraft(source);
   }
 
   _newDirectDraft(source = null) {
-    const item = source ?? {};
-    const directControl = typeof item.directControl === 'object' && item.directControl
-      ? item.directControl
-      : {};
-    const subDirectControlItems = Array.isArray(directControl.subDirectControl)
-      ? directControl.subDirectControl
-        .filter((entry) => entry && typeof entry === 'object')
-        .map((entry) => createDirectSubControlItem(entry))
-      : [];
-
-    return {
-      title: String(item.title ?? ''),
-      uuidDirect: String(item.uuidDirect ?? ''),
-      type: String(directControl.type ?? ''),
-      typeData: DIRECT_TYPE_DATA_OPTIONS.includes(String(directControl.typeData ?? 'all'))
-        ? String(directControl.typeData ?? 'all')
-        : 'all',
-      voiceCommands: Array.isArray(directControl.voiceCommands)
-        ? directControl.voiceCommands.join('; ')
-        : String(directControl.voiceCommands ?? ''),
-      manual: Boolean(directControl.manual),
-      subDirectControlItems,
-      subDirectControlArray: String(directControl.subDirectControlArray ?? ''),
-    };
+    return createDirectCommandDraft(source);
   }
 
   _newTemplateDraft(source = null) {
-    const item = source ?? {};
-    const subDirectControlItems = Array.isArray(item.subDirectControl)
-      ? item.subDirectControl
-        .filter((entry) => entry && typeof entry === 'object')
-        .map((entry) => createDirectSubControlItem(entry))
-      : [];
-
-    return {
-      title: String(item.title ?? ''),
-      uuid: String(item.uuid ?? ''),
-      subDirectControlItems,
-    };
+    return createTemplateCommandDraft(source);
   }
 
   _defaultConfig(type) {
-    return DEFAULT_COMMAND_CONFIGS.find((item) => item.type === type) ?? DEFAULT_COMMAND_CONFIGS[0];
+    return getDefaultCommandConfig(type);
   }
 
   _newDefaultsDraft(type, source = null) {
-    const item = source ?? {};
-    const config = this._defaultConfig(type);
-    return {
-      _id: String(item._id ?? ''),
-      type: config.type,
-      title: String(item.title ?? config.title),
-      endStatus: Boolean(item.endStatus),
-      llmEnabled: config.supportsLlm ? Boolean(item.llmEnabled ?? item.llm) : false,
-      message: String(item.message ?? ''),
-      system: config.supportsLlm ? String(item.system ?? '') : '',
-      model: config.supportsLlm ? String(item.model ?? '') : '',
-    };
+    return createDefaultsDraft(type, source);
   }
 
   _newDefaultsState() {
-    return DEFAULT_COMMAND_CONFIGS.reduce((acc, config) => {
-      acc[config.type] = this._newDefaultsDraft(config.type);
-      return acc;
-    }, {});
+    return createDefaultsState();
   }
 
   _apiHeaders(withJson = false) {
@@ -475,6 +419,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._modalOpen = true;
     this._modalMode = 'edit';
     this._editingId = String(item._id ?? '');
+    this._editingStatus = Boolean(item.status);
     this._draft = this._newDraft(item);
     this._openResponseItemIds = new Set();
     this._openDirectControlItemIds = new Set();
@@ -493,6 +438,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._modalOpen = false;
     this._modalMode = 'create';
     this._editingId = '';
+    this._editingStatus = false;
     this._openResponseItemIds = new Set();
     this._openDirectControlItemIds = new Set();
     this._openNextActionItemIds = new Set();
@@ -508,67 +454,17 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _buildPayload() {
-    const title = String(this._draft.title ?? '').trim();
-    const uuidDialog = String(this._draft.uuidDialog ?? '').trim();
-    const type = String(this._draft.type ?? '').trim();
-    const answerTypeRaw = String(this._draft.answerType ?? 'default').trim().toLowerCase();
-    const answerType = answerTypeRaw === 'redis' ? 'redis' : 'default';
-
-    if (!title) {
-      throw new Error('Title - обязательное поле.');
+    const payload = buildCommandPayloadFromDraft(this._draft);
+    if (this._tab === TABS.secondary) {
+      delete payload.componentDialog;
+      return payload;
     }
-    if (!uuidDialog) {
-      throw new Error('uuidDialog - обязательное поле.');
-    }
-    if (!type) {
-      throw new Error('type - обязательное поле.');
-    }
-
-    const responseItems = Array.isArray(this._draft.responseItems) ? this._draft.responseItems : [];
-    const voiceResponseArray = responseItems.map((item) => {
-      const normalized = {
-        type: String(item.type ?? '').trim(),
-        voiceResponse: String(item.voiceResponse ?? '').trim(),
-      };
-      if (item.llmEnabled) {
-        normalized.llm = true;
-        normalized.system = String(item.system ?? '').trim();
-        normalized.model = String(item.model ?? '').trim();
-      }
-      return normalized;
-    });
-    const nextDirectControl = (Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [])
-      .map((item) => ({
-        uuid: String(item.uuid ?? '').trim(),
-      }))
-      .filter((item) => item.uuid);
-    const nextAction = (Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : [])
-      .map((item) => ({
-        typeComponent: TYPE_COMPONENT_OPTIONS.includes(String(item.typeComponent ?? '').trim())
-          ? String(item.typeComponent ?? '').trim()
-          : 'children',
-        uuid: String(item.uuid ?? '').trim(),
-      }))
-      .filter((item) => item.uuid);
-
-    return {
-      title,
-      uuidDialog,
-      componentDialog: {
-        endStatus: Boolean(this._draft.endStatus),
-        type,
-        forwardText: Boolean(this._draft.forwardText),
-        answerType,
-        voiceCommands: String(this._draft.voiceCommands ?? '').split(';').map(s => s.trim()).filter(s => s),
-        nextDirectControl,
-        voiceResponseArray,
-        nextAction,
-      },
-    };
+    delete payload.subComponentDialog;
+    return payload;
   }
 
   _refreshUuid() {
-    this._updateDraft('uuidDialog', createUuid());
+    this._updateDraft('uuid', createUuid());
     this._render();
   }
 
@@ -850,6 +746,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._directModalOpen = true;
     this._directModalMode = 'edit';
     this._directEditingId = String(item._id ?? '');
+    this._directEditingStatus = Boolean(item.status);
     this._directDraft = this._newDirectDraft(item);
     this._openDirectSubControlItemIds = new Set();
     this._directError = '';
@@ -865,6 +762,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._directModalOpen = false;
     this._directModalMode = 'create';
     this._directEditingId = '';
+    this._directEditingStatus = false;
     this._openDirectSubControlItemIds = new Set();
     this._directDraft = this._newDirectDraft();
     this._searchResults = [];
@@ -883,7 +781,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   async _hydrateSelectedSubDirectControlSample() {
     const isCommandType = this._directDraft.typeData === 'command';
     const isManual = Boolean(this._directDraft.manual);
-    const selectedUuid = String(this._directDraft.subDirectControlArray ?? '').trim();
+    const selectedUuid = String(this._directDraft.subDirectControl ?? '').trim();
     if (!isCommandType || isManual || !selectedUuid) {
       return;
     }
@@ -902,7 +800,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _refreshDirectUuid() {
-    this._updateDirectDraft('uuidDirect', createUuid());
+    this._updateDirectDraft('uuid', createUuid());
     this._render();
   }
 
@@ -954,59 +852,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _buildDirectPayload() {
-    const title = String(this._directDraft.title ?? '').trim();
-    const uuidDirect = String(this._directDraft.uuidDirect ?? '').trim();
-    const type = String(this._directDraft.type ?? '').trim();
-    const typeData = DIRECT_TYPE_DATA_OPTIONS.includes(String(this._directDraft.typeData ?? 'all'))
-      ? String(this._directDraft.typeData ?? 'all')
-      : 'all';
-    const manual = Boolean(this._directDraft.manual);
-
-    if (!title) {
-      throw new Error('Title - обязательное поле.');
-    }
-    if (!uuidDirect) {
-      throw new Error('uuidDirect - обязательное поле.');
-    }
-    if (!type) {
-      throw new Error('type - обязательное поле.');
-    }
-
-    const payload = {
-      title,
-      uuidDirect,
-      directControl: {
-        type,
-        typeData,
-      },
-    };
-
-    if (typeData === 'command') {
-      const voiceCommandsRaw = String(this._directDraft.voiceCommands ?? '').trim();
-      payload.directControl.voiceCommands = voiceCommandsRaw ? voiceCommandsRaw.split(';').map(s => s.trim()).filter(s => s) : null;
-      payload.directControl.manual = manual;
-      if (manual) {
-        payload.directControl.subDirectControl = (Array.isArray(this._directDraft.subDirectControlItems)
-          ? this._directDraft.subDirectControlItems
-          : []
-        )
-          .map((item, index) => {
-            const subType = String(item.subType ?? '').trim();
-            const subVoiceCommandsRaw = String(item.subVoiceCommands ?? '').trim();
-            return {
-              id: Number(item.id) || index + 1,
-              subType: subType || null,
-              title: null,
-              subVoiceCommands: subVoiceCommandsRaw || null,
-            };
-          })
-          .filter((item) => item.subType || item.subVoiceCommands);
-      } else {
-        payload.directControl.subDirectControlArray = String(this._directDraft.subDirectControlArray ?? '').trim();
-      }
-    }
-
-    return payload;
+    return buildDirectPayloadFromDraft(this._directDraft);
   }
 
   async _loadSubDirectControlSamples() {
@@ -1222,6 +1068,169 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     }
   }
 
+  _openItemActionsModal({ kind, id, title, collection, status }) {
+    if (!id) {
+      return;
+    }
+    this._addModalBackdrop();
+    this._itemActionsModalOpen = true;
+    this._itemActionsSaving = false;
+    this._itemActionsKind = String(kind ?? '');
+    this._itemActionsId = String(id ?? '');
+    this._itemActionsTitle = String(title ?? '').trim();
+    this._itemActionsCollection = String(collection ?? '');
+    this._itemActionsStatus = Boolean(status);
+    this._render();
+  }
+
+  _closeItemActionsModal() {
+    if (this._itemActionsSaving) {
+      return;
+    }
+    this._removeModalBackdrop();
+    this._itemActionsModalOpen = false;
+    this._itemActionsSaving = false;
+    this._itemActionsKind = '';
+    this._itemActionsId = '';
+    this._itemActionsTitle = '';
+    this._itemActionsCollection = '';
+    this._itemActionsStatus = false;
+    this._render();
+  }
+
+  async _updateCommandStatusById(commandId, collection, nextStatus) {
+    const item = this._commands.find((command) => String(command._id ?? '') === String(commandId ?? ''));
+    if (!item) {
+      throw new Error('Команда не найдена.');
+    }
+    const draft = this._newDraft(item);
+    const payload = buildCommandPayloadFromDraft(draft);
+    if (collection === 'sub-commands') {
+      delete payload.componentDialog;
+    } else {
+      delete payload.subComponentDialog;
+    }
+    payload.status = Boolean(nextStatus);
+    const url = this._apiUrl(`/api/cms/${encodeURIComponent(collection)}/${encodeURIComponent(commandId)}`);
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: this._apiHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error(`Ошибка изменения статуса: HTTP ${response.status}`);
+    }
+    this._commands = this._commands.map((command) => (
+      String(command._id ?? '') === String(commandId ?? '')
+        ? { ...command, status: Boolean(nextStatus) }
+        : command
+    ));
+    if (String(this._editingId ?? '') === String(commandId ?? '')) {
+      this._editingStatus = Boolean(nextStatus);
+    }
+  }
+
+  async _updateDirectStatusById(directId, nextStatus) {
+    const item = this._directCommands.find((command) => String(command._id ?? '') === String(directId ?? ''));
+    if (!item) {
+      throw new Error('Direct-команда не найдена.');
+    }
+    const draft = this._newDirectDraft(item);
+    const payload = {
+      ...buildDirectPayloadFromDraft(draft),
+      status: Boolean(nextStatus),
+    };
+    const url = this._apiUrl(`/api/cms/sub-direct-controls/${encodeURIComponent(directId)}`);
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: this._apiHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error(`Ошибка изменения статуса direct-команды: HTTP ${response.status}`);
+    }
+    this._directCommands = this._directCommands.map((command) => (
+      String(command._id ?? '') === String(directId ?? '')
+        ? { ...command, status: Boolean(nextStatus) }
+        : command
+    ));
+    if (String(this._directEditingId ?? '') === String(directId ?? '')) {
+      this._directEditingStatus = Boolean(nextStatus);
+    }
+  }
+
+  async _applyItemStatus() {
+    if (this._itemActionsSaving || !this._itemActionsId) {
+      return;
+    }
+    const nextStatus = !this._itemActionsStatus;
+    this._itemActionsSaving = true;
+    this._error = '';
+    this._directError = '';
+    this._render();
+    try {
+      if (this._itemActionsKind === 'command') {
+        await this._updateCommandStatusById(this._itemActionsId, this._itemActionsCollection || 'commands', nextStatus);
+      } else if (this._itemActionsKind === 'direct') {
+        await this._updateDirectStatusById(this._itemActionsId, nextStatus);
+      } else {
+        throw new Error('Неизвестный тип сценария.');
+      }
+      this._itemActionsStatus = nextStatus;
+      this._status = nextStatus ? 'Сценарий опубликован.' : 'Сценарий скрыт.';
+      this._closeItemActionsModal();
+    } catch (error) {
+      if (this._itemActionsKind === 'direct') {
+        this._directError = error?.message || 'Не удалось изменить статус direct-команды.';
+      } else {
+        this._error = error?.message || 'Не удалось изменить статус сценария.';
+      }
+      this._itemActionsSaving = false;
+      this._render();
+    }
+  }
+
+  async _toggleEditModalStatus() {
+    if (this._modalSaving || !this._editingId) {
+      return;
+    }
+    this._modalSaving = true;
+    this._error = '';
+    this._render();
+    try {
+      const nextStatus = !Boolean(this._editingStatus);
+      const collection = this._tab === TABS.secondary ? 'sub-commands' : 'commands';
+      await this._updateCommandStatusById(this._editingId, collection, nextStatus);
+      this._editingStatus = nextStatus;
+      this._status = nextStatus ? 'Сценарий опубликован.' : 'Сценарий скрыт.';
+    } catch (error) {
+      this._error = error?.message || 'Не удалось изменить статус сценария.';
+    } finally {
+      this._modalSaving = false;
+      this._render();
+    }
+  }
+
+  async _toggleDirectEditModalStatus() {
+    if (this._directModalSaving || !this._directEditingId) {
+      return;
+    }
+    this._directModalSaving = true;
+    this._directError = '';
+    this._render();
+    try {
+      const nextStatus = !Boolean(this._directEditingStatus);
+      await this._updateDirectStatusById(this._directEditingId, nextStatus);
+      this._directEditingStatus = nextStatus;
+      this._status = nextStatus ? 'Direct-команда опубликована.' : 'Direct-команда скрыта.';
+    } catch (error) {
+      this._directError = error?.message || 'Не удалось изменить статус direct-команды.';
+    } finally {
+      this._directModalSaving = false;
+      this._render();
+    }
+  }
+
   async _saveDirectModal() {
     const base = this._apiUrl('');
     if (!base) {
@@ -1283,9 +1292,11 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
       await this._loadDirectCommands();
       this._status = isEdit ? 'Direct-команда обновлена.' : 'Direct-команда создана.';
+      this._removeModalBackdrop();
       this._directModalOpen = false;
       this._directModalMode = 'create';
       this._directEditingId = '';
+      this._directEditingStatus = false;
       this._openDirectSubControlItemIds = new Set();
       this._directDraft = this._newDirectDraft();
     } catch (error) {
@@ -1314,6 +1325,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       this._directModalOpen = false;
       this._directModalMode = 'create';
       this._directEditingId = '';
+      this._directEditingStatus = false;
       this._openDirectSubControlItemIds = new Set();
       this._directDraft = this._newDirectDraft();
     } catch (error) {
@@ -1415,39 +1427,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _buildTemplatePayload() {
-    const title = String(this._templateDraft.title ?? '').trim();
-    if (!title) {
-      throw new Error('Title - обязательное поле.');
-    }
-
-    let uuid = String(this._templateDraft.uuid ?? '').trim();
-    if (!uuid) {
-      uuid = createUuid();
-    }
-
-    if (!uuid) {
-      throw new Error('uuid - обязательное поле.');
-    }
-
-    return {
-      title,
-      uuid,
-      subDirectControl: (Array.isArray(this._templateDraft.subDirectControlItems)
-        ? this._templateDraft.subDirectControlItems
-        : []
-      )
-        .map((item, index) => {
-          const subType = String(item.subType ?? '').trim();
-          const subVoiceCommandsRaw = String(item.subVoiceCommands ?? '').trim();
-          return {
-            id: Number(item.id) || index + 1,
-            subType: subType || null,
-            title: null,
-            subVoiceCommands: subVoiceCommandsRaw || null,
-          };
-        })
-        .filter((item) => item.subType || item.subVoiceCommands),
-    };
+    return buildTemplatePayloadFromDraft(this._templateDraft);
   }
 
   async _saveTemplateModal() {
@@ -1511,6 +1491,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
       await this._loadTemplateCommands();
       this._status = isEdit ? 'Шаблон обновлен.' : 'Шаблон создан.';
+      this._removeModalBackdrop();
       this._templateModalOpen = false;
       this._templateModalMode = 'create';
       this._templateEditingId = '';
@@ -1553,7 +1534,8 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _reloadDefaultsCommands() {
-    const url = this._apiUrl('/api/cms/search?type=default_search,default_main,not_understand,finish_miss&collections=settings-dialog');
+    const actionTypes = DEFAULT_COMMAND_CONFIGS.map((config) => config.type).join(',');
+    const url = this._apiUrl(`/api/cms/search?actionType=${encodeURIComponent(actionTypes)}&collections=settings-dialog`);
     if (!url) {
       this._defaultsError = 'Заполните Base URL во вкладке Settings.';
       this._render();
@@ -1579,8 +1561,8 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
         const resolveType = (item, index) => {
           const directType = String(
-            item?.type
-            ?? item?.componentDialog?.type
+            item?.actionType
+            ?? item?.componentDialog?.actionType
             ?? ''
           ).trim();
           if (directType && nextState[directType] && !usedTypes.has(directType)) {
@@ -1624,12 +1606,12 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _openDefaultsModal(type) {
-    this._addModalBackdrop();
     const config = this._defaultConfig(type);
     if (!config.hasModal) {
       this._saveDefaultsType(config.type, false);
       return;
     }
+    this._addModalBackdrop();
     this._defaultsActiveType = config.type;
     this._defaultsActiveId = String(this._defaultsByType[config.type]?._id ?? '');
     this._defaultsModalOpen = true;
@@ -1660,20 +1642,8 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
   _buildDefaultsPayload() {
     const type = this._defaultsActiveType;
-    const config = this._defaultConfig(type);
     const draft = this._defaultsByType[type] ?? this._newDefaultsDraft(type);
-    const payload = {
-      type,
-      title: config.title,
-      endStatus: Boolean(draft.endStatus),
-      message: String(draft.message ?? '').trim() || null,
-    };
-    if (config.supportsLlm) {
-      payload.llm = Boolean(draft.llmEnabled);
-      payload.system = payload.llm ? (String(draft.system ?? '').trim() || null) : null;
-      payload.model = payload.llm ? (String(draft.model ?? '').trim() || null) : null;
-    }
-    return payload;
+    return buildDefaultsPayloadFromDraft(type, draft);
   }
 
   async _saveDefaultsType(type, closeModal = false) {
@@ -1736,13 +1706,14 @@ class DialogCustomUiCreateScenario extends HTMLElement {
           ...current,
           ...payload,
           _id: nextId,
-          llmEnabled: payload.llm ?? current.llmEnabled,
+          llmEnabled: payload.LLM ?? payload.llm ?? current.llmEnabled,
         },
       };
       this._defaultsActiveId = nextId;
       await this._reloadDefaultsCommands();
       this._status = 'Дефолтная команда обновлена.';
       if (closeModal) {
+        this._removeModalBackdrop();
         this._defaultsModalOpen = false;
       }
     } catch (error) {
@@ -1796,9 +1767,11 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       }
 
       this._status = isEdit ? 'Сценарий обновлен.' : 'Сценарий создан.';
+      this._removeModalBackdrop();
       this._modalOpen = false;
       this._modalMode = 'create';
       this._editingId = '';
+      this._editingStatus = false;
       this._draft = this._newDraft();
       await this._loadPage(this._pageByTab[this._tab] || 1);
     } catch (error) {
@@ -1829,6 +1802,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       this._modalOpen = false;
       this._modalMode = 'create';
       this._editingId = '';
+      this._editingStatus = false;
       this._draft = this._newDraft();
     } catch (error) {
       this._error = error?.message || 'Не удалось удалить сценарий.';
@@ -1839,774 +1813,59 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _renderCommandsTab(tabKey) {
-    const isSecondaryTab = tabKey === TABS.secondary;
-    const activePage = this._pageByTab[tabKey] || 1;
-    const activeTotal = this._totalByTab[tabKey] || 0;
-    const activeTotalPages = this._totalPagesByTab[tabKey] || 1;
-    const tabTitle = isSecondaryTab ? 'Второстепенные команды' : 'Основные команды';
-    const queryHint = '/api/cms/commands?page=1&pageSize=20';
-    const totalPages = Math.max(1, activeTotalPages || Math.ceil((activeTotal || 1) / COMMANDS_PAGE_SIZE));
-    const paginationItems = this._buildPaginationItems(activePage, totalPages);
-    const listMarkup = this._loading
-      ? '<div class="empty">Загрузка команд...</div>'
-      : this._commands.length
-        ? this._commands.map((item) => `
-            <button type="button" class="command-item" data-action="edit" data-command-id="${escapeHtml(item._id)}">
-              <span class="command-item-title">${escapeHtml(item.title || 'Без названия')}</span>
-              <span class="command-item-meta">
-                <span>${escapeHtml(item.componentDialog?.type || 'type: -')}</span>
-                <span>${escapeHtml(item.uuidDialog || 'uuid: -')}</span>
-              </span>
-            </button>
-          `).join('')
-        : '<div class="empty">Команд пока нет.</div>';
-
-    return `
-      <section class="hero-card">
-        <h2>${tabTitle}</h2>
-        <p>Запрос: <code>${queryHint}</code></p>
-        <div class="toolbar">
-          <button type="button" class="secondary" data-action="reload" ${this._loading ? 'disabled' : ''}>${this._loading ? 'Обновление...' : 'Обновить'}</button>
-          <button type="button" class="primary" data-action="create">+ Создать сценарий</button>
-        </div>
-      </section>
-      <section class="help-card command-list">
-        ${listMarkup}
-        <div class="command-pagination">
-          <button type="button" class="ghost" data-action="prev" ${activePage <= 1 || this._loading ? 'disabled' : ''}>&lt;</button>
-          <div class="pagination-pages">
-            ${paginationItems.map((item) => (
-              item === 'ellipsis'
-                ? '<span class="pagination-ellipsis">...</span>'
-                : `<button type="button" class="ghost pagination-page ${item === activePage ? 'active' : ''}" data-action="goto-page" data-page="${item}" ${this._loading ? 'disabled' : ''}>${item}</button>`
-            )).join('')}
-          </div>
-          <button type="button" class="ghost" data-action="next" ${activePage >= totalPages || this._loading ? 'disabled' : ''}>&gt;</button>
-        </div>
-      </section>
-    `;
+    return renderCommandsTab(this, tabKey);
   }
 
   _renderPrimaryCommandsPage() {
-    return this._renderCommandsTab(TABS.primary);
+    return renderPrimaryCommandsPage(this);
   }
 
   _renderSecondaryCommandsPage() {
-    return this._renderCommandsTab(TABS.secondary);
+    return renderSecondaryCommandsPage(this);
   }
 
   _renderDirectBasicSection(listMarkup) {
-    return `
-      <section class="hero-card">
-        <h3>Основные</h3>
-        <p>Управление direct-командами.</p>
-        <div class="toolbar">
-          <button type="button" class="secondary" data-action="reload-direct" ${this._directLoading ? 'disabled' : ''}>${this._directLoading ? 'Обновление...' : 'Обновить'}</button>
-          <button type="button" class="primary" data-action="create-direct">+ Создать</button>
-        </div>
-        ${this._directError ? `<div class="status error">${escapeHtml(this._directError)}</div>` : ''}
-      </section>
-      <section class="help-card command-list">
-        ${listMarkup}
-      </section>
-    `;
+    return renderDirectBasicSection(this, listMarkup);
   }
 
   _renderDirectTemplatesSection(templateListMarkup) {
-    return `
-      <section class="hero-card">
-        <h3>Шаблоны</h3>
-        <p>Управление шаблонами subDirectControl.</p>
-        <div class="toolbar">
-          <button type="button" class="secondary" data-action="reload-template" ${this._templateLoading ? 'disabled' : ''}>${this._templateLoading ? 'Обновление...' : 'Обновить'}</button>
-          <button type="button" class="primary" data-action="create-template">+ Создать</button>
-        </div>
-        ${this._templateError ? `<div class="status error">${escapeHtml(this._templateError)}</div>` : ''}
-      </section>
-      <section class="help-card command-list">
-        ${templateListMarkup}
-      </section>
-    `;
+    return renderDirectTemplatesSection(this, templateListMarkup);
   }
 
   _renderDirectCommandsTab() {
-    const listMarkup = this._directLoading
-      ? '<div class="empty">Загрузка direct-команд...</div>'
-      : this._directCommands.length
-        ? this._directCommands.map((item) => `
-            <button type="button" class="command-item" data-action="edit-direct" data-direct-id="${escapeHtml(item._id)}">
-              <span class="command-item-title">${escapeHtml(item.title || 'Без названия')}</span>
-              <span class="command-item-meta">
-                <span>${escapeHtml(item.directControl?.type || 'type: -')}</span>
-                <span>${escapeHtml(item.uuidDirect || 'uuidDirect: -')}</span>
-                <span>${escapeHtml(item.directControl?.typeData || 'typeData: -')}</span>
-              </span>
-            </button>
-          `).join('')
-        : '<div class="empty">Direct-команд пока нет.</div>';
-    const templateListMarkup = this._templateLoading
-      ? '<div class="empty">Загрузка шаблонов...</div>'
-      : this._templateCommands.length
-        ? this._templateCommands.map((item) => `
-            <button type="button" class="command-item" data-action="edit-template" data-template-id="${escapeHtml(item._id)}">
-              <span class="command-item-title">${escapeHtml(item.title || 'Без названия')}</span>
-              <span class="command-item-meta">
-                <span>subDirectControl: ${(Array.isArray(item.subDirectControl) ? item.subDirectControl.length : 0)}</span>
-              </span>
-            </button>
-          `).join('')
-        : '<div class="empty">Шаблонов пока нет.</div>';
-
-    return `
-      <section class="hero-card">
-        <h2>Команды прямого выполнения</h2>
-        <div class="inner-subtabs">
-          <button type="button" class="subtab-button ${this._directSubtab === DIRECT_SUBTABS.basic ? 'active' : ''}" data-direct-subtab="${DIRECT_SUBTABS.basic}">Основные</button>
-          <button type="button" class="subtab-button ${this._directSubtab === DIRECT_SUBTABS.templates ? 'active' : ''}" data-direct-subtab="${DIRECT_SUBTABS.templates}">Шаблоны</button>
-        </div>
-      </section>
-      ${this._directSubtab === DIRECT_SUBTABS.basic
-        ? this._renderDirectBasicSection(listMarkup)
-        : this._renderDirectTemplatesSection(templateListMarkup)}
-    `;
+    return renderDirectCommandsTab(this);
   }
 
   _renderActiveTabBody() {
-    if (this._tab === TABS.primary) {
-      return this._renderPrimaryCommandsPage();
-    }
-    if (this._tab === TABS.secondary) {
-      return this._renderSecondaryCommandsPage();
-    }
-    if (this._tab === TABS.direct) {
-      return this._renderDirectCommandsTab();
-    }
-    return this._renderDefaultsTab();
+    return renderActiveTabBody(this);
   }
 
   _renderStub(title, description) {
-    return `
-      <section class="hero-card">
-        <h2>${escapeHtml(title)}</h2>
-        <p>${escapeHtml(description)}</p>
-      </section>
-      <section class="help-card">
-        <div class="empty">Раздел подготовлен.</div>
-      </section>
-    `;
+    return renderStub(title, description);
   }
 
   _renderDirectModal() {
-    if (!this._directModalOpen) {
-      return '';
-    }
-    const title = this._directModalMode === 'edit' ? 'Редактировать direct-команду' : 'Создать direct-команду';
-    const isCommandType = this._directDraft.typeData === 'command';
-    const isEditMode = this._directModalMode === 'edit';
-    const canRefreshDirectUuid = !isEditMode && !String(this._directDraft.uuidDirect ?? '').trim();
-    const subItems = Array.isArray(this._directDraft.subDirectControlItems) ? this._directDraft.subDirectControlItems : [];
-    const sampleOptions = Array.isArray(this._subDirectControlSampleOptions) ? this._subDirectControlSampleOptions : [];
-    const selectedSampleUuid = String(this._directDraft.subDirectControlArray ?? '').trim();
-    const hasSelectedSample = sampleOptions.some((item) => String(item?.uuid ?? '').trim() === selectedSampleUuid);
-    return `
-      <div class="modal-backdrop" data-action="close-direct"></div>
-      <section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <div class="modal-header">
-          <h3>${escapeHtml(title)}</h3>
-          <button type="button" class="ghost" data-action="close-direct" ${this._directModalSaving ? 'disabled' : ''}>Закрыть</button>
-        </div>
-        <div class="modal-grid">
-          <label>
-            <span>title</span>
-            <input data-direct-field="title" value="${escapeHtml(this._directDraft.title)}" />
-          </label>
-          <label>
-            <span>uuidDirect</span>
-            <div class="field-inline field-inline-icon">
-              <input data-direct-field="uuidDirect" value="${escapeHtml(this._directDraft.uuidDirect)}" ${isEditMode ? 'readonly' : ''} />
-              ${canRefreshDirectUuid ? `
-                <button
-                  type="button"
-                  class="ghost inline-icon-button"
-                  data-action="generate-direct-uuid"
-                  aria-label="Обновить uuidDirect"
-                  title="Обновить uuidDirect"
-                  ${this._directModalSaving ? 'disabled' : ''}
-                >↻</button>
-              ` : ''}
-            </div>
-          </label>
-          <label>
-            <span>directControl.type</span>
-            <input data-direct-field="type" value="${escapeHtml(this._directDraft.type)}" />
-          </label>
-          <label>
-            <span>directControl.typeData</span>
-            <select data-direct-field="typeData">
-              ${DIRECT_TYPE_DATA_OPTIONS.map((option) => `
-                <option value="${option}" ${this._directDraft.typeData === option ? 'selected' : ''}>${option}</option>
-              `).join('')}
-            </select>
-          </label>
-          ${isCommandType ? `
-            <label class="field-span-2">
-              <span>voiceCommands</span>
-              <textarea rows="3" data-direct-field="voiceCommands">${escapeHtml(this._directDraft.voiceCommands)}</textarea>
-            </label>
-            <label class="field-span-2">
-              <span>manual</span>
-              <div class="switch-control">
-                <input type="checkbox" data-direct-field="manual" ${this._directDraft.manual ? 'checked' : ''} />
-                <span class="switch-slider" aria-hidden="true"></span>
-                <span class="switch-label">${this._directDraft.manual ? 'Включено' : 'Выключено'}</span>
-              </div>
-            </label>
-            ${this._directDraft.manual ? `
-              <section class="field-span-2 array-builder">
-                <div class="array-builder-header">
-                  <span>subDirectControl</span>
-                  <button type="button" class="secondary compact-button" data-action="add-direct-sub-control-item">+ Добавить</button>
-                </div>
-                <div class="array-builder-list">
-                  ${subItems.map((item, index) => {
-                    const isOpen = this._openDirectSubControlItemIds.has(item.id);
-                    return `
-                      <section class="response-item-card ${isOpen ? 'open' : ''}">
-                        <button
-                          type="button"
-                          class="response-item-toggle"
-                          data-action="toggle-direct-sub-control-item"
-                          data-direct-sub-control-item-id="${escapeHtml(item.id)}"
-                        >
-                          <span>Элемент ${index + 1}</span>
-                          <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
-                        </button>
-                        ${isOpen ? `
-                          <div class="response-item-grid">
-                            <label>
-                              <span>subType</span>
-                              <input
-                                data-direct-sub-control-item-id="${escapeHtml(item.id)}"
-                                data-direct-sub-control-item-field="subType"
-                                value="${escapeHtml(item.subType)}"
-                              />
-                            </label>
-                            <label>
-                              <span>subVoiceCommands</span>
-                              <textarea
-                                rows="3"
-                                data-direct-sub-control-item-id="${escapeHtml(item.id)}"
-                                data-direct-sub-control-item-field="subVoiceCommands"
-                              >${escapeHtml(item.subVoiceCommands)}</textarea>
-                            </label>
-                            <div class="response-item-actions">
-                              <button
-                                type="button"
-                                class="ghost compact-delete-button"
-                                data-action="remove-direct-sub-control-item"
-                                data-direct-sub-control-item-id="${escapeHtml(item.id)}"
-                              >Удалить элемент</button>
-                            </div>
-                          </div>
-                        ` : ''}
-                      </section>
-                    `;
-                  }).join('')}
-                  ${subItems.length === 0 ? '<div class="empty">Элементов пока нет.</div>' : ''}
-                </div>
-              </section>
-            ` : `
-              <label class="field-span-2">
-                <span>subDirectControlArray</span>
-                <select data-direct-field="subDirectControlArray">
-                  <option value="">Пока пусто (добавим позже)</option>
-                  ${selectedSampleUuid && !hasSelectedSample ? `
-                    <option value="${escapeHtml(selectedSampleUuid)}" selected>${escapeHtml(selectedSampleUuid)}</option>
-                  ` : ''}
-                  ${sampleOptions.map((result) => `
-                    <option value="${escapeHtml(result.uuid)}" ${this._directDraft.subDirectControlArray === result.uuid ? 'selected' : ''}>${escapeHtml(result.title)} (${escapeHtml(result.uuid)})</option>
-                  `).join('')}
-                </select>
-              </label>
-            `}
-          ` : ''}
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="ghost" data-action="close-direct" ${this._directModalSaving ? 'disabled' : ''}>Отмена</button>
-          ${this._directModalMode === 'edit' ? `<button type="button" class="ghost compact-delete-button" data-action="delete-direct" ${this._directModalSaving ? 'disabled' : ''}>Удалить</button>` : ''}
-          <button type="button" class="primary" data-action="save-direct" ${this._directModalSaving ? 'disabled' : ''}>${this._directModalSaving ? 'Сохранение...' : 'Сохранить'}</button>
-        </div>
-      </section>
-    `;
+    return renderDirectModal(this);
   }
 
   _renderTemplateModal() {
-    if (!this._templateModalOpen) {
-      return '';
-    }
-    const title = this._templateModalMode === 'edit' ? 'Редактировать шаблон' : 'Создать шаблон';
-    const isEditMode = this._templateModalMode === 'edit';
-    const canRefreshTemplateUuid = !isEditMode && !String(this._templateDraft.uuid ?? '').trim();
-    const subItems = Array.isArray(this._templateDraft.subDirectControlItems) ? this._templateDraft.subDirectControlItems : [];
-    return `
-      <div class="modal-backdrop" data-action="close-template"></div>
-      <section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <div class="modal-header">
-          <h3>${escapeHtml(title)}</h3>
-          <button type="button" class="ghost" data-action="close-template" ${this._templateModalSaving ? 'disabled' : ''}>Закрыть</button>
-        </div>
-        <div class="modal-grid">
-          <label>
-            <span>title</span>
-            <input data-template-field="title" value="${escapeHtml(this._templateDraft.title)}" />
-          </label>
-          <label>
-            <span>uuid</span>
-            <div class="field-inline field-inline-icon">
-              <input data-template-field="uuid" value="${escapeHtml(this._templateDraft.uuid)}" ${isEditMode ? 'readonly' : ''} />
-              ${canRefreshTemplateUuid ? `
-                <button
-                  type="button"
-                  class="ghost inline-icon-button"
-                  data-action="generate-template-uuid"
-                  aria-label="Обновить uuid"
-                  title="Обновить uuid"
-                  ${this._templateModalSaving ? 'disabled' : ''}
-                >↻</button>
-              ` : ''}
-            </div>
-          </label>
-          <section class="field-span-2 array-builder">
-            <div class="array-builder-header">
-              <span>subDirectControl</span>
-              <button type="button" class="secondary compact-button" data-action="add-template-sub-control-item">+ Добавить</button>
-            </div>
-            <div class="array-builder-list">
-              ${subItems.map((item, index) => {
-                const isOpen = this._openTemplateSubControlItemIds.has(item.id);
-                return `
-                  <section class="response-item-card ${isOpen ? 'open' : ''}">
-                    <button
-                      type="button"
-                      class="response-item-toggle"
-                      data-action="toggle-template-sub-control-item"
-                      data-template-sub-control-item-id="${escapeHtml(item.id)}"
-                    >
-                      <span>Элемент ${index + 1}</span>
-                      <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
-                    </button>
-                    ${isOpen ? `
-                      <div class="response-item-grid">
-                        <label>
-                          <span>subType</span>
-                          <input
-                            data-template-sub-control-item-id="${escapeHtml(item.id)}"
-                            data-template-sub-control-item-field="subType"
-                            value="${escapeHtml(item.subType)}"
-                          />
-                        </label>
-                        <label>
-                          <span>subVoiceCommands</span>
-                          <textarea
-                            rows="3"
-                            data-template-sub-control-item-id="${escapeHtml(item.id)}"
-                            data-template-sub-control-item-field="subVoiceCommands"
-                          >${escapeHtml(item.subVoiceCommands)}</textarea>
-                        </label>
-                        <div class="response-item-actions">
-                          <button
-                            type="button"
-                            class="ghost compact-delete-button"
-                            data-action="remove-template-sub-control-item"
-                            data-template-sub-control-item-id="${escapeHtml(item.id)}"
-                          >Удалить элемент</button>
-                        </div>
-                      </div>
-                    ` : ''}
-                  </section>
-                `;
-              }).join('')}
-              ${subItems.length === 0 ? '<div class="empty">Элементов пока нет.</div>' : ''}
-            </div>
-          </section>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="ghost" data-action="close-template" ${this._templateModalSaving ? 'disabled' : ''}>Отмена</button>
-          ${this._templateModalMode === 'edit' ? `<button type="button" class="ghost compact-delete-button" data-action="delete-template" ${this._templateModalSaving ? 'disabled' : ''}>Удалить</button>` : ''}
-          <button type="button" class="primary" data-action="save-template" ${this._templateModalSaving ? 'disabled' : ''}>${this._templateModalSaving ? 'Сохранение...' : 'Сохранить'}</button>
-        </div>
-      </section>
-    `;
+    return renderTemplateModal(this);
   }
 
   _renderDefaultsTab() {
-    const listMarkup = DEFAULT_COMMAND_CONFIGS.map((config, index) => {
-      const draft = this._defaultsByType[config.type] ?? this._newDefaultsDraft(config.type);
-      const metaParts = [
-        `type: ${config.type}`,
-        `endStatus: ${draft.endStatus ? 'on' : 'off'}`,
-      ];
-      if (config.supportsLlm) {
-        metaParts.push(`LLM: ${draft.llmEnabled ? 'on' : 'off'}`);
-      }
-
-      return `
-        <button type="button" class="command-item" data-action="open-defaults-item" data-default-type="${escapeHtml(config.type)}" ${this._defaultsLoading ? 'disabled' : ''}>
-          <span class="command-item-title">${index + 1}. ${escapeHtml(config.title)}</span>
-          <span class="command-item-meta">
-            ${metaParts.map((part) => `<span>${escapeHtml(part)}</span>`).join('')}
-          </span>
-        </button>
-      `;
-    }).join('');
-
-    return `
-      <section class="hero-card">
-        <h2>Дефолтные команды</h2>
-        <p>Настройка дефолтной реакции, если команда не найдена.</p>
-        <div class="toolbar">
-          <button type="button" class="secondary" data-action="reload-defaults" ${this._defaultsLoading ? 'disabled' : ''}>${this._defaultsLoading ? 'Обновление...' : 'Обновить'}</button>
-        </div>
-        ${this._defaultsError ? `<div class="status error">${escapeHtml(this._defaultsError)}</div>` : ''}
-      </section>
-      <section class="help-card command-list">
-        ${listMarkup}
-      </section>
-    `;
+    return renderDefaultsTab(this);
   }
 
   _renderDefaultsModal() {
-    if (!this._defaultsModalOpen) {
-      return '';
-    }
-    const type = this._defaultsActiveType;
-    const config = this._defaultConfig(type);
-    const draft = this._defaultsByType[type] ?? this._newDefaultsDraft(type);
-    return `
-      <div class="modal-backdrop" data-action="close-defaults"></div>
-      <section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(config.title)}">
-        <div class="modal-header">
-          <h3>${escapeHtml(config.title)}</h3>
-          <button type="button" class="ghost" data-action="close-defaults" ${this._defaultsModalSaving ? 'disabled' : ''}>Закрыть</button>
-        </div>
-        <div class="modal-grid">
-          <label class="field-span-2">
-            <span>title</span>
-            <input data-defaults-field="title" value="${escapeHtml(config.title)}" disabled />
-          </label>
-          <label>
-            <span>endStatus</span>
-            <div class="switch-control">
-              <input type="checkbox" data-defaults-field="endStatus" ${draft.endStatus ? 'checked' : ''} />
-              <span class="switch-slider" aria-hidden="true"></span>
-              <span class="switch-label">${draft.endStatus ? 'Включено' : 'Выключено'}</span>
-            </div>
-          </label>
-          ${config.supportsLlm ? `
-            <label>
-              <span>LLM</span>
-              <div class="switch-control">
-                <input type="checkbox" data-defaults-field="llmEnabled" ${draft.llmEnabled ? 'checked' : ''} />
-                <span class="switch-slider" aria-hidden="true"></span>
-                <span class="switch-label">${draft.llmEnabled ? 'Включено' : 'Выключено'}</span>
-              </div>
-            </label>
-          ` : ''}
-          <label class="field-span-2">
-            <span>message</span>
-            <input data-defaults-field="message" value="${escapeHtml(draft.message)}" />
-          </label>
-          ${config.supportsLlm && draft.llmEnabled ? `
-            <label class="field-span-2">
-              <span>system</span>
-              <textarea rows="6" data-defaults-field="system">${escapeHtml(draft.system)}</textarea>
-            </label>
-            <label class="field-span-2">
-              <span>model</span>
-              <input data-defaults-field="model" value="${escapeHtml(draft.model)}" />
-            </label>
-          ` : ''}
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="ghost" data-action="close-defaults" ${this._defaultsModalSaving ? 'disabled' : ''}>Отмена</button>
-          <button type="button" class="primary" data-action="save-defaults" ${this._defaultsModalSaving ? 'disabled' : ''}>${this._defaultsModalSaving ? 'Сохранение...' : 'Сохранить'}</button>
-        </div>
-      </section>
-    `;
+    return renderDefaultsModal(this);
   }
 
   _renderModal() {
-    if (!this._modalOpen) {
-      return '';
-    }
-    const title = this._modalMode === 'edit' ? 'Редактировать сценарий' : 'Создать сценарий';
-    const isEditMode = this._modalMode === 'edit';
-    const canRefreshUuid = !isEditMode && !String(this._draft.uuidDialog ?? '').trim();
-    return `
-      <div class="modal-backdrop" data-action="close"></div>
-      <section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-        <div class="modal-header">
-          <h3>${escapeHtml(title)}</h3>
-          <button type="button" class="ghost" data-action="close" ${this._modalSaving ? 'disabled' : ''}>Закрыть</button>
-        </div>
-        <div class="modal-grid">
-          <label><span>Title</span><input data-field="title" value="${escapeHtml(this._draft.title)}" /></label>
-          <label>
-            <span>uuidDialog</span>
-            <div class="field-inline field-inline-icon">
-              <input data-field="uuidDialog" value="${escapeHtml(this._draft.uuidDialog)}" ${isEditMode ? 'readonly' : ''} />
-              ${canRefreshUuid ? `
-                <button
-                  type="button"
-                  class="ghost inline-icon-button"
-                  data-action="generate-uuid"
-                  aria-label="Обновить uuidDialog"
-                  title="Обновить uuidDialog"
-                  ${this._modalSaving ? 'disabled' : ''}
-                >↻</button>
-              ` : ''}
-            </div>
-          </label>
-          <label><span>type</span><input data-field="type" value="${escapeHtml(this._draft.type)}" /></label>
-          <label>
-            <span>answerType</span>
-            <select data-field="answerType">
-              <option value="default" ${this._draft.answerType === 'default' ? 'selected' : ''}>default</option>
-              <option value="redis" ${this._draft.answerType === 'redis' ? 'selected' : ''}>redis</option>
-            </select>
-          </label>
-          <label>
-            <span>endStatus</span>
-            <div class="switch-control">
-              <input type="checkbox" data-field="endStatus" ${this._draft.endStatus ? 'checked' : ''} />
-              <span class="switch-slider" aria-hidden="true"></span>
-              <span class="switch-label">${this._draft.endStatus ? 'Включено' : 'Выключено'}</span>
-            </div>
-          </label>
-          <label class="field-span-2">
-            <span>voiceCommands (string)</span>
-            <textarea rows="6" class="voice-commands-field" data-field="voiceCommands">${escapeHtml(this._draft.voiceCommands)}</textarea>
-          </label>
-          <section class="field-span-2 response-accordion open">
-            <div class="response-accordion-head-static">
-              <span class="response-accordion-title">voiceResponseArray</span>
-            </div>
-            <div class="response-accordion-body">
-              <div class="response-items">
-                ${(Array.isArray(this._draft.responseItems) ? this._draft.responseItems : []).map((responseItem, index) => {
-                  const isOpen = this._openResponseItemIds.has(responseItem.id);
-                  return `
-                    <section class="response-item-card ${isOpen ? 'open' : ''}">
-                      <button
-                        type="button"
-                        class="response-item-toggle"
-                        data-action="toggle-response-item"
-                        data-response-item-id="${escapeHtml(responseItem.id)}"
-                      >
-                        <span>Элемент ${index + 1}</span>
-                        <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
-                      </button>
-                      ${isOpen ? `
-                        <div class="response-item-grid">
-                          <div class="response-inline-row">
-                            <label>
-                              <span>type</span>
-                              <input
-                                data-response-item-id="${escapeHtml(responseItem.id)}"
-                                data-response-item-field="type"
-                                value="${escapeHtml(responseItem.type)}"
-                                placeholder="default"
-                              />
-                            </label>
-                            <label>
-                              <span>LLM</span>
-                              <div class="switch-control">
-                                <input
-                                  type="checkbox"
-                                  data-response-item-id="${escapeHtml(responseItem.id)}"
-                                  data-response-item-field="llmEnabled"
-                                  ${responseItem.llmEnabled ? 'checked' : ''}
-                                />
-                                <span class="switch-slider" aria-hidden="true"></span>
-                                <span class="switch-label">${responseItem.llmEnabled ? 'Включено' : 'Выключено'}</span>
-                              </div>
-                            </label>
-                          </div>
-                          <label>
-                            <span>voiceResponse</span>
-                            <textarea
-                              rows="3"
-                              data-response-item-id="${escapeHtml(responseItem.id)}"
-                              data-response-item-field="voiceResponse"
-                            >${escapeHtml(responseItem.voiceResponse)}</textarea>
-                          </label>
-                          ${responseItem.llmEnabled ? `
-                            <label>
-                              <span>system</span>
-                              <textarea
-                                rows="3"
-                                data-response-item-id="${escapeHtml(responseItem.id)}"
-                                data-response-item-field="system"
-                              >${escapeHtml(responseItem.system)}</textarea>
-                            </label>
-                            <label>
-                              <span>model</span>
-                              <input
-                                data-response-item-id="${escapeHtml(responseItem.id)}"
-                                data-response-item-field="model"
-                                value="${escapeHtml(responseItem.model)}"
-                              />
-                            </label>
-                          ` : ''}
-                          ${(this._draft.responseItems?.length || 0) > 1 ? `
-                            <div class="response-item-actions">
-                              <button
-                                type="button"
-                                class="ghost compact-delete-button"
-                                data-action="remove-voice-response-item"
-                                data-response-item-id="${escapeHtml(responseItem.id)}"
-                              >Удалить элемент</button>
-                            </div>
-                          ` : ''}
-                        </div>
-                      ` : ''}
-                    </section>
-                  `;
-                }).join('')}
-              </div>
-              <button type="button" class="secondary compact-button" data-action="add-voice-response-item">+ Добавить элемент</button>
-            </div>
-          </section>
-          <section class="field-span-2 array-builder">
-            <div class="array-builder-header">
-              <span>nextDirectControl</span>
-              <button type="button" class="secondary compact-button" data-action="add-direct-control-item">+ Добавить элемент</button>
-            </div>
-            <div class="array-builder-list">
-              ${(Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : []).map((item, index) => {
-                const isOpen = this._openDirectControlItemIds.has(item.id);
-                return `
-                  <section class="response-item-card ${isOpen ? 'open' : ''}">
-                    <button
-                      type="button"
-                      class="response-item-toggle"
-                      data-action="toggle-direct-control-item"
-                      data-direct-control-item-id="${escapeHtml(item.id)}"
-                    >
-                      <span>${escapeHtml(item.uuid ? (item.displayValue || item.uuid) : `Элемент ${index + 1}`)}</span>
-                      <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
-                    </button>
-                    ${isOpen ? `
-                      <div class="response-item-grid">
-                        <label>
-                          <span>uuid</span>
-                          <div class="dropdown-container">
-                            <input
-                              data-direct-control-item-id="${escapeHtml(item.id)}"
-                              value="${escapeHtml(item.uuid)}"
-                              placeholder="uuid"
-                            />
-                            ${this._searchActiveType === 'directControl' && this._searchActiveItemId === item.id && this._searchResults.length > 0 ? `
-                              <div class="dropdown-options">
-                                ${this._searchResults.map((result) => `
-                                  <div class="dropdown-option" data-action="select-search-result" data-direct-control-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title)}">
-                                    ${escapeHtml(result.title)} (${escapeHtml(result.uuid)})
-                                  </div>
-                                `).join('')}
-                              </div>
-                            ` : ''}
-                          </div>
-                        </label>
-                        <div class="response-item-actions">
-                          <button
-                            type="button"
-                            class="ghost compact-delete-button"
-                            data-action="remove-direct-control-item"
-                            data-direct-control-item-id="${escapeHtml(item.id)}"
-                          >Удалить элемент</button>
-                        </div>
-                      </div>
-                    ` : ''}
-                  </section>
-                `;
-              }).join('')}
-              ${(this._draft.directControlItems?.length || 0) === 0 ? '<div class="empty">Элементов пока нет.</div>' : ''}
-            </div>
-          </section>
-          <section class="field-span-2 array-builder">
-            <div class="array-builder-header">
-              <span>nextAction</span>
-              <button type="button" class="secondary compact-button" data-action="add-next-action-item">+ Добавить элемент</button>
-            </div>
-            <div class="array-builder-list">
-              ${(Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : []).map((item, index) => {
-                const isOpen = this._openNextActionItemIds.has(item.id);
-                return `
-                  <section class="response-item-card ${isOpen ? 'open' : ''}">
-                    <button
-                      type="button"
-                      class="response-item-toggle"
-                      data-action="toggle-next-action-item"
-                      data-next-action-item-id="${escapeHtml(item.id)}"
-                    >
-                      <span>${escapeHtml(item.uuid ? (item.displayValue || item.uuid) : `Элемент ${index + 1}`)}</span>
-                      <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
-                    </button>
-                    ${isOpen ? `
-                      <div class="response-item-grid">
-                        <div class="response-inline-row">
-                          <label>
-                            <span>typeComponent</span>
-                            <select data-next-action-item-id="${escapeHtml(item.id)}" data-next-action-item-field="typeComponent">
-                              ${TYPE_COMPONENT_OPTIONS.map((option) => `
-                                <option value="${option}" ${item.typeComponent === option ? 'selected' : ''}>${option}</option>
-                              `).join('')}
-                            </select>
-                          </label>
-                          <label>
-                            <span>uuid</span>
-                            <div class="dropdown-container">
-                              <input
-                                data-next-action-item-id="${escapeHtml(item.id)}"
-                                data-next-action-item-field="uuid"
-                                value="${escapeHtml(item.uuid)}"
-                                placeholder="uuid"
-                              />
-                              ${this._searchActiveType === 'nextAction' && this._searchActiveItemId === item.id && this._searchResults.length > 0 ? `
-                                <div class="dropdown-options">
-                                  ${this._searchResults.map((result) => `
-                                    <div class="dropdown-option" data-action="select-search-result" data-next-action-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title)}">
-                                      ${escapeHtml(result.title)} (${escapeHtml(result.uuid)})
-                                    </div>
-                                  `).join('')}
-                                </div>
-                              ` : ''}
-                            </div>
-                          </label>
-                        </div>
-                        <div class="response-item-actions">
-                          <button
-                            type="button"
-                            class="ghost compact-delete-button"
-                            data-action="remove-next-action-item"
-                            data-next-action-item-id="${escapeHtml(item.id)}"
-                          >Удалить элемент</button>
-                        </div>
-                      </div>
-                    ` : ''}
-                  </section>
-                `;
-              }).join('')}
-              ${(this._draft.nextActionItems?.length || 0) === 0 ? '<div class="empty">Элементов пока нет.</div>' : ''}
-            </div>
-          </section>
-        </div>
-        <div class="modal-footer">
-          ${this._modalMode === 'edit' ? `<button type="button" class="ghost compact-delete-button" data-action="delete" ${this._modalSaving ? 'disabled' : ''}>Удалить</button>` : ''}
-          <button type="button" class="primary" data-action="save" ${this._modalSaving ? 'disabled' : ''}>${this._modalSaving ? 'Сохранение...' : 'Сохранить'}</button>
-        </div>
-      </section>
-    `;
+    return renderMainModal(this);
+  }
+
+  _renderItemActionsModal() {
+    return renderItemActionsModal(this);
   }
 
   _swallowUiEvent(event) {
@@ -2614,278 +1873,11 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _bind() {
-    const root = this.shadowRoot;
-    if (!root) return;
-    if (this._bindController?.abort) {
-      this._bindController.abort();
-    }
-    if (this._legacyListeners.length) {
-      this._legacyListeners.forEach(({ element, eventName, handler }) => {
-        element.removeEventListener(eventName, handler);
-      });
-      this._legacyListeners = [];
-    }
-    const supportsAbortController = typeof AbortController !== 'undefined';
-    this._bindController = supportsAbortController ? new AbortController() : null;
-    const signal = this._bindController?.signal ?? null;
-    const on = (element, eventName, handler) => {
-      if (!element) return;
-      try {
-        if (signal) {
-          element.addEventListener(eventName, handler, { signal });
-        } else {
-          element.addEventListener(eventName, handler);
-          this._legacyListeners.push({ element, eventName, handler });
-        }
-      } catch {
-        element.addEventListener(eventName, handler);
-        this._legacyListeners.push({ element, eventName, handler });
-      }
-    };
-
-    root.querySelectorAll('[data-tab]').forEach((element) => {
-      on(element, 'click', () => this._setTab(element.dataset.tab));
-    });
-
-    on(root.querySelector('[data-action="reload"]'), 'click', () => this._loadPage(this._pageByTab[this._tab] || 1, { force: true }));
-    on(root.querySelector('[data-action="create"]'), 'click', () => this._openCreateModal());
-    on(root.querySelector('[data-action="prev"]'), 'click', () => this._loadPage((this._pageByTab[this._tab] || 1) - 1));
-    on(root.querySelector('[data-action="next"]'), 'click', () => this._loadPage((this._pageByTab[this._tab] || 1) + 1));
-    root.querySelectorAll('[data-action="goto-page"]').forEach((element) => {
-      on(element, 'click', () => this._loadPage(Number(element.dataset.page) || 1));
-    });
-    on(root.querySelector('[data-action="reload-direct"]'), 'click', () => this._reloadDirectCommands());
-    on(root.querySelector('[data-action="create-direct"]'), 'click', () => this._openCreateDirectModal());
-    on(root.querySelector('[data-action="reload-template"]'), 'click', () => this._reloadTemplateCommands());
-    on(root.querySelector('[data-action="create-template"]'), 'click', () => this._openCreateTemplateModal());
-    on(root.querySelector('[data-action="reload-defaults"]'), 'click', () => this._reloadDefaultsCommands());
-    root.querySelectorAll('[data-action="open-defaults-item"]').forEach((element) => {
-      on(element, 'click', () => this._openDefaultsModal(element.dataset.defaultType));
-    });
-    root.querySelectorAll('[data-action="edit"]').forEach((element) => {
-      on(element, 'click', () => this._openEditModal(element.dataset.commandId));
-    });
-    root.querySelectorAll('[data-action="edit-direct"]').forEach((element) => {
-      on(element, 'click', () => this._openEditDirectModal(element.dataset.directId));
-    });
-    root.querySelectorAll('[data-action="edit-template"]').forEach((element) => {
-      on(element, 'click', () => this._openEditTemplateModal(element.dataset.templateId));
-    });
-    root.querySelectorAll('[data-direct-subtab]').forEach((element) => {
-      on(element, 'click', () => this._setDirectSubtab(element.dataset.directSubtab));
-    });
-
-    root.querySelectorAll('[data-action="close"]').forEach((element) => {
-      on(element, 'click', () => this._closeModal());
-    });
-    root.querySelectorAll('[data-action="close-direct"]').forEach((element) => {
-      on(element, 'click', () => this._closeDirectModal());
-    });
-    root.querySelectorAll('[data-action="close-template"]').forEach((element) => {
-      on(element, 'click', () => this._closeTemplateModal());
-    });
-    root.querySelectorAll('[data-action="close-defaults"]').forEach((element) => {
-      on(element, 'click', () => this._closeDefaultsModal());
-    });
-    on(root.querySelector('[data-action="save"]'), 'click', () => this._saveModal());
-    on(root.querySelector('[data-action="save-direct"]'), 'click', () => this._saveDirectModal());
-    on(root.querySelector('[data-action="save-template"]'), 'click', () => this._saveTemplateModal());
-    on(root.querySelector('[data-action="save-defaults"]'), 'click', () => this._saveDefaultsModal());
-    on(root.querySelector('[data-action="delete"]'), 'click', () => this._deleteModal());
-    on(root.querySelector('[data-action="delete-direct"]'), 'click', () => this._deleteDirectModal());
-    on(root.querySelector('[data-action="delete-template"]'), 'click', () => this._deleteTemplateModal());
-    on(root.querySelector('[data-action="generate-uuid"]'), 'click', () => this._refreshUuid());
-    on(root.querySelector('[data-action="generate-direct-uuid"]'), 'click', () => this._refreshDirectUuid());
-    on(root.querySelector('[data-action="generate-template-uuid"]'), 'click', () => this._refreshTemplateUuid());
-    on(root.querySelector('[data-action="add-voice-response-item"]'), 'click', () => this._addVoiceResponseItem());
-    on(root.querySelector('[data-action="add-direct-control-item"]'), 'click', () => this._addDirectControlItem());
-    on(root.querySelector('[data-action="add-next-action-item"]'), 'click', () => this._addNextActionItem());
-    on(root.querySelector('[data-action="add-direct-sub-control-item"]'), 'click', () => this._addDirectSubControlItem());
-    on(root.querySelector('[data-action="add-template-sub-control-item"]'), 'click', () => this._addTemplateSubControlItem());
-    root.querySelectorAll('[data-action="remove-voice-response-item"]').forEach((element) => {
-      on(element, 'click', () => this._removeVoiceResponseItem(element.dataset.responseItemId));
-    });
-    root.querySelectorAll('[data-action="remove-direct-control-item"]').forEach((element) => {
-      on(element, 'click', () => this._removeDirectControlItem(element.dataset.directControlItemId));
-    });
-    root.querySelectorAll('[data-action="toggle-direct-control-item"]').forEach((element) => {
-      on(element, 'click', () => this._toggleDirectControlItem(element.dataset.directControlItemId));
-    });
-    root.querySelectorAll('[data-action="remove-next-action-item"]').forEach((element) => {
-      on(element, 'click', () => this._removeNextActionItem(element.dataset.nextActionItemId));
-    });
-    root.querySelectorAll('[data-action="toggle-next-action-item"]').forEach((element) => {
-      on(element, 'click', () => this._toggleNextActionItem(element.dataset.nextActionItemId));
-    });
-    root.querySelectorAll('[data-action="toggle-response-item"]').forEach((element) => {
-      on(element, 'click', () => this._toggleResponseItem(element.dataset.responseItemId));
-    });
-    root.querySelectorAll('[data-action="remove-direct-sub-control-item"]').forEach((element) => {
-      on(element, 'click', () => this._removeDirectSubControlItem(element.dataset.directSubControlItemId));
-    });
-    root.querySelectorAll('[data-action="toggle-direct-sub-control-item"]').forEach((element) => {
-      on(element, 'click', () => this._toggleDirectSubControlItem(element.dataset.directSubControlItemId));
-    });
-    root.querySelectorAll('[data-action="remove-template-sub-control-item"]').forEach((element) => {
-      on(element, 'click', () => this._removeTemplateSubControlItem(element.dataset.templateSubControlItemId));
-    });
-    root.querySelectorAll('[data-action="toggle-template-sub-control-item"]').forEach((element) => {
-      on(element, 'click', () => this._toggleTemplateSubControlItem(element.dataset.templateSubControlItemId));
-    });
-
-    // Handle search result selection
-    root.querySelectorAll('[data-action="select-search-result"]').forEach((element) => {
-      on(element, 'click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const itemId = element.dataset.directControlItemId || element.dataset.nextActionItemId;
-        const result = {
-          uuid: element.dataset.resultUuid,
-          title: element.dataset.resultTitle,
-        };
-        this._selectSearchResult(itemId, result);
-      });
-    });
-
-    root.querySelectorAll('[data-field]').forEach((element) => {
-      const field = element.dataset.field;
-      const onInput = (event) => {
-        const value = element.type === 'checkbox' ? event.currentTarget.checked : event.currentTarget.value;
-        this._updateDraft(field, value);
-      };
-      on(element, 'input', onInput);
-      on(element, 'change', onInput);
-    });
-    root.querySelectorAll('[data-direct-field]').forEach((element) => {
-      const field = element.dataset.directField;
-      const onInput = (event) => {
-        const value = element.type === 'checkbox' ? event.currentTarget.checked : event.currentTarget.value;
-        this._updateDirectDraft(field, value);
-        if (field === 'typeData') {
-          if (event.currentTarget.value !== 'command') {
-            this._updateDirectDraft('manual', false);
-            this._updateDirectDraft('voiceCommands', '');
-          } else {
-            this._searchResults = [];
-            this._searchActiveType = null;
-          }
-        }
-        if (field === 'subDirectControlArray' && value.length > 0) {
-          this._performUuidSearch(value, 'subDirectControlSample');
-        }
-        if (element.type === 'checkbox' || element.tagName === 'SELECT') {
-          this._render();
-        }
-      };
-      on(element, 'input', onInput);
-      on(element, 'change', onInput);
-      if (field === 'subDirectControlArray') {
-        on(element, 'focus', () => {
-          if (!this._subDirectControlSampleOptions.length) {
-            this._loadSubDirectControlSamples();
-          }
-        });
-        on(element, 'click', () => {
-          if (!this._subDirectControlSampleOptions.length) {
-            this._loadSubDirectControlSamples();
-          }
-        });
-      }
-    });
-    root.querySelectorAll('[data-template-field]').forEach((element) => {
-      const field = element.dataset.templateField;
-      const handler = (event) => this._updateTemplateDraft(field, event.currentTarget.value);
-      on(element, 'input', handler);
-      on(element, 'change', handler);
-    });
-    root.querySelectorAll('[data-defaults-field]').forEach((element) => {
-      const field = element.dataset.defaultsField;
-      const handler = (event) => {
-        const value = element.type === 'checkbox' ? event.currentTarget.checked : event.currentTarget.value;
-        this._updateDefaultsDraft(field, value);
-        const activeConfig = this._defaultConfig(this._defaultsActiveType);
-        if (field === 'llmEnabled' && element.type === 'checkbox' && activeConfig.supportsLlm) {
-          this._render();
-        }
-      };
-      on(element, 'input', handler);
-      if (element.type === 'checkbox' || element.tagName === 'SELECT') {
-        on(element, 'change', handler);
-      }
-    });
-    root.querySelectorAll('[data-response-item-id][data-response-item-field]').forEach((element) => {
-      const itemId = element.dataset.responseItemId;
-      const field = element.dataset.responseItemField;
-      const onInput = (event) => {
-        const value = element.type === 'checkbox' ? event.currentTarget.checked : event.currentTarget.value;
-        this._updateVoiceResponseItem(itemId, field, value);
-        if (element.type === 'checkbox') {
-          this._render();
-        }
-      };
-      on(element, 'input', onInput);
-      if (element.type === 'checkbox') {
-        on(element, 'change', onInput);
-      }
-    });
-    root.querySelectorAll('[data-direct-control-item-id]').forEach((element) => {
-      const itemId = element.dataset.directControlItemId;
-      on(element, 'input', (event) => this._updateDirectControlItem(itemId, event.currentTarget.value));
-      on(element, 'change', (event) => this._updateDirectControlItem(itemId, event.currentTarget.value));
-    });
-    root.querySelectorAll('[data-next-action-item-id][data-next-action-item-field]').forEach((element) => {
-      const itemId = element.dataset.nextActionItemId;
-      const field = element.dataset.nextActionItemField;
-      const handler = (event) => this._updateNextActionItem(itemId, field, event.currentTarget.value);
-      on(element, 'input', handler);
-      on(element, 'change', handler);
-    });
-    root.querySelectorAll('[data-direct-sub-control-item-id][data-direct-sub-control-item-field]').forEach((element) => {
-      const itemId = element.dataset.directSubControlItemId;
-      const field = element.dataset.directSubControlItemField;
-      const handler = (event) => this._updateDirectSubControlItem(itemId, field, event.currentTarget.value);
-      on(element, 'input', handler);
-      on(element, 'change', handler);
-    });
-    root.querySelectorAll('[data-template-sub-control-item-id][data-template-sub-control-item-field]').forEach((element) => {
-      const itemId = element.dataset.templateSubControlItemId;
-      const field = element.dataset.templateSubControlItemField;
-      const handler = (event) => this._updateTemplateSubControlItem(itemId, field, event.currentTarget.value);
-      on(element, 'input', handler);
-      on(element, 'change', handler);
-    });
-
-    root.querySelectorAll('input, select, textarea').forEach((element) => {
-      ['click', 'focusin'].forEach((eventName) => {
-        on(element, eventName, (event) => this._swallowUiEvent(event));
-      });
-    });
+    bindEvents(this);
   }
 
   _render() {
-    const body = this._renderActiveTabBody();
-
-    const markup = `
-      ${CREATE_SCENARIO_STYLES}
-      <section class="subtabs-dock">
-        <div class="subtabs">
-          <button type="button" class="subtab-button ${this._tab === TABS.primary ? 'active' : ''}" data-tab="${TABS.primary}">Основные команды</button>
-          <button type="button" class="subtab-button ${this._tab === TABS.secondary ? 'active' : ''}" data-tab="${TABS.secondary}">Второстепенные команды</button>
-          <button type="button" class="subtab-button ${this._tab === TABS.direct ? 'active' : ''}" data-tab="${TABS.direct}">Команды прямого выполнения</button>
-          <button type="button" class="subtab-button ${this._tab === TABS.defaults ? 'active' : ''}" data-tab="${TABS.defaults}">Дефолтные команды</button>
-        </div>
-      </section>
-      ${this._error ? `<div class="status error">${escapeHtml(this._error)}</div>` : ''}
-      ${this._status ? `<div class="status ok">${escapeHtml(this._status)}</div>` : ''}
-      ${body}
-      ${this._renderModal()}
-      ${this._renderDirectModal()}
-      ${this._renderTemplateModal()}
-      ${this._renderDefaultsModal()}
-    `;
-
-    this._mountReact(markup);
-    this._bind();
+    renderRoot(this);
   }
 }
 

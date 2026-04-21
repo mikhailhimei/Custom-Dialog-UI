@@ -103,6 +103,12 @@ export const CREATE_SCENARIO_STYLES = `
         .help-card { padding:20px; }
         .command-list { display:grid; gap:10px; }
         .command-item {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 8px;
+          align-items: stretch;
+        }
+        .command-item-main {
           display:grid;
           gap:8px;
           width:100%;
@@ -114,10 +120,20 @@ export const CREATE_SCENARIO_STYLES = `
           padding:14px;
           transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease;
         }
-        .command-item:hover {
+        .command-item-main:hover {
           transform: translateY(-1px);
           border-color: rgba(35,79,125,.3);
           box-shadow: 0 9px 20px rgba(31,41,55,.1);
+        }
+        .command-item-menu-button {
+          align-self: center;
+          min-width: 42px;
+          width: 42px;
+          height: 42px;
+          border-radius: 999px;
+          padding: 0;
+          font-weight: 700;
+          letter-spacing: 1px;
         }
         .command-item-title { font-size:16px; font-weight:700; }
         .command-item-meta { display:flex; flex-wrap:wrap; gap:8px; color:var(--ui-muted); font-size:13px; }
@@ -345,6 +361,9 @@ export const CREATE_SCENARIO_STYLES = `
           box-shadow: var(--ui-elev-2);
           scrollbar-width: none;
           -ms-overflow-style: none;
+        }
+        .modal-compact {
+          width: min(520px, calc(100vw - 32px));
         }
         .modal::-webkit-scrollbar { width: 0; height: 0; }
         .modal-header, .modal-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }

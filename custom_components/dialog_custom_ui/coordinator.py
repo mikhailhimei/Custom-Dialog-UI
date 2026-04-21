@@ -124,7 +124,7 @@ class DialogCommandCoordinator:
                 "idle",
                 (
                     "Нет совпадения для "
-                    f"children_type={_describe_payload_type(payload.get('children_type') or payload.get('type'))} "
+                    f"children_type={_describe_payload_type(payload.get('children_type') or payload.get('actionType'))} "
                     f"children_direct_type={_describe_payload_type(payload.get(ATTR_CHILDREN_DIRECT_TYPE))} "
                     f"parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}"
                 ),
@@ -148,8 +148,8 @@ class DialogCommandCoordinator:
             "entity_id": script_entity_id,
             "variables": {
                 "dialog_payload": payload,
-                "dialog_children_type": payload.get("children_type") or payload.get("type"),
-                "dialog_type": payload.get("children_type") or payload.get("type"),
+                "dialog_children_type": payload.get("children_type") or payload.get("actionType"),
+                "dialog_type": payload.get("children_type") or payload.get("actionType"),
                 "dialog_children_direct_type": payload.get(ATTR_CHILDREN_DIRECT_TYPE),
                 "dialog_parent_type": payload.get("parent_type"),
                 "dialog_value": payload.get("value"),
@@ -184,7 +184,7 @@ def _extract_payload(raw_payload: Any) -> dict[str, Any] | None:
 
 
 def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
-    incoming_children_type = payload.get("children_type") or payload.get("type")
+    incoming_children_type = payload.get("children_type") or payload.get("actionType")
     incoming_children_direct_type = payload.get(ATTR_CHILDREN_DIRECT_TYPE)
     incoming_parent_type = payload.get("parent_type")
 

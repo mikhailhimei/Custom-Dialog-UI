@@ -1,4 +1,4 @@
-export const COMMANDS_PAGE_SIZE = 20;
+﻿export const COMMANDS_PAGE_SIZE = 20;
 
 export const TABS = {
   primary: 'primary',
@@ -19,26 +19,38 @@ export const DEFAULT_COMMANDS_API_PATH = '/api/cms/default_commands';
 export const DEFAULT_COMMAND_CONFIGS = [
   {
     type: 'default_main',
-    title: 'дефолтная ошибка комманда не найдено',
+    title: 'Default Main',
     supportsLlm: true,
     hasModal: true,
   },
   {
     type: 'not_understand',
-    title: 'Не поняла, повторите пожалуйста.',
+    title: 'Not Understand',
     supportsLlm: false,
     hasModal: true,
   },
   {
     type: 'finish_miss',
-    title: 'Давайте начнём сначала',
+    title: 'Finish Miss',
     supportsLlm: false,
     hasModal: false,
   },
   {
     type: 'default_search',
-    title: 'Поиск в гугле',
+    title: 'Default Search',
     supportsLlm: true,
+    hasModal: true,
+  },
+  {
+    type: 'default_miss',
+    title: 'Default Miss',
+    supportsLlm: false,
+    hasModal: true,
+  },
+  {
+    type: 'default_integrations',
+    title: 'Default Integrations',
+    supportsLlm: false,
     hasModal: true,
   },
 ];
