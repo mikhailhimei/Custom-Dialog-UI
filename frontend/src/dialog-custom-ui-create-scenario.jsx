@@ -3,8 +3,6 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
   COMMANDS_PAGE_SIZE,
-  DEFAULT_COMMAND_CONFIGS,
-  DEFAULT_COMMANDS_API_PATH,
   DIRECT_SUBTABS,
   TABS,
 } from './create-scenario/constants.jsx';
@@ -14,15 +12,10 @@ import {
   buildDirectPayloadFromDraft,
   buildTemplatePayloadFromDraft,
   createCommandDraft,
-  createDirectControlItem,
   createDefaultsDraft,
   createDefaultsState,
   createDirectCommandDraft,
-  createDirectSubControlItem,
-  createNextActionItem,
   createTemplateCommandDraft,
-  createVoiceResponseItem,
-  createUuid,
   getDefaultCommandConfig,
 } from './create-scenario/utils.jsx';
 import {
@@ -35,11 +28,92 @@ import {
   renderPrimaryCommandsPage,
   renderSecondaryCommandsPage,
   renderStub,
-} from './create-scenario/tabs/render-tabs.jsx';
+} from './create-scenario/tabs/index.jsx';
+import {
+  closeModal,
+  deleteModal,
+  openCreateModal,
+  openEditModal,
+  saveModal,
+} from './create-scenario/tabs/commands/actions.jsx';
+import {
+  addDirectControlItem as addCommandDirectControlItem,
+  addNextActionItem,
+  addVoiceResponseItem,
+  refreshUuid,
+  removeDirectControlItem as removeCommandDirectControlItem,
+  removeNextActionItem,
+  removeVoiceResponseItem,
+  toggleDirectControlItem as toggleCommandDirectControlItem,
+  toggleNextActionItem,
+  toggleResponseItem,
+  updateDirectControlItem as updateCommandDirectControlItem,
+  updateNextActionItem,
+  updateVoiceResponseItem,
+} from './create-scenario/tabs/commands/draft-actions.jsx';
+import {
+  applyItemStatus,
+  closeItemActionsModal,
+  openItemActionsModal,
+  toggleEditModalStatus,
+  updateCommandStatusById,
+  updateDirectStatusById,
+} from './create-scenario/tabs/shared/status-actions.jsx';
+import {
+  addDirectSubControlItem,
+  addTemplateSubControlItem,
+  closeDirectModal,
+  closeTemplateModal,
+  deleteDirectModal,
+  deleteTemplateModal,
+  hydrateSelectedSubDirectControlSample,
+  loadDirectCommands,
+  loadSubDirectControlSamples,
+  loadTemplateCommands,
+  openCreateDirectModal,
+  openCreateTemplateModal,
+  openEditDirectModal,
+  openEditTemplateModal,
+  refreshDirectUuid,
+  refreshTemplateUuid,
+  reloadDirectCommands,
+  reloadTemplateCommands,
+  removeDirectSubControlItem,
+  removeTemplateSubControlItem,
+  saveDirectModal,
+  saveTemplateModal,
+  setDirectSubtab,
+  toggleDirectEditModalStatus,
+  toggleDirectSubControlItem,
+  toggleTemplateSubControlItem,
+  updateDirectDraft,
+  updateDirectSubControlItem,
+  updateTemplateDraft,
+  updateTemplateSubControlItem,
+} from './create-scenario/tabs/direct/actions.jsx';
+import {
+  debouncedPerformUuidSearch,
+  deleteItem,
+  hydrateDirectControlTitles,
+  hydrateNextActionTitles,
+  performUuidSearch,
+  resolveTitleByUuid,
+  searchUuid,
+  selectSearchResult,
+} from './create-scenario/api/actions.jsx';
+import {
+  closeDefaultsModal,
+  openDefaultsModal,
+  reloadDefaultsCommands,
+  saveDefaultsModal,
+  saveDefaultsType,
+  updateDefaultsDraft,
+} from './create-scenario/tabs/defaults/actions.jsx';
 import { bindEvents } from './create-scenario/events/bind-events.jsx';
 import { renderDefaultsModal, renderDirectModal, renderItemActionsModal, renderTemplateModal } from './create-scenario/modals/render-secondary-modals.jsx';
 import { renderMainModal } from './create-scenario/modals/render-main-modal.jsx';
 import { renderRoot } from './create-scenario/render/render-root.jsx';
+import { ensureModalBackdropStyle, initializeCreateScenarioState } from './create-scenario/state/init-state.jsx';
 const ShadowMarkup = ({ html }) => (
   <div dangerouslySetInnerHTML={{ __html: html }} />
 );
@@ -47,100 +121,8 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._reactRoot = null;
-    this._hass = null;
-    this._config = { base_url: '', timer_alarm_token: '' };
-    // Add global style for modal backdrop
-    if (typeof document !== 'undefined') {
-      let modalStyle = document.getElementById('dialog-custom-ui-modal-style');
-      if (!modalStyle) {
-        modalStyle = document.createElement('style');
-        modalStyle.id = 'dialog-custom-ui-modal-style';
-        modalStyle.textContent = 'body.modal-open { overflow: hidden; }';
-        document.head.appendChild(modalStyle);
-      }
-    }
-    this._tab = TABS.primary;
-    this._commands = [];
-    this._pageByTab = {
-      [TABS.primary]: 1,
-      [TABS.secondary]: 1,
-    };
-    this._totalByTab = {
-      [TABS.primary]: 0,
-      [TABS.secondary]: 0,
-    };
-    this._totalPagesByTab = {
-      [TABS.primary]: 1,
-      [TABS.secondary]: 1,
-    };
-    this._lastLoadedTab = TABS.primary;
-    this._lastLoadPageKey = '';
-    this._inFlightPageKey = '';
-    this._lastLoadedPageKey = '';
-    this._lastLoadedPageAt = 0;
-    this._loading = false;
-    this._error = '';
-    this._status = '';
-
-    this._modalOpen = false;
-    this._modalMode = 'create';
-    this._modalSaving = false;
-    this._editingId = '';
-    this._editingStatus = false;
-    this._openResponseItemIds = new Set();
-    this._openDirectControlItemIds = new Set();
-    this._openNextActionItemIds = new Set();
-    this._bindController = null;
-    this._legacyListeners = [];
-    this._draft = this._newDraft();
-
-    // Search state for UUID inputs
-    this._searchActiveItemId = null;
-    this._searchActiveType = null; // 'directControl' or 'nextAction'
-    this._searchResults = [];
-    this._searchLoading = false;
-    this._searchDebounceTimer = null;
-    this._modalScrollTop = 0;
-
-    this._directSubtab = DIRECT_SUBTABS.basic;
-    this._directCommands = [];
-    this._directLoading = false;
-    this._directError = '';
-    this._directModalOpen = false;
-    this._directModalMode = 'create';
-    this._directModalSaving = false;
-    this._directEditingId = '';
-    this._directEditingStatus = false;
-    this._openDirectSubControlItemIds = new Set();
-    this._directDraft = this._newDirectDraft();
-
-    this._templateCommands = [];
-    this._templateLoading = false;
-    this._templateError = '';
-    this._templateModalOpen = false;
-    this._templateModalMode = 'create';
-    this._templateModalSaving = false;
-    this._templateEditingId = '';
-    this._openTemplateSubControlItemIds = new Set();
-    this._templateDraft = this._newTemplateDraft();
-    this._subDirectControlSampleOptions = [];
-
-    this._defaultsLoading = false;
-    this._defaultsError = '';
-    this._defaultsModalOpen = false;
-    this._defaultsModalSaving = false;
-    this._defaultsByType = this._newDefaultsState();
-    this._defaultsActiveType = DEFAULT_COMMAND_CONFIGS[0].type;
-    this._defaultsActiveId = '';
-    this._itemActionsModalOpen = false;
-    this._itemActionsSaving = false;
-    this._itemActionsId = '';
-    this._itemActionsKind = '';
-    this._itemActionsCollection = '';
-    this._itemActionsStatus = false;
-    this._itemActionsTitle = '';
-    this._modalCount = 0;
+    ensureModalBackdropStyle();
+    initializeCreateScenarioState(this);
   }
 
   set hass(hass) {
@@ -396,54 +378,15 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _openCreateModal() {
-    this._addModalBackdrop();
-    this._modalOpen = true;
-    this._modalMode = 'create';
-    this._editingId = '';
-    this._draft = this._newDraft();
-    this._openResponseItemIds = new Set();
-    this._openDirectControlItemIds = new Set();
-    this._openNextActionItemIds = new Set();
-    this._error = '';
-    this._render();
+    return openCreateModal(this);
   }
 
   _openEditModal(commandId) {
-    this._addModalBackdrop();
-    const item = this._commands.find((command) => String(command._id ?? '') === String(commandId ?? ''));
-    if (!item) {
-      this._error = 'Команда не найдена.';
-      this._render();
-      return;
-    }
-    this._modalOpen = true;
-    this._modalMode = 'edit';
-    this._editingId = String(item._id ?? '');
-    this._editingStatus = Boolean(item.status);
-    this._draft = this._newDraft(item);
-    this._openResponseItemIds = new Set();
-    this._openDirectControlItemIds = new Set();
-    this._openNextActionItemIds = new Set();
-    this._error = '';
-    this._render();
-    this._hydrateDirectControlTitles();
-    this._hydrateNextActionTitles();
+    return openEditModal(this, commandId);
   }
 
   _closeModal() {
-    if (this._modalSaving) {
-      return;
-    }
-    this._removeModalBackdrop();
-    this._modalOpen = false;
-    this._modalMode = 'create';
-    this._editingId = '';
-    this._editingStatus = false;
-    this._openResponseItemIds = new Set();
-    this._openDirectControlItemIds = new Set();
-    this._openNextActionItemIds = new Set();
-    this._draft = this._newDraft();
-    this._render();
+    return closeModal(this);
   }
 
   _updateDraft(field, value) {
@@ -464,391 +407,119 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _refreshUuid() {
-    this._updateDraft('uuid', createUuid());
-    this._render();
+    return refreshUuid(this);
   }
 
   _addVoiceResponseItem() {
-    const nextItems = Array.isArray(this._draft.responseItems) ? this._draft.responseItems : [];
-    const newItem = createVoiceResponseItem();
-    this._draft = {
-      ...this._draft,
-      responseItems: [...nextItems, newItem],
-    };
-    this._openResponseItemIds.add(newItem.id);
-    this._render();
+    return addVoiceResponseItem(this);
   }
 
   _removeVoiceResponseItem(itemId) {
-    const nextItems = (Array.isArray(this._draft.responseItems) ? this._draft.responseItems : [])
-      .filter((item) => item.id !== itemId);
-    this._draft = {
-      ...this._draft,
-      responseItems: nextItems,
-    };
-    this._openResponseItemIds = new Set(
-      [...this._openResponseItemIds].filter((id) => this._draft.responseItems.some((item) => item.id === id))
-    );
-    this._render();
+    return removeVoiceResponseItem(this, itemId);
   }
 
   _updateVoiceResponseItem(itemId, field, value) {
-    const nextItems = (Array.isArray(this._draft.responseItems) ? this._draft.responseItems : [])
-      .map((item) => {
-        if (item.id !== itemId) {
-          return item;
-        }
-        return {
-          ...item,
-          [field]: value,
-        };
-      });
-    this._draft = {
-      ...this._draft,
-      responseItems: nextItems,
-    };
+    return updateVoiceResponseItem(this, itemId, field, value);
   }
 
   _toggleResponseItem(itemId) {
-    if (this._openResponseItemIds.has(itemId)) {
-      this._openResponseItemIds.delete(itemId);
-    } else {
-      this._openResponseItemIds.add(itemId);
-    }
-    this._render();
+    return toggleResponseItem(this, itemId);
   }
 
   _addDirectControlItem() {
-    const nextItems = Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [];
-    const newItem = createDirectControlItem();
-    this._draft = {
-      ...this._draft,
-      directControlItems: [...nextItems, newItem],
-    };
-    this._openDirectControlItemIds.add(newItem.id);
-    this._render();
+    return addCommandDirectControlItem(this);
   }
 
   _removeDirectControlItem(itemId) {
-    const nextItems = (Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [])
-      .filter((item) => item.id !== itemId);
-    this._draft = {
-      ...this._draft,
-      directControlItems: nextItems,
-    };
-    this._openDirectControlItemIds = new Set(
-      [...this._openDirectControlItemIds].filter((id) => nextItems.some((item) => item.id === id))
-    );
-    this._render();
+    return removeCommandDirectControlItem(this, itemId);
   }
 
   _updateDirectControlItem(itemId, value) {
-    itemId = itemId.trim();
-    const nextItems = (Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [])
-      .map((item) => {
-        if (item.id !== itemId) {
-          return item;
-        }
-        const nextUuid = String(value ?? '');
-        const nextTrimmedUuid = nextUuid.trim();
-        const currentTrimmedUuid = String(item.uuid ?? '').trim();
-        return {
-          ...item,
-          uuid: nextUuid,
-          displayValue: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.displayValue : '',
-        };
-      });
-    this._draft = {
-      ...this._draft,
-      directControlItems: nextItems,
-    };
-    // Trigger search if input has length
-    if (value.length > 0) {
-      this._debouncedPerformUuidSearch(value, 'directControl', itemId);
-    }
+    return updateCommandDirectControlItem(this, itemId, value);
   }
 
   _toggleDirectControlItem(itemId) {
-    if (this._openDirectControlItemIds.has(itemId)) {
-      this._openDirectControlItemIds.delete(itemId);
-    } else {
-      this._openDirectControlItemIds.add(itemId);
-    }
-    this._render();
+    return toggleCommandDirectControlItem(this, itemId);
   }
 
   _addNextActionItem() {
-    const nextItems = Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : [];
-    const newItem = createNextActionItem();
-    this._draft = {
-      ...this._draft,
-      nextActionItems: [...nextItems, newItem],
-    };
-    this._openNextActionItemIds.add(newItem.id);
-    this._render();
+    return addNextActionItem(this);
   }
 
   _removeNextActionItem(itemId) {
-    const nextItems = (Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : [])
-      .filter((item) => item.id !== itemId);
-    this._draft = {
-      ...this._draft,
-      nextActionItems: nextItems,
-    };
-    this._openNextActionItemIds = new Set(
-      [...this._openNextActionItemIds].filter((id) => nextItems.some((item) => item.id === id))
-    );
-    this._render();
+    return removeNextActionItem(this, itemId);
   }
 
   _updateNextActionItem(itemId, field, value) {
-    itemId = itemId.trim();
-    const nextItems = (Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : [])
-      .map((item) => {
-        if (item.id !== itemId) {
-          return item;
-        }
-        if (field === 'uuid') {
-          const nextUuid = String(value ?? '');
-          const nextTrimmedUuid = nextUuid.trim();
-          const currentTrimmedUuid = String(item.uuid ?? '').trim();
-          return {
-            ...item,
-            uuid: nextUuid,
-            displayValue: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.displayValue : '',
-          };
-        }
-        return { ...item, [field]: value };
-      });
-    this._draft = {
-      ...this._draft,
-      nextActionItems: nextItems,
-    };
-    // Trigger search if uuid field and has length
-    if (field === 'uuid' && value.length > 0) {
-      this._debouncedPerformUuidSearch(value, 'nextAction', itemId);
-    }
+    return updateNextActionItem(this, itemId, field, value);
   }
 
   _toggleNextActionItem(itemId) {
-    if (this._openNextActionItemIds.has(itemId)) {
-      this._openNextActionItemIds.delete(itemId);
-    } else {
-      this._openNextActionItemIds.add(itemId);
-    }
-    this._render();
+    return toggleNextActionItem(this, itemId);
   }
 
   _setDirectSubtab(subtab) {
-    this._directSubtab = subtab;
-    this._directError = '';
-    if (subtab === DIRECT_SUBTABS.basic && !this._directCommands.length && !this._directLoading) {
-      this._loadDirectCommands();
-    } else if (subtab === DIRECT_SUBTABS.templates && !this._templateCommands.length && !this._templateLoading) {
-      this._loadTemplateCommands();
-    }
-    this._render();
+    return setDirectSubtab(this, subtab);
   }
 
   async _loadDirectCommands() {
-    const url = this._apiUrl('/api/cms/sub-direct-controls?page=1&pageSize=' + COMMANDS_PAGE_SIZE);
-    if (!url) {
-      this._directError = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-    this._directLoading = true;
-    this._directError = '';
-    this._render();
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: this._apiHeaders(false),
-      });
-      if (!response.ok) {
-        throw new Error(`Ошибка загрузки direct-команд: HTTP ${response.status}`);
-      }
-      const result = await response.json();
-      const data = Array.isArray(result.data) ? result.data : [];
-      this._directCommands = data;
-      this._status = `Direct-команды загружены: ${data.length}.`;
-    } catch (error) {
-      this._directCommands = [];
-      this._directError = error?.message || 'Не удалось загрузить direct-команды.';
-    } finally {
-      this._directLoading = false;
-      this._render();
-    }
+    return loadDirectCommands(this);
   }
 
   async _loadTemplateCommands() {
-    const url = this._apiUrl('/api/cms/sub-direct-controls-sample?page=1&pageSize=' + COMMANDS_PAGE_SIZE);
-    if (!url) {
-      this._templateError = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-    this._templateLoading = true;
-    this._templateError = '';
-    this._render();
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: this._apiHeaders(false),
-      });
-      if (!response.ok) {
-        throw new Error(`Ошибка загрузки шаблонов: HTTP ${response.status}`);
-      }
-      const result = await response.json();
-      const data = Array.isArray(result.data) ? result.data : [];
-      this._templateCommands = data;
-      this._status = `Шаблоны загружены: ${data.length}.`;
-    } catch (error) {
-      this._templateCommands = [];
-      this._templateError = error?.message || 'Не удалось загрузить шаблоны.';
-    } finally {
-      this._templateLoading = false;
-      this._render();
-    }
+    return loadTemplateCommands(this);
   }
 
   _reloadDirectCommands() {
-    if (this._directLoading) return;
-    this._directCommands = [];
-    this._loadDirectCommands();
+    return reloadDirectCommands(this);
   }
 
   _reloadTemplateCommands() {
-    if (this._templateLoading) return;
-    this._templateCommands = [];
-    this._loadTemplateCommands();
+    return reloadTemplateCommands(this);
   }
 
   _openCreateDirectModal() {
-    this._addModalBackdrop();
-    this._directModalOpen = true;
-    this._directModalMode = 'create';
-    this._directEditingId = '';
-    this._directDraft = this._newDirectDraft();
-    this._openDirectSubControlItemIds = new Set();
-    this._directError = '';
-    this._render();
+    return openCreateDirectModal(this);
   }
 
   _openEditDirectModal(commandId) {
-    this._addModalBackdrop();
-    const item = this._directCommands.find((command) => String(command._id ?? '') === String(commandId ?? ''));
-    if (!item) {
-      this._directError = 'Direct-команда не найдена.';
-      this._render();
-      return;
-    }
-    this._directModalOpen = true;
-    this._directModalMode = 'edit';
-    this._directEditingId = String(item._id ?? '');
-    this._directEditingStatus = Boolean(item.status);
-    this._directDraft = this._newDirectDraft(item);
-    this._openDirectSubControlItemIds = new Set();
-    this._directError = '';
-    this._render();
-    this._hydrateSelectedSubDirectControlSample();
+    return openEditDirectModal(this, commandId);
   }
 
   _closeDirectModal() {
-    if (this._directModalSaving) {
-      return;
-    }
-    this._removeModalBackdrop();
-    this._directModalOpen = false;
-    this._directModalMode = 'create';
-    this._directEditingId = '';
-    this._directEditingStatus = false;
-    this._openDirectSubControlItemIds = new Set();
-    this._directDraft = this._newDirectDraft();
-    this._searchResults = [];
-    this._searchActiveType = null;
-    this._subDirectControlSampleOptions = [];
-    this._render();
+    return closeDirectModal(this);
   }
 
   _updateDirectDraft(field, value) {
-    this._directDraft = {
-      ...this._directDraft,
-      [field]: value,
-    };
+    return updateDirectDraft(this, field, value);
   }
 
   async _hydrateSelectedSubDirectControlSample() {
-    const isCommandType = this._directDraft.typeData === 'command';
-    const isManual = Boolean(this._directDraft.manual);
-    const selectedUuid = String(this._directDraft.subDirectControl ?? '').trim();
-    if (!isCommandType || isManual || !selectedUuid) {
-      return;
-    }
-    const hasSelected = (Array.isArray(this._subDirectControlSampleOptions) ? this._subDirectControlSampleOptions : [])
-      .some((item) => String(item?.uuid ?? '').trim() === selectedUuid);
-    if (hasSelected) {
-      return;
-    }
-    const results = await this._searchUuid(selectedUuid, ['sub-direct-controls-sample']);
-    const exactMatch = results.find((item) => String(item?.uuid ?? '').trim() === selectedUuid);
-    const option = exactMatch
-      ? { uuid: String(exactMatch.uuid ?? selectedUuid), title: String(exactMatch.title ?? '').trim() || selectedUuid }
-      : { uuid: selectedUuid, title: selectedUuid };
-    this._subDirectControlSampleOptions = [option, ...(Array.isArray(this._subDirectControlSampleOptions) ? this._subDirectControlSampleOptions : [])];
-    this._render();
+    return hydrateSelectedSubDirectControlSample(this);
   }
 
   _refreshDirectUuid() {
-    this._updateDirectDraft('uuid', createUuid());
-    this._render();
+    return refreshDirectUuid(this);
   }
 
   _refreshTemplateUuid() {
-    this._updateTemplateDraft('uuid', createUuid());
-    this._render();
+    return refreshTemplateUuid(this);
   }
 
   _addDirectSubControlItem() {
-    const nextItems = Array.isArray(this._directDraft.subDirectControlItems) ? this._directDraft.subDirectControlItems : [];
-    const newItem = createDirectSubControlItem();
-    this._directDraft = {
-      ...this._directDraft,
-      subDirectControlItems: [...nextItems, newItem],
-    };
-    this._openDirectSubControlItemIds.add(newItem.id);
-    this._render();
+    return addDirectSubControlItem(this);
   }
 
   _removeDirectSubControlItem(itemId) {
-    const nextItems = (Array.isArray(this._directDraft.subDirectControlItems) ? this._directDraft.subDirectControlItems : [])
-      .filter((item) => item.id !== itemId);
-    this._directDraft = {
-      ...this._directDraft,
-      subDirectControlItems: nextItems,
-    };
-    this._openDirectSubControlItemIds = new Set(
-      [...this._openDirectSubControlItemIds].filter((id) => nextItems.some((item) => item.id === id))
-    );
-    this._render();
+    return removeDirectSubControlItem(this, itemId);
   }
 
   _toggleDirectSubControlItem(itemId) {
-    if (this._openDirectSubControlItemIds.has(itemId)) {
-      this._openDirectSubControlItemIds.delete(itemId);
-    } else {
-      this._openDirectSubControlItemIds.add(itemId);
-    }
-    this._render();
+    return toggleDirectSubControlItem(this, itemId);
   }
 
   _updateDirectSubControlItem(itemId, field, value) {
-    const nextItems = (Array.isArray(this._directDraft.subDirectControlItems) ? this._directDraft.subDirectControlItems : [])
-      .map((item) => (item.id === itemId ? { ...item, [field]: value } : item));
-    this._directDraft = {
-      ...this._directDraft,
-      subDirectControlItems: nextItems,
-    };
+    return updateDirectSubControlItem(this, itemId, field, value);
   }
 
   _buildDirectPayload() {
@@ -856,574 +527,107 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   async _loadSubDirectControlSamples() {
-    if (this._searchLoading) {
-      return;
-    }
-    this._searchActiveType = 'subDirectControlSample';
-    this._searchLoading = true;
-    this._render();
-
-    try {
-      const results = await this._searchUuid('', ['sub-direct-controls-sample']);
-      this._searchResults = results;
-      this._subDirectControlSampleOptions = results;
-    } catch (error) {
-      this._searchResults = [];
-      this._subDirectControlSampleOptions = [];
-    } finally {
-      this._searchLoading = false;
-      this._render();
-    }
+    return loadSubDirectControlSamples(this);
   }
 
   async _performUuidSearch(searchText, searchType, itemId = null) {
-    if (!searchText || searchText.length === 0) {
-      this._searchResults = [];
-      this._searchActiveItemId = null;
-      this._searchActiveType = null;
-      this._render();
-      return;
-    }
-
-    this._searchActiveItemId = itemId;
-    this._searchActiveType = searchType;
-    this._searchLoading = true;
-    // Removed _render() to prevent scroll jumping
-
-    try {
-      let collections = [];
-      if (searchType === 'directControl') {
-        collections = ['sub-direct-controls'];
-      } else if (searchType === 'nextAction') {
-        collections = ['sub-commands', 'commands'];
-      } else if (searchType === 'subDirectControlSample') {
-        collections = ['sub-direct-controls-sample'];
-      }
-
-      const results = await this._searchUuid(searchText, collections);
-      this._searchResults = results;
-      if (searchType === 'directControl' && itemId) {
-        const normalizedSearchText = String(searchText ?? '').trim();
-        const exactMatch = results.find(
-          (entry) => String(entry?.uuid ?? '').trim() === normalizedSearchText
-        );
-        if (exactMatch?.title) {
-          const nextItems = (Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [])
-            .map((item) => (
-              item.id === itemId
-                ? { ...item, displayValue: String(exactMatch.title) }
-                : item
-            ));
-          this._draft = {
-            ...this._draft,
-            directControlItems: nextItems,
-          };
-        }
-      }
-    } catch (error) {
-      this._searchResults = [];
-    } finally {
-      this._searchLoading = false;
-      this._render();
-    }
+    return performUuidSearch(this, searchText, searchType, itemId);
   }
 
   _debouncedPerformUuidSearch(searchText, searchType, itemId = null) {
-    if (this._searchDebounceTimer) {
-      clearTimeout(this._searchDebounceTimer);
-    }
-    this._searchDebounceTimer = setTimeout(() => {
-      this._performUuidSearch(searchText, searchType, itemId);
-    }, 300); // 300ms delay
+    return debouncedPerformUuidSearch(this, searchText, searchType, itemId);
   }
 
   _selectSearchResult(itemId, result) {
-    itemId = itemId.trim();
-    const activeType = this._searchActiveType;
-    if (activeType === 'directControl') {
-      const nextItems = (Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [])
-        .map((item) => (
-          item.id === itemId
-            ? { ...item, uuid: String(result.uuid ?? ''), displayValue: String(result.title ?? '') }
-            : item
-        ));
-      this._draft = {
-        ...this._draft,
-        directControlItems: nextItems,
-      };
-    } else if (activeType === 'nextAction') {
-      this._updateNextActionItem(itemId, 'displayValue', result.title);
-      // Also set uuid
-      const nextItems = (Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : [])
-        .map((item) => (item.id === itemId ? { ...item, uuid: result.uuid } : item));
-      this._draft = {
-        ...this._draft,
-        nextActionItems: nextItems,
-      };
-    }
-    // Clear search state
-    this._searchResults = [];
-    this._searchActiveItemId = null;
-    this._searchActiveType = null;
-    this._render();
+    return selectSearchResult(this, itemId, result);
   }
 
   async _searchUuid(searchText, collections) {
-    const baseUrl = String(this._config.base_url ?? '').trim().replace(/\/$/, '');
-    if (!baseUrl) {
-      return [];
-    }
-    try {
-      const collectionsParam = Array.isArray(collections) ? collections.join(',') : String(collections);
-      const url = `${baseUrl}/api/cms/search?collections=${encodeURIComponent(collectionsParam)}&text=${encodeURIComponent(searchText)}`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: this._apiHeaders(false),
-      });
-      if (!response.ok) {
-        return [];
-      }
-      const result = await response.json();
-      const data = Array.isArray(result.data) ? result.data : Array.isArray(result) ? result : [];
-      return data;
-    } catch (error) {
-      return [];
-    }
+    return searchUuid(this, searchText, collections);
   }
 
   async _resolveTitleByUuid(uuid, collections) {
-    const normalizedUuid = String(uuid ?? '').trim();
-    if (!normalizedUuid) {
-      return '';
-    }
-    const results = await this._searchUuid(normalizedUuid, collections);
-    const exactMatch = results.find((entry) => String(entry?.uuid ?? '').trim() === normalizedUuid);
-    return String(exactMatch?.title ?? results[0]?.title ?? '').trim();
+    return resolveTitleByUuid(this, uuid, collections);
   }
 
   async _hydrateDirectControlTitles() {
-    const items = Array.isArray(this._draft.directControlItems) ? this._draft.directControlItems : [];
-    if (!items.length) {
-      return;
-    }
-    const updatedItems = await Promise.all(
-      items.map(async (item) => {
-        const uuid = String(item.uuid ?? '').trim();
-        const displayValue = String(item.displayValue ?? '').trim();
-        if (!uuid || displayValue) {
-          return item;
-        }
-        const title = await this._resolveTitleByUuid(uuid, ['sub-direct-controls']);
-        return {
-          ...item,
-          displayValue: title,
-        };
-      })
-    );
-    this._draft = {
-      ...this._draft,
-      directControlItems: updatedItems,
-    };
-    this._render();
+    return hydrateDirectControlTitles(this);
   }
 
   async _hydrateNextActionTitles() {
-    const items = Array.isArray(this._draft.nextActionItems) ? this._draft.nextActionItems : [];
-    if (!items.length) {
-      return;
-    }
-    const updatedItems = await Promise.all(
-      items.map(async (item) => {
-        const uuid = String(item.uuid ?? '').trim();
-        const displayValue = String(item.displayValue ?? '').trim();
-        if (!uuid || displayValue) {
-          return item;
-        }
-        const title = await this._resolveTitleByUuid(uuid, ['sub-commands', 'commands']);
-        return {
-          ...item,
-          displayValue: title,
-        };
-      })
-    );
-    this._draft = {
-      ...this._draft,
-      nextActionItems: updatedItems,
-    };
-    this._render();
+    return hydrateNextActionTitles(this);
   }
 
   async _deleteItem(collection, uuid) {
-    const baseUrl = String(this._config.base_url ?? '').trim().replace(/\/$/, '');
-    if (!baseUrl) {
-      throw new Error('Заполните Base URL во вкладке Settings.');
-    }
-    const url = `${baseUrl}/api/cms/${encodeURIComponent(collection)}/${encodeURIComponent(uuid)}`;
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: this._apiHeaders(true),
-    });
-    if (!response.ok) {
-      throw new Error(`Ошибка удаления: HTTP ${response.status}`);
-    }
+    return deleteItem(this, collection, uuid);
   }
 
   _openItemActionsModal({ kind, id, title, collection, status }) {
-    if (!id) {
-      return;
-    }
-    this._addModalBackdrop();
-    this._itemActionsModalOpen = true;
-    this._itemActionsSaving = false;
-    this._itemActionsKind = String(kind ?? '');
-    this._itemActionsId = String(id ?? '');
-    this._itemActionsTitle = String(title ?? '').trim();
-    this._itemActionsCollection = String(collection ?? '');
-    this._itemActionsStatus = Boolean(status);
-    this._render();
+    return openItemActionsModal(this, { kind, id, title, collection, status });
   }
 
   _closeItemActionsModal() {
-    if (this._itemActionsSaving) {
-      return;
-    }
-    this._removeModalBackdrop();
-    this._itemActionsModalOpen = false;
-    this._itemActionsSaving = false;
-    this._itemActionsKind = '';
-    this._itemActionsId = '';
-    this._itemActionsTitle = '';
-    this._itemActionsCollection = '';
-    this._itemActionsStatus = false;
-    this._render();
+    return closeItemActionsModal(this);
   }
 
   async _updateCommandStatusById(commandId, collection, nextStatus) {
-    const item = this._commands.find((command) => String(command._id ?? '') === String(commandId ?? ''));
-    if (!item) {
-      throw new Error('Команда не найдена.');
-    }
-    const draft = this._newDraft(item);
-    const payload = buildCommandPayloadFromDraft(draft);
-    if (collection === 'sub-commands') {
-      delete payload.componentDialog;
-    } else {
-      delete payload.subComponentDialog;
-    }
-    payload.status = Boolean(nextStatus);
-    const url = this._apiUrl(`/api/cms/${encodeURIComponent(collection)}/${encodeURIComponent(commandId)}`);
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: this._apiHeaders(true),
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      throw new Error(`Ошибка изменения статуса: HTTP ${response.status}`);
-    }
-    this._commands = this._commands.map((command) => (
-      String(command._id ?? '') === String(commandId ?? '')
-        ? { ...command, status: Boolean(nextStatus) }
-        : command
-    ));
-    if (String(this._editingId ?? '') === String(commandId ?? '')) {
-      this._editingStatus = Boolean(nextStatus);
-    }
+    return updateCommandStatusById(this, commandId, collection, nextStatus);
   }
 
   async _updateDirectStatusById(directId, nextStatus) {
-    const item = this._directCommands.find((command) => String(command._id ?? '') === String(directId ?? ''));
-    if (!item) {
-      throw new Error('Direct-команда не найдена.');
-    }
-    const draft = this._newDirectDraft(item);
-    const payload = {
-      ...buildDirectPayloadFromDraft(draft),
-      status: Boolean(nextStatus),
-    };
-    const url = this._apiUrl(`/api/cms/sub-direct-controls/${encodeURIComponent(directId)}`);
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: this._apiHeaders(true),
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) {
-      throw new Error(`Ошибка изменения статуса direct-команды: HTTP ${response.status}`);
-    }
-    this._directCommands = this._directCommands.map((command) => (
-      String(command._id ?? '') === String(directId ?? '')
-        ? { ...command, status: Boolean(nextStatus) }
-        : command
-    ));
-    if (String(this._directEditingId ?? '') === String(directId ?? '')) {
-      this._directEditingStatus = Boolean(nextStatus);
-    }
+    return updateDirectStatusById(this, directId, nextStatus);
   }
 
   async _applyItemStatus() {
-    if (this._itemActionsSaving || !this._itemActionsId) {
-      return;
-    }
-    const nextStatus = !this._itemActionsStatus;
-    this._itemActionsSaving = true;
-    this._error = '';
-    this._directError = '';
-    this._render();
-    try {
-      if (this._itemActionsKind === 'command') {
-        await this._updateCommandStatusById(this._itemActionsId, this._itemActionsCollection || 'commands', nextStatus);
-      } else if (this._itemActionsKind === 'direct') {
-        await this._updateDirectStatusById(this._itemActionsId, nextStatus);
-      } else {
-        throw new Error('Неизвестный тип сценария.');
-      }
-      this._itemActionsStatus = nextStatus;
-      this._status = nextStatus ? 'Сценарий опубликован.' : 'Сценарий скрыт.';
-      this._closeItemActionsModal();
-    } catch (error) {
-      if (this._itemActionsKind === 'direct') {
-        this._directError = error?.message || 'Не удалось изменить статус direct-команды.';
-      } else {
-        this._error = error?.message || 'Не удалось изменить статус сценария.';
-      }
-      this._itemActionsSaving = false;
-      this._render();
-    }
+    return applyItemStatus(this);
   }
 
   async _toggleEditModalStatus() {
-    if (this._modalSaving || !this._editingId) {
-      return;
-    }
-    this._modalSaving = true;
-    this._error = '';
-    this._render();
-    try {
-      const nextStatus = !Boolean(this._editingStatus);
-      const collection = this._tab === TABS.secondary ? 'sub-commands' : 'commands';
-      await this._updateCommandStatusById(this._editingId, collection, nextStatus);
-      this._editingStatus = nextStatus;
-      this._status = nextStatus ? 'Сценарий опубликован.' : 'Сценарий скрыт.';
-    } catch (error) {
-      this._error = error?.message || 'Не удалось изменить статус сценария.';
-    } finally {
-      this._modalSaving = false;
-      this._render();
-    }
+    return toggleEditModalStatus(this);
   }
 
   async _toggleDirectEditModalStatus() {
-    if (this._directModalSaving || !this._directEditingId) {
-      return;
-    }
-    this._directModalSaving = true;
-    this._directError = '';
-    this._render();
-    try {
-      const nextStatus = !Boolean(this._directEditingStatus);
-      await this._updateDirectStatusById(this._directEditingId, nextStatus);
-      this._directEditingStatus = nextStatus;
-      this._status = nextStatus ? 'Direct-команда опубликована.' : 'Direct-команда скрыта.';
-    } catch (error) {
-      this._directError = error?.message || 'Не удалось изменить статус direct-команды.';
-    } finally {
-      this._directModalSaving = false;
-      this._render();
-    }
+    return toggleDirectEditModalStatus(this);
   }
 
   async _saveDirectModal() {
-    const base = this._apiUrl('');
-    if (!base) {
-      this._directError = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-
-    let payload;
-    try {
-      payload = this._buildDirectPayload();
-    } catch (error) {
-      this._directError = error?.message || 'Ошибка валидации direct-команды.';
-      this._render();
-      return;
-    }
-
-    this._directModalSaving = true;
-    this._directError = '';
-    this._render();
-    try {
-      const isEdit = this._directModalMode === 'edit' && this._directEditingId;
-      const collection = 'sub-direct-controls';
-      const url = isEdit
-        ? this._apiUrl(`/api/cms/${collection}/${encodeURIComponent(this._directEditingId)}`)
-        : this._apiUrl(`/api/cms/${collection}`);
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: this._apiHeaders(true),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Ошибка сохранения direct-команды: HTTP ${response.status}`);
-      }
-
-      let savedItem = null;
-      try {
-        savedItem = await response.json();
-      } catch {
-        savedItem = null;
-      }
-
-      if (isEdit) {
-        this._directCommands = this._directCommands.map((item) => (
-          String(item._id ?? '') === String(this._directEditingId)
-            ? { ...item, ...(savedItem && typeof savedItem === 'object' ? savedItem : payload), _id: this._directEditingId }
-            : item
-        ));
-      } else {
-        const createdId = String(savedItem?._id ?? createUuid());
-        this._directCommands = [
-          { ...(savedItem && typeof savedItem === 'object' ? savedItem : payload), _id: createdId },
-          ...this._directCommands,
-        ];
-      }
-
-      await this._loadDirectCommands();
-      this._status = isEdit ? 'Direct-команда обновлена.' : 'Direct-команда создана.';
-      this._removeModalBackdrop();
-      this._directModalOpen = false;
-      this._directModalMode = 'create';
-      this._directEditingId = '';
-      this._directEditingStatus = false;
-      this._openDirectSubControlItemIds = new Set();
-      this._directDraft = this._newDirectDraft();
-    } catch (error) {
-      this._directError = error?.message || 'Не удалось сохранить direct-команду.';
-    } finally {
-      this._directModalSaving = false;
-      this._render();
-    }
+    return saveDirectModal(this);
   }
 
   async _deleteDirectModal() {
-    if (!this._directEditingId) {
-      return;
-    }
-    if (!confirm('Вы уверены, что хотите удалить эту direct-команду?')) {
-      return;
-    }
-    this._directModalSaving = true;
-    this._directError = '';
-    this._render();
-    try {
-      await this._deleteItem('sub-direct-controls', this._directEditingId);
-      this._directCommands = this._directCommands.filter((item) => String(item._id ?? '') !== String(this._directEditingId));
-      this._status = 'Direct-команда удалена.';
-      this._removeModalBackdrop();
-      this._directModalOpen = false;
-      this._directModalMode = 'create';
-      this._directEditingId = '';
-      this._directEditingStatus = false;
-      this._openDirectSubControlItemIds = new Set();
-      this._directDraft = this._newDirectDraft();
-    } catch (error) {
-      this._directError = error?.message || 'Не удалось удалить direct-команду.';
-    } finally {
-      this._directModalSaving = false;
-      this._render();
-    }
+    return deleteDirectModal(this);
   }
 
   _openCreateTemplateModal() {
-    this._addModalBackdrop();
-    this._templateModalOpen = true;
-    this._templateModalMode = 'create';
-    this._templateEditingId = '';
-    this._templateDraft = this._newTemplateDraft();
-    this._openTemplateSubControlItemIds = new Set();
-    this._templateError = '';
-    this._render();
+    return openCreateTemplateModal(this);
   }
 
   _openEditTemplateModal(templateId) {
-    this._addModalBackdrop();
-    const item = this._templateCommands.find((command) => String(command._id ?? '') === String(templateId ?? ''));
-    if (!item) {
-      this._templateError = 'Шаблон не найден.';
-      this._render();
-      return;
-    }
-    this._templateModalOpen = true;
-    this._templateModalMode = 'edit';
-    this._templateEditingId = String(item._id ?? '');
-    this._templateDraft = this._newTemplateDraft(item);
-    this._openTemplateSubControlItemIds = new Set();
-    this._templateError = '';
-    this._render();
+    return openEditTemplateModal(this, templateId);
   }
 
   _closeTemplateModal() {
-    if (this._templateModalSaving) {
-      return;
-    }
-    this._removeModalBackdrop();
-    this._templateModalOpen = false;
-    this._templateModalMode = 'create';
-    this._templateEditingId = '';
-    this._openTemplateSubControlItemIds = new Set();
-    this._templateDraft = this._newTemplateDraft();
-    this._render();
+    return closeTemplateModal(this);
   }
 
   _updateTemplateDraft(field, value) {
-    this._templateDraft = {
-      ...this._templateDraft,
-      [field]: value,
-    };
+    return updateTemplateDraft(this, field, value);
   }
 
   _addTemplateSubControlItem() {
-    const nextItems = Array.isArray(this._templateDraft.subDirectControlItems) ? this._templateDraft.subDirectControlItems : [];
-    const newItem = createDirectSubControlItem();
-    this._templateDraft = {
-      ...this._templateDraft,
-      subDirectControlItems: [...nextItems, newItem],
-    };
-    this._openTemplateSubControlItemIds.add(newItem.id);
-    this._render();
+    return addTemplateSubControlItem(this);
   }
 
   _removeTemplateSubControlItem(itemId) {
-    const nextItems = (Array.isArray(this._templateDraft.subDirectControlItems) ? this._templateDraft.subDirectControlItems : [])
-      .filter((item) => item.id !== itemId);
-    this._templateDraft = {
-      ...this._templateDraft,
-      subDirectControlItems: nextItems,
-    };
-    this._openTemplateSubControlItemIds = new Set(
-      [...this._openTemplateSubControlItemIds].filter((id) => nextItems.some((item) => item.id === id))
-    );
-    this._render();
+    return removeTemplateSubControlItem(this, itemId);
   }
 
   _toggleTemplateSubControlItem(itemId) {
-    if (this._openTemplateSubControlItemIds.has(itemId)) {
-      this._openTemplateSubControlItemIds.delete(itemId);
-    } else {
-      this._openTemplateSubControlItemIds.add(itemId);
-    }
-    this._render();
+    return toggleTemplateSubControlItem(this, itemId);
   }
 
   _updateTemplateSubControlItem(itemId, field, value) {
-    const nextItems = (Array.isArray(this._templateDraft.subDirectControlItems) ? this._templateDraft.subDirectControlItems : [])
-      .map((item) => (item.id === itemId ? { ...item, [field]: value } : item));
-    this._templateDraft = {
-      ...this._templateDraft,
-      subDirectControlItems: nextItems,
-    };
+    return updateTemplateSubControlItem(this, itemId, field, value);
   }
 
   _buildTemplatePayload() {
@@ -1431,213 +635,27 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   async _saveTemplateModal() {
-    const base = this._apiUrl('');
-    if (!base) {
-      this._templateError = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-
-    let payload;
-    try {
-      payload = this._buildTemplatePayload();
-    } catch (error) {
-      this._templateError = error?.message || 'Ошибка валидации шаблона.';
-      this._render();
-      return;
-    }
-
-    this._templateModalSaving = true;
-    this._templateError = '';
-    this._render();
-    try {
-      const isEdit = this._templateModalMode === 'edit' && this._templateEditingId;
-      const collection = 'sub-direct-controls-sample';
-      const url = isEdit
-        ? this._apiUrl(`/api/cms/${collection}/${encodeURIComponent(this._templateEditingId)}`)
-        : this._apiUrl(`/api/cms/${collection}`);
-      const method = isEdit ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: this._apiHeaders(true),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Ошибка сохранения шаблона: HTTP ${response.status}`);
-      }
-
-      let savedItem = null;
-      try {
-        savedItem = await response.json();
-      } catch {
-        savedItem = null;
-      }
-
-      if (isEdit) {
-        this._templateCommands = this._templateCommands.map((item) => (
-          String(item._id ?? '') === String(this._templateEditingId)
-            ? { ...item, ...(savedItem && typeof savedItem === 'object' ? savedItem : payload), _id: this._templateEditingId }
-            : item
-        ));
-      } else {
-        const createdId = String(savedItem?._id ?? createUuid());
-        this._templateCommands = [
-          { ...(savedItem && typeof savedItem === 'object' ? savedItem : payload), _id: createdId },
-          ...this._templateCommands,
-        ];
-      }
-
-      await this._loadTemplateCommands();
-      this._status = isEdit ? 'Шаблон обновлен.' : 'Шаблон создан.';
-      this._removeModalBackdrop();
-      this._templateModalOpen = false;
-      this._templateModalMode = 'create';
-      this._templateEditingId = '';
-      this._openTemplateSubControlItemIds = new Set();
-      this._templateDraft = this._newTemplateDraft();
-    } catch (error) {
-      this._templateError = error?.message || 'Не удалось сохранить шаблон.';
-    } finally {
-      this._templateModalSaving = false;
-      this._render();
-    }
+    return saveTemplateModal(this);
   }
 
   async _deleteTemplateModal() {
-    if (!this._templateEditingId) {
-      return;
-    }
-    if (!confirm('Вы уверены, что хотите удалить этот шаблон?')) {
-      return;
-    }
-    this._templateModalSaving = true;
-    this._templateError = '';
-    this._render();
-    try {
-      await this._deleteItem('sub-direct-controls-sample', this._templateEditingId);
-      this._templateCommands = this._templateCommands.filter((item) => String(item._id ?? '') !== String(this._templateEditingId));
-      this._status = 'Шаблон удален.';
-      this._removeModalBackdrop();
-      this._templateModalOpen = false;
-      this._templateModalMode = 'create';
-      this._templateEditingId = '';
-      this._openTemplateSubControlItemIds = new Set();
-      this._templateDraft = this._newTemplateDraft();
-    } catch (error) {
-      this._templateError = error?.message || 'Не удалось удалить шаблон.';
-    } finally {
-      this._templateModalSaving = false;
-      this._render();
-    }
+    return deleteTemplateModal(this);
   }
 
   _reloadDefaultsCommands() {
-    const actionTypes = DEFAULT_COMMAND_CONFIGS.map((config) => config.type).join(',');
-    const url = this._apiUrl(`/api/cms/search?actionType=${encodeURIComponent(actionTypes)}&collections=settings-dialog`);
-    if (!url) {
-      this._defaultsError = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-
-    this._defaultsLoading = true;
-    this._defaultsError = '';
-    this._render();
-    return fetch(url, {
-      method: 'GET',
-      headers: this._apiHeaders(false),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Ошибка загрузки дефолтных команд: HTTP ${response.status}`);
-        }
-        const result = await response.json();
-        const items = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : [];
-        const nextState = this._newDefaultsState();
-        const usedTypes = new Set();
-        const fallbackOrder = DEFAULT_COMMAND_CONFIGS.map((config) => config.type);
-
-        const resolveType = (item, index) => {
-          const directType = String(
-            item?.actionType
-            ?? item?.componentDialog?.actionType
-            ?? ''
-          ).trim();
-          if (directType && nextState[directType] && !usedTypes.has(directType)) {
-            return directType;
-          }
-
-          const byTitle = DEFAULT_COMMAND_CONFIGS.find((config) => (
-            String(config.title).trim() === String(item?.title ?? '').trim()
-            && !usedTypes.has(config.type)
-          ));
-          if (byTitle?.type && nextState[byTitle.type]) {
-            return byTitle.type;
-          }
-
-          const byIndex = fallbackOrder[index];
-          if (byIndex && nextState[byIndex] && !usedTypes.has(byIndex)) {
-            return byIndex;
-          }
-
-          return '';
-        };
-
-        items.forEach((item, index) => {
-          const type = resolveType(item, index);
-          if (!type) {
-            return;
-          }
-          usedTypes.add(type);
-          nextState[type] = this._newDefaultsDraft(type, item);
-        });
-        this._defaultsByType = nextState;
-        this._status = 'Дефолтные команды загружены.';
-      })
-      .catch((error) => {
-        this._defaultsError = error?.message || 'Не удалось загрузить дефолтные команды.';
-      })
-      .finally(() => {
-        this._defaultsLoading = false;
-        this._render();
-      });
+    return reloadDefaultsCommands(this);
   }
 
   _openDefaultsModal(type) {
-    const config = this._defaultConfig(type);
-    if (!config.hasModal) {
-      this._saveDefaultsType(config.type, false);
-      return;
-    }
-    this._addModalBackdrop();
-    this._defaultsActiveType = config.type;
-    this._defaultsActiveId = String(this._defaultsByType[config.type]?._id ?? '');
-    this._defaultsModalOpen = true;
-    this._defaultsError = '';
-    this._render();
+    return openDefaultsModal(this, type);
   }
 
   _closeDefaultsModal() {
-    if (this._defaultsModalSaving) {
-      return;
-    }
-    this._removeModalBackdrop();
-    this._defaultsModalOpen = false;
-    this._render();
+    return closeDefaultsModal(this);
   }
 
   _updateDefaultsDraft(field, value) {
-    const type = this._defaultsActiveType;
-    const current = this._defaultsByType[type] ?? this._newDefaultsDraft(type);
-    this._defaultsByType = {
-      ...this._defaultsByType,
-      [type]: {
-        ...current,
-        [field]: value,
-      },
-    };
+    return updateDefaultsDraft(this, field, value);
   }
 
   _buildDefaultsPayload() {
@@ -1647,169 +665,19 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   async _saveDefaultsType(type, closeModal = false) {
-    const config = this._defaultConfig(type);
-    this._defaultsActiveType = config.type;
-    this._defaultsActiveId = String(this._defaultsByType[config.type]?._id ?? this._defaultsActiveId ?? '');
-
-    const base = this._apiUrl('');
-    if (!base) {
-      this._defaultsError = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-
-    let payload;
-    try {
-      payload = this._buildDefaultsPayload();
-    } catch (error) {
-      this._defaultsError = error?.message || 'Ошибка валидации дефолтной команды.';
-      this._render();
-      return;
-    }
-
-    this._defaultsModalSaving = closeModal;
-    this._defaultsLoading = !closeModal;
-    this._defaultsError = '';
-    this._render();
-    try {
-      const isEdit = Boolean(this._defaultsActiveId);
-      const collection = 'settings-dialog';
-      const url = isEdit
-        ? this._apiUrl(`/api/cms/${collection}/${encodeURIComponent(this._defaultsActiveId)}`)
-        : this._apiUrl(`/api/cms/${collection}`);
-      const method = isEdit ? 'PUT' : 'POST';
-      const response = await fetch(url, {
-        method,
-        headers: this._apiHeaders(true),
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        throw new Error(`Ошибка сохранения дефолтной команды: HTTP ${response.status}`);
-      }
-
-      let savedItem = null;
-      try {
-        savedItem = await response.json();
-      } catch {
-        savedItem = null;
-      }
-      const savedPayload = savedItem?.data && typeof savedItem.data === 'object'
-        ? savedItem.data
-        : savedItem;
-
-      const type = this._defaultsActiveType;
-      const current = this._defaultsByType[type] ?? this._newDefaultsDraft(type);
-      const nextId = String(savedPayload?._id ?? current._id ?? this._defaultsActiveId ?? '');
-      this._defaultsByType = {
-        ...this._defaultsByType,
-        [type]: {
-          ...current,
-          ...payload,
-          _id: nextId,
-          llmEnabled: payload.LLM ?? payload.llm ?? current.llmEnabled,
-        },
-      };
-      this._defaultsActiveId = nextId;
-      await this._reloadDefaultsCommands();
-      this._status = 'Дефолтная команда обновлена.';
-      if (closeModal) {
-        this._removeModalBackdrop();
-        this._defaultsModalOpen = false;
-      }
-    } catch (error) {
-      this._defaultsError = error?.message || 'Не удалось сохранить дефолтную команду.';
-    } finally {
-      this._defaultsModalSaving = false;
-      this._defaultsLoading = false;
-      this._render();
-    }
+    return saveDefaultsType(this, type, closeModal);
   }
 
   async _saveDefaultsModal() {
-    await this._saveDefaultsType(this._defaultsActiveType, true);
+    return saveDefaultsModal(this);
   }
 
   async _saveModal() {
-    const base = this._apiUrl('');
-    if (!base) {
-      this._error = 'Заполните Base URL во вкладке Settings.';
-      this._render();
-      return;
-    }
-
-    let payload;
-    try {
-      payload = this._buildPayload();
-    } catch (error) {
-      this._error = error?.message || 'Ошибка валидации.';
-      this._render();
-      return;
-    }
-
-    const isEdit = this._modalMode === 'edit' && this._editingId;
-    const collection = this._tab === TABS.secondary ? 'sub-commands' : 'commands';
-    const url = isEdit
-      ? this._apiUrl(`/api/cms/${collection}/${encodeURIComponent(this._editingId)}`)
-      : this._apiUrl(`/api/cms/${collection}`);
-    const method = isEdit ? 'PUT' : 'POST';
-
-    this._modalSaving = true;
-    this._error = '';
-    this._render();
-    try {
-      const response = await fetch(url, {
-        method,
-        headers: this._apiHeaders(true),
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        throw new Error(`Ошибка сохранения: HTTP ${response.status}`);
-      }
-
-      this._status = isEdit ? 'Сценарий обновлен.' : 'Сценарий создан.';
-      this._removeModalBackdrop();
-      this._modalOpen = false;
-      this._modalMode = 'create';
-      this._editingId = '';
-      this._editingStatus = false;
-      this._draft = this._newDraft();
-      await this._loadPage(this._pageByTab[this._tab] || 1);
-    } catch (error) {
-      this._error = error?.message || 'Не удалось сохранить сценарий.';
-      this._render();
-    } finally {
-      this._modalSaving = false;
-      this._render();
-    }
+    return saveModal(this);
   }
 
   async _deleteModal() {
-    if (!this._editingId) {
-      return;
-    }
-    if (!confirm('Вы уверены, что хотите удалить этот сценарий?')) {
-      return;
-    }
-    const collection = this._tab === TABS.secondary ? 'sub-commands' : 'commands';
-    this._modalSaving = true;
-    this._error = '';
-    this._render();
-    try {
-      await this._deleteItem(collection, this._editingId);
-      this._commands = this._commands.filter((item) => String(item._id ?? '') !== String(this._editingId));
-      this._status = 'Сценарий удален.';
-      this._removeModalBackdrop();
-      this._modalOpen = false;
-      this._modalMode = 'create';
-      this._editingId = '';
-      this._editingStatus = false;
-      this._draft = this._newDraft();
-    } catch (error) {
-      this._error = error?.message || 'Не удалось удалить сценарий.';
-    } finally {
-      this._modalSaving = false;
-      this._render();
-    }
+    return deleteModal(this);
   }
 
   _renderCommandsTab(tabKey) {

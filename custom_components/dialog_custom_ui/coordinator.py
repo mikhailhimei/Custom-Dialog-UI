@@ -22,6 +22,7 @@ from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
+    CONF_TIMER_ALARM_TOKEN,
     CONF_TIMEOUT,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
@@ -85,14 +86,16 @@ class DialogCommandCoordinator:
         self._append_log("request", f"POST {url} clientId={client_id}")
 
         try:
+            headers = {"Accept": "application/json"}
+            authorization = _normalize_value(options[CONF_TIMER_ALARM_TOKEN])
+            if authorization:
+                headers["Authorization"] = authorization
+
             async with async_timeout.timeout(timeout):
                 response = await self._session.post(
                     url,
                     json={"clientId": client_id},
-                    headers={
-                        "Accept": "application/json",
-                        "Authorization": "Bearer erqwlkrqelkjqweklqwjeqwlejkqw"
-                        },
+                    headers=headers,
                 )
         except (aiohttp.ClientError, TimeoutError) as err:
             self._append_log("error", f"Запрос не выполнен: {err}")
@@ -406,6 +409,7 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
+        CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_SCENARIOS: list(stored.get(CONF_SCENARIOS, [])),
     }
