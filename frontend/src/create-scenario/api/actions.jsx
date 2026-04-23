@@ -35,7 +35,7 @@ export const performUuidSearch = async (ctx, searchText, searchType, itemId = nu
               ? {
                 ...item,
                 displayValue: String(exactMatch.title),
-                actionType: String(exactMatch.actionType ?? ''),
+                mappingType: String(exactMatch.mappingType ?? ''),
               }
               : item
           ));
@@ -73,7 +73,7 @@ export const selectSearchResult = (ctx, itemId, result) => {
             ...item,
             uuid: String(result.uuid ?? ''),
             displayValue: String(result.title ?? ''),
-            actionType: String(result.actionType ?? ''),
+            mappingType: String(result.mappingType ?? ''),
           }
           : item
       ));

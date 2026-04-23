@@ -37,7 +37,7 @@ export const createDirectControlItem = (item = {}) => ({
   id: createUuid(),
   uuid: String(item.uuid ?? ''),
   displayValue: String(item.displayValue ?? ''),
-  actionType: String(item.actionType ?? ''),
+  mappingType: String(item.mappingType ?? ''),
 });
 
 export const createNextActionItem = (item = {}) => ({

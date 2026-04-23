@@ -98,7 +98,7 @@ export const updateDirectControlItem = (ctx, itemId, value) => {
         ...item,
         uuid: nextUuid,
         displayValue: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.displayValue : '',
-        actionType: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.actionType : '',
+        mappingType: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.mappingType : '',
       };
     });
   ctx._draft = {
