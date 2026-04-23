@@ -71,10 +71,6 @@ export const reloadDefaultsCommands = async (ctx) => {
 
 export const openDefaultsModal = (ctx, type) => {
   const config = ctx._defaultConfig(type);
-  if (!config.hasModal) {
-    ctx._saveDefaultsType(config.type, false);
-    return;
-  }
   ctx._addModalBackdrop();
   ctx._defaultsActiveType = config.type;
   ctx._defaultsActiveId = String(ctx._defaultsByType[config.type]?._id ?? '');

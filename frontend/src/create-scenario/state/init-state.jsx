@@ -16,7 +16,7 @@ export const ensureModalBackdropStyle = () => {
 export const initializeCreateScenarioState = (ctx) => {
   ctx._reactRoot = null;
   ctx._hass = null;
-  ctx._config = { base_url: '', timer_alarm_token: '' };
+  ctx._config = { base_url: '', timer_alarm_token: '', theme: 'light' };
 
   ctx._tab = TABS.primary;
   ctx._commands = [];

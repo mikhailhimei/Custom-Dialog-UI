@@ -16,6 +16,18 @@ export const CREATE_SCENARIO_STYLES = `
           color: var(--ui-text);
           font-family: "Manrope", "Segoe UI", "Trebuchet MS", sans-serif;
         }
+        :host([data-theme="dark"]) {
+          --ui-border: rgba(164, 180, 214, 0.24);
+          --ui-text: #ecf2ff;
+          --ui-muted: #b3c0da;
+          --ui-accent: #4f86d8;
+          --ui-accent-warm: #ff8a5a;
+          --ui-card-bg: linear-gradient(175deg, rgba(19, 28, 44, 0.96), rgba(14, 22, 36, 0.92));
+          --ui-card-bg-soft: rgba(20, 30, 47, 0.84);
+          --ui-ring: rgba(79, 134, 216, 0.26);
+          --ui-elev-1: 0 12px 32px rgba(1, 5, 14, 0.44);
+          --ui-elev-2: 0 18px 40px rgba(1, 5, 14, 0.54);
+        }
         * { box-sizing: border-box; min-width: 0; }
         .hero-card, .help-card {
           background: var(--ui-card-bg);
@@ -367,6 +379,13 @@ export const CREATE_SCENARIO_STYLES = `
         }
         .modal::-webkit-scrollbar { width: 0; height: 0; }
         .modal-header, .modal-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .modal-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
         .modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
         .field-inline { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
         .field-inline-icon {

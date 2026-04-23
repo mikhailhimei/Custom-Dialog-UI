@@ -20,6 +20,9 @@ export const toggleCondition = (ctx, id) => {
 
 export const updateConfigField = (ctx, field, value, rerender = false) => {
   ctx._config = { ...ctx._config, [field]: value };
+  if (field === 'theme') {
+    ctx._applyTheme();
+  }
   ctx._status = '';
   ctx._error = '';
   if (rerender) {

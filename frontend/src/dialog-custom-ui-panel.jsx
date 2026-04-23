@@ -49,6 +49,7 @@ class DialogCustomUiPanel extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     initializePanelState(this, DEFAULT_CONFIG);
+    this._applyTheme();
   }
 
   set hass(hass) {
@@ -70,6 +71,7 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   connectedCallback() {
+    this._applyTheme();
     if (!this.shadowRoot.innerHTML) {
       this._render();
     }
@@ -102,7 +104,7 @@ class DialogCustomUiPanel extends HTMLElement {
     }
     if (!this._timerAlarmLoadPromise) {
       this._timerAlarmLoading = true;
-      this._timerAlarmLoadPromise = import(TIMER_ALARM_MODULE_URL)
+      this._timerAlarmLoadPromise = import(/* @vite-ignore */ TIMER_ALARM_MODULE_URL)
         .then(() => {
           this._timerAlarmLoaded = true;
           this._error = '';
@@ -137,6 +139,7 @@ class DialogCustomUiPanel extends HTMLElement {
           ? result.scenarios.map((scenario) => this._normalizeScenarioForUi(scenario))
           : [],
       };
+      this._applyTheme();
       this._expandedScenarios = new Set();
       this._error = '';
     } catch (err) {
@@ -213,6 +216,12 @@ class DialogCustomUiPanel extends HTMLElement {
         this._ensureTimerAlarmModule();
       }
     }
+  }
+
+  _applyTheme() {
+    const theme = String(this._config?.theme ?? 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
+    this._config = { ...this._config, theme };
+    this.setAttribute('data-theme', theme);
   }
 
   _renderSettings() {
@@ -309,9 +318,7 @@ class DialogCustomUiPanel extends HTMLElement {
     const children = String(scenario.children_type ?? scenario.type ?? '')
       .split(';')
       .map((value) => value.trim());
-    const directChildren = String(scenario.children_direct_type ?? '')
-      .split(';')
-      .map((value) => value.trim());
+    const directChildren = this._normalizeChildrenDirectTypeForUi(scenario.children_direct_type);
     const size = Math.max(parents.length, children.length, directChildren.length, 1);
     const conditions = [];
 
@@ -331,7 +338,7 @@ class DialogCustomUiPanel extends HTMLElement {
 
   _normalizeConditionForUi(condition) {
     const childrenType = String(condition.children_type ?? condition.type ?? '').trim();
-    const childrenDirectType = String(condition.children_direct_type ?? '').trim();
+    const childrenDirectType = this._normalizeChildrenDirectTypeForUi(condition.children_direct_type).join(';');
     return {
       id: String(condition.id ?? generateConditionId()),
       parent_type: String(condition.parent_type ?? '').trim(),
@@ -385,6 +392,30 @@ class DialogCustomUiPanel extends HTMLElement {
 
   _updateCondition(scenarioId, conditionId, field, value, rerender = false) {
     return updateCondition(this, scenarioId, conditionId, field, value, rerender);
+  }
+
+  _normalizeChildrenDirectTypeForUi(value) {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => {
+          if (typeof item === 'string') {
+            return item.trim();
+          }
+          if (item && typeof item === 'object') {
+            return String(item.mapping_type ?? item.mappingType ?? item.type ?? '').trim();
+          }
+          return '';
+        })
+        .filter(Boolean);
+    }
+    if (value && typeof value === 'object') {
+      const single = String(value.mapping_type ?? value.mappingType ?? value.type ?? '').trim();
+      return single ? [single] : [];
+    }
+    return String(value ?? '')
+      .split(';')
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
 
   _enableConditionChildrenType(scenarioId, conditionId) {
@@ -467,6 +498,7 @@ class DialogCustomUiPanel extends HTMLElement {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
       timer_alarm_token: this._config.timer_alarm_token,
+      theme: this._config.theme,
       timer_alarm_device_ids: this._timerAlarmDeviceIdsForSave(),
       timeout: Number(this._config.timeout) || 10,
       scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
@@ -509,6 +541,7 @@ class DialogCustomUiPanel extends HTMLElement {
         ),
         scenarios: scenarios.map((scenario) => this._normalizeScenarioForUi(scenario)),
       };
+      this._applyTheme();
       this._expandedScenarios = new Set(this._config.scenarios.map((scenario) => scenario.id));
       this._status = 'JSON загружен в форму.';
       this._error = '';
@@ -555,6 +588,7 @@ class DialogCustomUiPanel extends HTMLElement {
           ? refreshed.scenarios.map((scenario) => this._normalizeScenarioForUi(scenario))
           : [],
       };
+      this._applyTheme();
       this._status = 'Настройки сохранены.';
     } catch (err) {
       this._error = err?.message || 'Не удалось сохранить настройки.';
@@ -574,6 +608,48 @@ class DialogCustomUiPanel extends HTMLElement {
     const on = createEventBinder(root);
     bindPanelActions(this, root, on);
     bindPanelFields(this, root, on);
+  }
+
+  async _resetCommandsCache() {
+    const base = String(this._config.base_url ?? '').trim().replace(/\/$/, '');
+    if (!base) {
+      this._error = 'Заполните Base URL во вкладке Settings.';
+      this._status = '';
+      this._render();
+      return;
+    }
+
+    this._error = '';
+    this._status = '';
+    this._render();
+    const url = `${base}/api/setting/commands`;
+    const headers = {};
+    if (this._config.timer_alarm_token) {
+      headers.Authorization = this._config.timer_alarm_token;
+    }
+    headers['Content-Type'] = 'application/json';
+
+    try {
+      let response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ clientId: String(this._config.client_id ?? '').trim() }),
+      });
+      if (response.status === 405 || response.status === 404) {
+        response = await fetch(url, {
+          method: 'GET',
+          headers: this._config.timer_alarm_token ? { Authorization: this._config.timer_alarm_token } : {},
+        });
+      }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      this._status = 'Кэш команд сброшен.';
+    } catch (error) {
+      this._error = error?.message || 'Не удалось сбросить кэш команд.';
+    } finally {
+      this._render();
+    }
   }
 
   _renderScenarios() {

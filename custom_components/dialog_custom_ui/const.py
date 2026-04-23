@@ -12,6 +12,7 @@ MAX_LOG_ENTRIES = 10
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMEOUT = 10
+DEFAULT_THEME = "light"
 DEFAULT_TIMER_ALARM_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMER_ALARM_CLIENT_ID = ""
 DEFAULT_TIMER_ALARM_INTERVAL_SECONDS = 1
@@ -20,12 +21,15 @@ CONF_BASE_URL = "base_url"
 CONF_CLIENT_ID = "client_id"
 CONF_TIMEOUT = "timeout"
 CONF_SCENARIOS = "scenarios"
+CONF_THEME = "theme"
 CONF_TIMER_ALARM_BASE_URL = "timer_alarm_base_url"
 CONF_TIMER_ALARM_CLIENT_ID = "timer_alarm_client_id"
 CONF_TIMER_ALARM_TOKEN = "timer_alarm_token"
 CONF_TIMER_ALARM_INTERVAL_SECONDS = "timer_alarm_interval_seconds"
 CONF_TIMER_ALARM_ITEMS = "timer_alarm_items"
 CONF_TIMER_ALARM_DEVICE_IDS = "timer_alarm_device_ids"
+CONF_VOICE_AGENT_IP = "voice_agent_ip"
+CONF_VOICE_AGENT_USER_ID = "voice_agent_user_id"
 
 ATTR_SCENARIO_ID = "id"
 ATTR_SCENARIO_NAME = "name"

@@ -13,7 +13,14 @@ export const renderMainModal = (ctx) => {
     <section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
       <div class="modal-header">
         <h3>${escapeHtml(title)}</h3>
-        <button type="button" class="ghost" data-action="close" ${ctx._modalSaving ? 'disabled' : ''}>Закрыть</button>
+        <div class="modal-header-actions">
+          ${ctx._modalMode === 'edit' ? `
+            <button type="button" class="secondary" data-action="toggle-status" ${ctx._modalSaving ? 'disabled' : ''}>
+              ${ctx._editingStatus ? 'Скрыть' : 'Опубликовать'}
+            </button>
+          ` : ''}
+          <button type="button" class="ghost" data-action="close" ${ctx._modalSaving ? 'disabled' : ''}>Закрыть</button>
+        </div>
       </div>
       <div class="modal-grid">
         <label><span>Title</span><input data-field="title" value="${escapeHtml(ctx._draft.title)}" /></label>
@@ -276,7 +283,6 @@ export const renderMainModal = (ctx) => {
         </section>
       </div>
       <div class="modal-footer">
-        ${ctx._modalMode === 'edit' ? `<button type="button" class="secondary" data-action="toggle-status" ${ctx._modalSaving ? 'disabled' : ''}>${ctx._editingStatus ? 'Скрыть' : 'Опубликовать'}</button>` : ''}
         ${ctx._modalMode === 'edit' ? `<button type="button" class="ghost compact-delete-button" data-action="delete" ${ctx._modalSaving ? 'disabled' : ''}>Удалить</button>` : ''}
         <button type="button" class="primary" data-action="save" ${ctx._modalSaving ? 'disabled' : ''}>${ctx._modalSaving ? 'Сохранение...' : 'Сохранить'}</button>
       </div>

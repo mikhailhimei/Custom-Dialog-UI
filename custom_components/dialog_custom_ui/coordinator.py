@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -13,6 +15,7 @@ import async_timeout
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     ATTR_CHILDREN_TYPE,
@@ -32,6 +35,8 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 _COMMAND_CHECK_PATH = "/api/dialog/command-check"
+_SAVE_COMMANDS_PATH = "/api/dialog/save-commands"
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
 
 
 class DialogCommandCoordinator:
@@ -42,6 +47,7 @@ class DialogCommandCoordinator:
         self.entry = entry
         self._task: asyncio.Task | None = None
         self._session = aiohttp_client.async_get_clientsession(hass)
+        self._ha_timer_tasks: dict[str, dict[str, Any]] = {}
 
     async def async_start(self) -> None:
         if self._task and not self._task.done():
@@ -57,6 +63,11 @@ class DialogCommandCoordinator:
         except asyncio.CancelledError:
             pass
         self._task = None
+        for timer_entry in list(self._ha_timer_tasks.values()):
+            task = timer_entry.get("task")
+            if isinstance(task, asyncio.Task):
+                task.cancel()
+        self._ha_timer_tasks.clear()
 
     async def async_reload(self) -> None:
         await self.async_stop()
@@ -142,6 +153,8 @@ class DialogCommandCoordinator:
             "match",
             f"Совпадение -> {scenario[ATTR_SCRIPT_ENTITY_ID]}",
         )
+        if await self._async_handle_builtin_timer_alarm(scenario, payload, options):
+            return
         await self._async_run_script(scenario[ATTR_SCRIPT_ENTITY_ID], payload)
 
     async def _async_run_script(self, script_entity_id: str, payload: dict[str, Any]) -> None:
@@ -165,6 +178,216 @@ class DialogCommandCoordinator:
         }
         await self.hass.services.async_call("script", "turn_on", service_data, blocking=False)
         self._append_log("success", f"Запущен {script_entity_id}")
+
+    async def _async_handle_builtin_timer_alarm(
+        self,
+        scenario: dict[str, Any],
+        payload: dict[str, Any],
+        options: dict[str, Any],
+    ) -> bool:
+        script_entity_id = _normalize_value(scenario.get(ATTR_SCRIPT_ENTITY_ID)).lower()
+        if script_entity_id not in {"timer", "alarm"}:
+            return False
+
+        parent_type = _normalize_value(payload.get("parent_type")).lower()
+        if script_entity_id == "timer":
+            if parent_type == "timer_start":
+                await self._async_handle_timer_start(payload, options)
+                return True
+            if parent_type == "timer_stop":
+                await self._async_handle_timer_stop(payload, options)
+                return True
+            if parent_type == "timer_info":
+                await self._async_handle_timer_info(payload, options)
+                return True
+
+        # Alarm hooks are reserved for future extension.
+        return False
+
+    async def _async_handle_timer_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
+        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        device_id = _normalize_value(payload.get("device_id") or payload.get("deviceId"))
+        if not client_id:
+            self._append_log("error", "Timer start skipped: client_id is empty")
+            return
+
+        commands_text = _extract_commands_text(payload)
+        timer_parts = _extract_timer_parts(payload)
+        total_seconds = max(1, timer_parts["hour"] * 3600 + timer_parts["minut"] * 60 + timer_parts["second"])
+        timer_id = f"{client_id}:{uuid.uuid4().hex[:8]}"
+
+        task = self.hass.async_create_task(
+            self._async_wait_and_fire_timer(timer_id, client_id, device_id, total_seconds)
+        )
+        self._ha_timer_tasks[timer_id] = {
+            "task": task,
+            "client_id": client_id,
+            "device_id": device_id,
+            "hour": timer_parts["hour"],
+            "minut": timer_parts["minut"],
+            "second": timer_parts["second"],
+            "commands": commands_text,
+            "created_at": datetime.now().timestamp(),
+        }
+
+        body = {
+            "children_type": "",
+            "parent_type": "timer_start",
+            "data": {
+                "commands": commands_text,
+            },
+            "client_id": client_id,
+            "device_id": device_id,
+            "children_direct_type": [
+                {
+                    "mapping_type": "timer",
+                    "value": {
+                        "timer": timer_parts,
+                    },
+                }
+            ],
+        }
+        await self._async_post_save_commands(options, body)
+        self._append_log("success", f"Timer started in HA: {timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}")
+
+    async def _async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
+        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        if not client_id:
+            self._append_log("error", "Timer stop skipped: client_id is empty")
+            return
+
+        timers = _active_timers_for_client(self._ha_timer_tasks, client_id)
+        if not timers:
+            self._append_log("idle", "Timer stop requested but no active timers")
+            return
+
+        target_count = _extract_timer_count(payload)
+        if target_count is None and len(timers) > 1:
+            await self._async_post_save_commands(
+                options,
+                {
+                    "clientId": client_id,
+                    "activeType": "timer_count",
+                    "data": {
+                        "timer": [_timer_info_for_response(item) for item in timers],
+                    },
+                },
+            )
+            self._append_log("info", f"Timer stop needs clarification ({len(timers)} active)")
+            return
+
+        selected_index = max(0, (target_count or 1) - 1)
+        if selected_index >= len(timers):
+            selected_index = len(timers) - 1
+        selected = timers[selected_index]
+        timer_id = _normalize_value(selected.get("id"))
+        timer_entry = self._ha_timer_tasks.get(timer_id)
+        if timer_entry is None:
+            return
+        task = timer_entry.get("task")
+        if isinstance(task, asyncio.Task):
+            task.cancel()
+        self._ha_timer_tasks.pop(timer_id, None)
+
+        await self._async_post_save_commands(
+            options,
+            {
+                "children_type": "",
+                "parent_type": "timer_stop",
+                "data": {
+                    "commands": _extract_commands_text(payload),
+                },
+                "client_id": client_id,
+                "device_id": _normalize_value(timer_entry.get("device_id")),
+                "children_direct_type": [
+                    {
+                        "mapping_type": "count",
+                        "value": {
+                            "count": selected_index + 1,
+                        },
+                    }
+                ],
+            },
+        )
+        self._append_log("success", f"Timer stopped in HA: #{selected_index + 1}")
+
+    async def _async_handle_timer_info(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
+        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        if not client_id:
+            self._append_log("error", "Timer info skipped: client_id is empty")
+            return
+        timers = _active_timers_for_client(self._ha_timer_tasks, client_id)
+        await self._async_post_save_commands(
+            options,
+            {
+                "clientId": client_id,
+                "data": {
+                    "timer": [_timer_info_for_response(item) for item in timers],
+                },
+            },
+        )
+        self._append_log("info", f"Timer info sent: {len(timers)} active")
+
+    async def _async_wait_and_fire_timer(
+        self,
+        timer_id: str,
+        client_id: str,
+        device_id: str,
+        total_seconds: int,
+    ) -> None:
+        try:
+            await asyncio.sleep(total_seconds)
+            timer_entry = self._ha_timer_tasks.get(timer_id)
+            if timer_entry is None:
+                return
+            media_player_entity_id = _resolve_media_player_entity_id(self.hass, device_id)
+            if not media_player_entity_id:
+                self._append_log("error", f"Timer finished but device not found: {device_id or '<empty>'}")
+                return
+            await self.hass.services.async_call(
+                "media_player",
+                "turn_on",
+                target={"entity_id": media_player_entity_id},
+                blocking=False,
+            )
+            await self.hass.services.async_call(
+                "media_player",
+                "play_media",
+                {
+                    "media_content_id": _DEFAULT_TIMER_MEDIA_CONTENT_ID,
+                    "media_content_type": "music",
+                    "enqueue": "replace",
+                },
+                target={"entity_id": media_player_entity_id},
+                blocking=False,
+            )
+            self._append_log("success", f"Timer finished on {media_player_entity_id} ({client_id})")
+        except asyncio.CancelledError:
+            raise
+        finally:
+            self._ha_timer_tasks.pop(timer_id, None)
+
+    async def _async_post_save_commands(self, options: dict[str, Any], body: dict[str, Any]) -> None:
+        base_url = _normalize_value(options.get(CONF_BASE_URL)).rstrip("/")
+        if not base_url:
+            return
+        url = f"{base_url}{_SAVE_COMMANDS_PATH}"
+        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        authorization = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
+        if authorization:
+            headers["Authorization"] = authorization
+        try:
+            async with async_timeout.timeout(timeout):
+                response = await self._session.post(url, json=body, headers=headers)
+            if response.status >= 400:
+                body_text = await response.text()
+                self._append_log("error", f"save-commands returned {response.status}")
+                _LOGGER.warning("save-commands returned %s: %s", response.status, body_text[:300])
+                return
+            self._append_log("request", f"POST {_SAVE_COMMANDS_PATH} ({response.status})")
+        except (aiohttp.ClientError, TimeoutError) as err:
+            self._append_log("error", f"save-commands request failed: {err}")
 
     def _append_log(self, level: str, message: str) -> None:
         logs = self.hass.data[DOMAIN].setdefault("logs", [])
@@ -281,7 +504,7 @@ def _normalize_children_direct_type_values(value: Any) -> list[str]:
     if value is None:
         return []
     if isinstance(value, dict):
-        values: list[Any] = [value.get("type", "")]
+        values: list[Any] = [value]
     elif isinstance(value, (list, tuple, set)):
         values = list(value)
     else:
@@ -290,11 +513,22 @@ def _normalize_children_direct_type_values(value: Any) -> list[str]:
     normalized_values: list[str] = []
     for item in values:
         if isinstance(item, dict):
-            normalized = _normalize_value(item.get("type"))
+            candidates = [
+                item.get("type"),
+                item.get("mapping_type"),
+                item.get("mappingType"),
+            ]
+            value_payload = item.get("value")
+            if isinstance(value_payload, dict):
+                candidates.extend(value_payload.keys())
+            for candidate in candidates:
+                normalized = _normalize_value(candidate)
+                if normalized:
+                    normalized_values.append(normalized)
         else:
             normalized = _normalize_value(item)
-        if normalized:
-            normalized_values.append(normalized)
+            if normalized:
+                normalized_values.append(normalized)
     return normalized_values
 
 
@@ -402,6 +636,137 @@ def _matches_condition(
         return False
 
     return True
+
+
+def _extract_commands_text(payload: dict[str, Any]) -> str:
+    value = payload.get("data") if isinstance(payload.get("data"), dict) else payload.get("value")
+    if isinstance(value, dict):
+        command = _normalize_value(value.get("commands") or value.get("command"))
+        if command:
+            return command
+    return _normalize_value(payload.get("commands"))
+
+
+def _extract_timer_parts(payload: dict[str, Any]) -> dict[str, int]:
+    defaults = {"hour": 0, "minut": 1, "second": 0}
+    direct_values = payload.get(ATTR_CHILDREN_DIRECT_TYPE)
+    if isinstance(direct_values, dict):
+        direct_values = [direct_values]
+    if isinstance(direct_values, (list, tuple)):
+        for item in direct_values:
+            if not isinstance(item, dict):
+                continue
+            mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
+            value = item.get("value") if isinstance(item.get("value"), dict) else {}
+            timer_data = value.get("timer") if isinstance(value.get("timer"), dict) else value
+            if mapping_type == "timer" and isinstance(timer_data, dict):
+                return {
+                    "hour": _safe_int(timer_data.get("hour")),
+                    "minut": _safe_int(timer_data.get("minut") or timer_data.get("minute")),
+                    "second": _safe_int(timer_data.get("second")),
+                }
+    commands_text = _extract_commands_text(payload)
+    minutes = _extract_first_int(commands_text)
+    if minutes is not None:
+        return {"hour": minutes // 60, "minut": minutes % 60, "second": 0}
+    return defaults
+
+
+def _extract_timer_count(payload: dict[str, Any]) -> int | None:
+    direct_values = payload.get(ATTR_CHILDREN_DIRECT_TYPE)
+    if isinstance(direct_values, dict):
+        direct_values = [direct_values]
+    if isinstance(direct_values, (list, tuple)):
+        for item in direct_values:
+            if not isinstance(item, dict):
+                continue
+            mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
+            if mapping_type != "count":
+                continue
+            value = item.get("value") if isinstance(item.get("value"), dict) else {}
+            count = _safe_int(value.get("count"))
+            if count > 0:
+                return count
+
+    commands_text = _extract_commands_text(payload)
+    guess = _extract_first_int(commands_text)
+    if guess and guess > 0:
+        return guess
+    return None
+
+
+def _extract_first_int(text: str) -> int | None:
+    if not text:
+        return None
+    match = re.search(r"\d+", text)
+    if not match:
+        return None
+    try:
+        return int(match.group(0))
+    except ValueError:
+        return None
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _active_timers_for_client(storage: dict[str, dict[str, Any]], client_id: str) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for timer_id, timer_entry in storage.items():
+        if _normalize_value(timer_entry.get("client_id")) != client_id:
+            continue
+        items.append(
+            {
+                "id": timer_id,
+                "client_id": client_id,
+                "device_id": _normalize_value(timer_entry.get("device_id")),
+                "hour": _safe_int(timer_entry.get("hour")),
+                "minut": _safe_int(timer_entry.get("minut")),
+                "second": _safe_int(timer_entry.get("second")),
+                "commands": _normalize_value(timer_entry.get("commands")),
+                "created_at": timer_entry.get("created_at"),
+            }
+        )
+    items.sort(key=lambda item: float(item.get("created_at") or 0))
+    return items
+
+
+def _timer_info_for_response(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": _normalize_value(item.get("id")),
+        "device_id": _normalize_value(item.get("device_id")),
+        "timer": {
+            "hour": _safe_int(item.get("hour")),
+            "minut": _safe_int(item.get("minut")),
+            "second": _safe_int(item.get("second")),
+        },
+        "commands": _normalize_value(item.get("commands")),
+    }
+
+
+def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str:
+    if not device_ref:
+        return ""
+
+    if hass.states.get(device_ref):
+        state = hass.states.get(device_ref)
+        if state is not None and state.entity_id.startswith("media_player."):
+            return device_ref
+
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_device(registry, device_ref)
+    media_players = [entry.entity_id for entry in entities if entry.entity_id.startswith("media_player.")]
+    if media_players:
+        return media_players[0]
+
+    if hass.states.get(device_ref):
+        return device_ref
+
+    return ""
 
 
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:

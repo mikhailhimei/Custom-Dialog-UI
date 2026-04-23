@@ -18,7 +18,14 @@ export const renderDirectModal = (ctx) => {
     <section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
       <div class="modal-header">
         <h3>${escapeHtml(title)}</h3>
-        <button type="button" class="ghost" data-action="close-direct" ${ctx._directModalSaving ? 'disabled' : ''}>Закрыть</button>
+        <div class="modal-header-actions">
+          ${ctx._directModalMode === 'edit' ? `
+            <button type="button" class="secondary" data-action="toggle-direct-status" ${ctx._directModalSaving ? 'disabled' : ''}>
+              ${ctx._directEditingStatus ? 'Скрыть' : 'Опубликовать'}
+            </button>
+          ` : ''}
+          <button type="button" class="ghost" data-action="close-direct" ${ctx._directModalSaving ? 'disabled' : ''}>Закрыть</button>
+        </div>
       </div>
       <div class="modal-grid">
         <label>
@@ -137,8 +144,6 @@ export const renderDirectModal = (ctx) => {
         ` : ''}
       </div>
       <div class="modal-footer">
-        <button type="button" class="ghost" data-action="close-direct" ${ctx._directModalSaving ? 'disabled' : ''}>Отмена</button>
-        ${ctx._directModalMode === 'edit' ? `<button type="button" class="secondary" data-action="toggle-direct-status" ${ctx._directModalSaving ? 'disabled' : ''}>${ctx._directEditingStatus ? 'Скрыть' : 'Опубликовать'}</button>` : ''}
         ${ctx._directModalMode === 'edit' ? `<button type="button" class="ghost compact-delete-button" data-action="delete-direct" ${ctx._directModalSaving ? 'disabled' : ''}>Удалить</button>` : ''}
         <button type="button" class="primary" data-action="save-direct" ${ctx._directModalSaving ? 'disabled' : ''}>${ctx._directModalSaving ? 'Сохранение...' : 'Сохранить'}</button>
       </div>
@@ -237,7 +242,6 @@ export const renderTemplateModal = (ctx) => {
         </section>
       </div>
       <div class="modal-footer">
-        <button type="button" class="ghost" data-action="close-template" ${ctx._templateModalSaving ? 'disabled' : ''}>Отмена</button>
         ${ctx._templateModalMode === 'edit' ? `<button type="button" class="ghost compact-delete-button" data-action="delete-template" ${ctx._templateModalSaving ? 'disabled' : ''}>Удалить</button>` : ''}
         <button type="button" class="primary" data-action="save-template" ${ctx._templateModalSaving ? 'disabled' : ''}>${ctx._templateModalSaving ? 'Сохранение...' : 'Сохранить'}</button>
       </div>
@@ -298,7 +302,6 @@ export const renderDefaultsModal = (ctx) => {
         ` : ''}
       </div>
       <div class="modal-footer">
-        <button type="button" class="ghost" data-action="close-defaults" ${ctx._defaultsModalSaving ? 'disabled' : ''}>Отмена</button>
         <button type="button" class="primary" data-action="save-defaults" ${ctx._defaultsModalSaving ? 'disabled' : ''}>${ctx._defaultsModalSaving ? 'Сохранение...' : 'Сохранить'}</button>
       </div>
     </section>
@@ -321,7 +324,6 @@ export const renderItemActionsModal = (ctx) => {
       </div>
       <p>${statusLabel}</p>
       <div class="modal-footer">
-        <button type="button" class="ghost" data-action="close-item-actions" ${ctx._itemActionsSaving ? 'disabled' : ''}>Отмена</button>
         <button type="button" class="secondary" data-action="apply-item-status" ${ctx._itemActionsSaving ? 'disabled' : ''}>
           ${ctx._itemActionsSaving ? 'Сохранение...' : actionLabel}
         </button>

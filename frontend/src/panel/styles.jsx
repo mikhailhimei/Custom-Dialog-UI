@@ -22,6 +22,19 @@ export const PANEL_STYLES = `
           font-family: "Manrope", "Segoe UI", "Trebuchet MS", sans-serif;
           overflow-x: hidden;
         }
+        :host([data-theme="dark"]) {
+          --panel-bg: radial-gradient(circle at 16% 12%, #182033 0%, #121827 44%, #0f1728 100%);
+          --card-bg: linear-gradient(175deg, rgba(19, 28, 44, 0.96), rgba(14, 22, 36, 0.92));
+          --card-bg-soft: rgba(20, 30, 47, 0.84);
+          --border: rgba(164, 180, 214, 0.24);
+          --text: #ecf2ff;
+          --muted: #b3c0da;
+          --accent: #ff8a5a;
+          --accent-2: #4f86d8;
+          --ring: rgba(79, 134, 216, 0.26);
+          --elev-1: 0 12px 32px rgba(1, 5, 14, 0.44);
+          --elev-2: 0 18px 40px rgba(1, 5, 14, 0.54);
+        }
         * {
           box-sizing: border-box;
           min-width: 0;
@@ -468,6 +481,50 @@ export const PANEL_STYLES = `
           color: var(--text);
           background: rgba(255, 255, 255, 0.92);
           transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+        .switch-control {
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+          padding: 6px 0;
+        }
+        .switch-control input[type="checkbox"] {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
+        .switch-slider {
+          position: relative;
+          width: 54px;
+          height: 30px;
+          border-radius: 999px;
+          background: rgba(34, 45, 67, 0.2);
+          border: 1px solid rgba(34, 45, 67, 0.15);
+          transition: background .2s ease, border-color .2s ease, box-shadow .2s ease;
+        }
+        .switch-slider::after {
+          content: "";
+          position: absolute;
+          top: 3px;
+          left: 3px;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 3px 8px rgba(15, 23, 42, 0.25);
+          transition: transform .2s ease;
+        }
+        .switch-control input[type="checkbox"]:checked + .switch-slider {
+          background: linear-gradient(135deg, var(--accent-2), #4c78a8);
+          border-color: transparent;
+          box-shadow: 0 8px 18px rgba(35,79,125,.28);
+        }
+        .switch-control input[type="checkbox"]:checked + .switch-slider::after {
+          transform: translateX(24px);
+        }
+        .switch-label {
+          font-weight: 600;
+          color: var(--muted);
         }
         input:focus,
         select:focus,

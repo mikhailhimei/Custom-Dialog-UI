@@ -6,22 +6,16 @@ export const bindPanelFields = (ctx, root, on) => {
   });
 
   root.querySelectorAll('[data-config-field]').forEach((element) => {
+    const readValue = (event) => (
+      element.dataset.configBool === 'true'
+        ? event.currentTarget.checked
+        : event.currentTarget.value
+    );
     on(element, 'input', (event) => {
-      ctx._updateConfigField(event.currentTarget.dataset.configField, event.currentTarget.value, false);
+      ctx._updateConfigField(event.currentTarget.dataset.configField, readValue(event), false);
     });
     on(element, 'change', (event) => {
-      ctx._updateConfigField(event.currentTarget.dataset.configField, event.currentTarget.value, false);
-    });
-  });
-
-  root.querySelectorAll('[data-timer-device-index]').forEach((element) => {
-    const index = Number(element.dataset.timerDeviceIndex);
-    on(element, 'input', (event) => {
-      ctx._updateTimerAlarmDeviceId(index, event.currentTarget.value);
-    });
-    on(element, 'change', (event) => {
-      ctx._updateTimerAlarmDeviceId(index, event.currentTarget.value);
-      ctx._render();
+      ctx._updateConfigField(event.currentTarget.dataset.configField, readValue(event), true);
     });
   });
 

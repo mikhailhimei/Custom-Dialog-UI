@@ -93,7 +93,7 @@ class TimerAlarmCoordinator:
                 self._append_log("error", f"Timer/alarm polling failed: {err}")
                 _LOGGER.exception("Unexpected error while polling timer/alarm")
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(30)
 
     async def _async_poll_once(self) -> None:
         options = _get_options(self.entry)

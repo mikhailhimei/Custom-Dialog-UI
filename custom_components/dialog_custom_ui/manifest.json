@@ -2,6 +2,7 @@
   "domain": "dialog_custom_ui",
   "name": "Dialog Custom UI",
   "codeowners": [],
+  "dependencies": ["conversation"],
   "config_flow": true,
   "documentation": "https://github.com/mikhailhimei/Custom-Dialog-UI",
   "integration_type": "service",

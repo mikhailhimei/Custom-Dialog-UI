@@ -3,13 +3,21 @@ export const DEFAULT_CONFIG = {
   client_id: '',
   timer_alarm_token: '',
   timer_alarm_device_ids: [''],
+  theme: 'light',
   timeout: 10,
   scenarios: [],
 };
 
 export const EXAMPLE_PAYLOAD = `{
   "children_type": "some_subcommand",
-  "children_direct_type": [{"type": "some_direct_subcommand"}],
+  "children_direct_type": [
+    {
+      "mapping_type": "some_direct_subcommand",
+      "value": {
+        "some_direct_subcommand": "example"
+      }
+    }
+  ],
   "parent_type": "weather_metno",
   "value": {"commands": "москва"},
   "client_id": "...",

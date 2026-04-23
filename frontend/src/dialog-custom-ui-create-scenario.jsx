@@ -123,6 +123,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     ensureModalBackdropStyle();
     initializeCreateScenarioState(this);
+    this._applyTheme();
   }
 
   set hass(hass) {
@@ -137,8 +138,12 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     const nextConfig = {
       base_url: String(config?.base_url ?? '').trim(),
       timer_alarm_token: String(config?.timer_alarm_token ?? '').trim(),
+      theme: String(config?.theme ?? 'light').trim().toLowerCase() === 'dark' ? 'dark' : 'light',
     };
     const changed = nextConfig.base_url !== this._config.base_url
+      || nextConfig.timer_alarm_token !== this._config.timer_alarm_token
+      || nextConfig.theme !== this._config.theme;
+    const endpointChanged = nextConfig.base_url !== this._config.base_url
       || nextConfig.timer_alarm_token !== this._config.timer_alarm_token;
     if (!changed) {
       if (!this.shadowRoot?.innerHTML) {
@@ -147,8 +152,9 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       return;
     }
     this._config = nextConfig;
+    this._applyTheme();
     if (
-      changed
+      endpointChanged
       && (this._tab === TABS.primary || this._tab === TABS.secondary)
       && !this._loading
       && nextConfig.base_url
@@ -157,7 +163,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       this._loadPage(this._pageByTab[this._tab] || 1, { force: true });
       return;
     }
-    if (changed && this._tab === TABS.defaults && !this._defaultsLoading) {
+    if (endpointChanged && this._tab === TABS.defaults && !this._defaultsLoading) {
       this._reloadDefaultsCommands();
       return;
     }
@@ -165,6 +171,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   connectedCallback() {
+    this._applyTheme();
     this._render();
     if ((this._tab === TABS.primary || this._tab === TABS.secondary) && !this._commands.length && !this._loading) {
       this._loadPage(1);
@@ -379,6 +386,12 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
   _openCreateModal() {
     return openCreateModal(this);
+  }
+
+  _applyTheme() {
+    const theme = String(this._config?.theme ?? 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
+    this._config = { ...this._config, theme };
+    this.setAttribute('data-theme', theme);
   }
 
   _openEditModal(commandId) {

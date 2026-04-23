@@ -1,4 +1,4 @@
-import { EXAMPLE_PAYLOAD } from '../constants.jsx';
+﻿import { EXAMPLE_PAYLOAD } from '../constants.jsx';
 import { escapeHtml } from '../utils.jsx';
 
 export const renderScenarios = (ctx) => {
@@ -113,7 +113,7 @@ export const renderScenarios = (ctx) => {
                         data-condition-id="${escapeHtml(condition.id)}"
                         data-condition-field="children_direct_type"
                         value="${escapeHtml(condition.children_direct_type ?? '')}"
-                        placeholder="direct_subcommand"
+                        placeholder="direct_subcommand | all_test"
                       />
                       <small>Необязателен. Если direct type не пришел во входящем payload, это условие просто не ограничивается по нему.</small>
                     </div>
@@ -175,6 +175,8 @@ export const renderScenarios = (ctx) => {
           const label = script.attributes.friendly_name || script.entity_id;
           return `<option value="${escapeHtml(script.entity_id)}" ${selected}>${escapeHtml(label)} (${escapeHtml(script.entity_id)})</option>`;
         }).join('')}
+                      <option value="timer" ${scenario.script_entity_id === 'timer' ? 'selected' : ''}>Таймер (встроенная обработка)</option>
+                      <option value="alarm" ${scenario.script_entity_id === 'alarm' ? 'selected' : ''}>Будильник (встроенная обработка)</option>
                     </select>
                   </label>
                 </div>
@@ -207,3 +209,4 @@ export const renderScenarios = (ctx) => {
       </section>
     `;
 };
+

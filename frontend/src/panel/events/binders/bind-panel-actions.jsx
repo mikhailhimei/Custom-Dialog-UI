@@ -7,8 +7,7 @@ export const bindPanelActions = (ctx, root, on) => {
   on(root.querySelector('[data-action="refresh-logs"]'), 'click', () => ctx._loadLogs());
   on(root.querySelector('[data-action="download-json"]'), 'click', () => ctx._downloadJson());
   on(root.querySelector('[data-action="upload-json"]'), 'click', () => ctx._openJsonFilePicker());
-  on(root.querySelector('[data-action="toggle-device-accordion"]'), 'click', () => ctx._toggleDeviceAccordion());
-  on(root.querySelector('[data-action="add-device-id"]'), 'click', () => ctx._addTimerAlarmDeviceId());
+  on(root.querySelector('[data-action="reset-commands-cache"]'), 'click', () => ctx._resetCommandsCache());
 
   const addScenarioButton = root.querySelector('[data-action="add-scenario"]');
   if (addScenarioButton) {
@@ -55,9 +54,6 @@ export const bindPanelActions = (ctx, root, on) => {
     on(element, 'click', () => ctx._toggleCondition(element.dataset.toggleCondition));
   });
 
-  root.querySelectorAll('[data-action="remove-device-id"]').forEach((element) => {
-    on(element, 'click', () => ctx._removeTimerAlarmDeviceId(Number(element.dataset.timerDeviceIndex)));
-  });
   root.querySelectorAll('[data-remove-id]').forEach((element) => {
     on(element, 'click', () => ctx._removeScenario(element.dataset.removeId));
   });
@@ -74,6 +70,7 @@ export const bindPanelActions = (ctx, root, on) => {
     createScenarioElement.config = {
       base_url: ctx._config.base_url,
       timer_alarm_token: ctx._config.timer_alarm_token,
+      theme: ctx._config.theme,
     };
   }
 };

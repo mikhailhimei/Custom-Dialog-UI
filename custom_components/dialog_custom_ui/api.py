@@ -19,11 +19,15 @@ from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
+    CONF_THEME,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_TOKEN,
+    CONF_VOICE_AGENT_IP,
+    CONF_VOICE_AGENT_USER_ID,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
+    DEFAULT_THEME,
     DOMAIN,
     WS_GET_CONFIG,
     WS_GET_LOGS,
@@ -54,6 +58,9 @@ async def _ws_get_config(
             "base_url": entry.options.get(CONF_BASE_URL, DEFAULT_BASE_URL),
             "client_id": entry.options.get(CONF_CLIENT_ID, ""),
             "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
+            "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
+            "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
+            "theme": _normalize_theme(entry.options.get(CONF_THEME, DEFAULT_THEME)),
             "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
             "timer_alarm_device_ids": _normalize_device_ids(
                 entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
@@ -79,6 +86,9 @@ async def _ws_get_logs(
         vol.Required(CONF_BASE_URL): str,
         vol.Required(CONF_CLIENT_ID): str,
         vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
+        vol.Optional(CONF_THEME, default=DEFAULT_THEME): str,
+        vol.Optional(CONF_VOICE_AGENT_IP, default=""): str,
+        vol.Optional(CONF_VOICE_AGENT_USER_ID, default=""): str,
         vol.Required(CONF_TIMEOUT): vol.Any(int, float),
         vol.Optional(CONF_TIMER_ALARM_DEVICE_IDS, default=[]): [str],
         vol.Required(CONF_SCENARIOS): [
@@ -111,10 +121,16 @@ async def _ws_save_config(
         return
 
     scenarios = [_normalize_scenario(item) for item in msg[CONF_SCENARIOS]]
+    previous_options = dict(entry.options)
+    voice_agent_ip = msg.get(CONF_VOICE_AGENT_IP, "").strip() or previous_options.get(CONF_VOICE_AGENT_IP, "")
+    voice_agent_user_id = msg.get(CONF_VOICE_AGENT_USER_ID, "").strip() or previous_options.get(CONF_VOICE_AGENT_USER_ID, "")
     options = {
         CONF_BASE_URL: msg[CONF_BASE_URL].strip(),
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
         CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
+        CONF_THEME: _normalize_theme(msg.get(CONF_THEME, DEFAULT_THEME)),
+        CONF_VOICE_AGENT_IP: voice_agent_ip,
+        CONF_VOICE_AGENT_USER_ID: voice_agent_user_id,
         CONF_TIMEOUT: max(1, int(msg[CONF_TIMEOUT])),
         CONF_TIMER_ALARM_DEVICE_IDS: [
             device_id.strip()
@@ -159,6 +175,10 @@ def _normalize_device_ids(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [device_id.strip() for device_id in value if device_id.strip()]
+
+
+def _normalize_theme(value: Any) -> str:
+    return "dark" if str(value or "").strip().lower() == "dark" else "light"
 
 
 def _normalize_condition(item: dict[str, Any]) -> dict[str, str] | None:
