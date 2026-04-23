@@ -265,10 +265,10 @@ export const renderMainModal = (ctx) => {
                           ` : ''}
                         </div>
                       </label>
-                      ${String(item.activeType ?? '').trim() ? `
+                      ${String(item.mappingType ?? '').trim() ? `
                         <label>
-                          <span>activeType</span>
-                          <input value="${escapeHtml(item.activeType)}" disabled />
+                          <span>mappingType</span>
+                          <input value="${escapeHtml(item.mappingType)}" disabled />
                         </label>
                       ` : ''}
                       <div class="response-item-actions">
