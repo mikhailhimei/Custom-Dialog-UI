@@ -123,7 +123,6 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     ensureModalBackdropStyle();
     initializeCreateScenarioState(this);
-    this._applyTheme();
   }
 
   set hass(hass) {

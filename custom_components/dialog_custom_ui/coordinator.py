@@ -8,6 +8,7 @@ import re
 import uuid
 from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import async_timeout
@@ -214,7 +215,8 @@ class DialogCommandCoordinator:
         commands_text = _extract_commands_text(payload)
         timer_parts = _extract_timer_parts(payload)
         total_seconds = max(1, timer_parts["hour"] * 3600 + timer_parts["minut"] * 60 + timer_parts["second"])
-        timer_id = f"{client_id}:{uuid.uuid4().hex[:8]}"
+        timer_id = f"ha_timer:{client_id}:{uuid.uuid4().hex[:8]}"
+        timezone_name = _default_timezone_name()
 
         task = self.hass.async_create_task(
             self._async_wait_and_fire_timer(timer_id, client_id, device_id, total_seconds)
@@ -226,8 +228,11 @@ class DialogCommandCoordinator:
             "hour": timer_parts["hour"],
             "minut": timer_parts["minut"],
             "second": timer_parts["second"],
+            "total_seconds": total_seconds,
+            "timezone": timezone_name,
             "commands": commands_text,
             "created_at": datetime.now().timestamp(),
+            "ends_at": datetime.now().timestamp() + total_seconds,
         }
 
         body = {
@@ -388,6 +393,56 @@ class DialogCommandCoordinator:
             self._append_log("request", f"POST {_SAVE_COMMANDS_PATH} ({response.status})")
         except (aiohttp.ClientError, TimeoutError) as err:
             self._append_log("error", f"save-commands request failed: {err}")
+
+    def get_ha_timer_ids(self) -> set[str]:
+        return set(self._ha_timer_tasks.keys())
+
+    def get_ha_timer_items(self) -> list[dict[str, Any]]:
+        now_ts = datetime.now().timestamp()
+        items: list[dict[str, Any]] = []
+        for timer_id, entry in self._ha_timer_tasks.items():
+            total_seconds = _safe_int(entry.get("total_seconds"))
+            if total_seconds <= 0:
+                total_seconds = (
+                    _safe_int(entry.get("hour")) * 3600
+                    + _safe_int(entry.get("minut")) * 60
+                    + _safe_int(entry.get("second"))
+                )
+            ends_at_ts = float(entry.get("ends_at") or (now_ts + max(1, total_seconds)))
+            timezone_name = _normalize_value(entry.get("timezone")) or _default_timezone_name()
+            end_iso = _format_ha_datetime(ends_at_ts, timezone_name)
+            items.append(
+                {
+                    "id": timer_id,
+                    "type": "timer",
+                    "status": "on",
+                    "clientId": _normalize_value(entry.get("client_id")),
+                    "userId": _normalize_value(entry.get("client_id")),
+                    "deviceId": _normalize_value(entry.get("device_id")),
+                    "ha_managed": True,
+                    "time": {
+                        "count_timer": _seconds_to_duration(max(1, total_seconds)),
+                        "date_end": end_iso,
+                        "timezone": timezone_name,
+                        "time_zone": timezone_name,
+                    },
+                }
+            )
+        items.sort(key=lambda item: item.get("time", {}).get("date_end", ""))
+        return items
+
+    async def async_cancel_ha_timer(self, timer_id: str) -> bool:
+        timer_key = _normalize_value(timer_id)
+        if not timer_key:
+            return False
+        timer_entry = self._ha_timer_tasks.pop(timer_key, None)
+        if timer_entry is None:
+            return False
+        task = timer_entry.get("task")
+        if isinstance(task, asyncio.Task):
+            task.cancel()
+        self._append_log("info", f"HA timer stopped from UI: {timer_key}")
+        return True
 
     def _append_log(self, level: str, message: str) -> None:
         logs = self.hass.data[DOMAIN].setdefault("logs", [])
@@ -712,6 +767,31 @@ def _safe_int(value: Any) -> int:
         return max(0, int(value))
     except (TypeError, ValueError):
         return 0
+
+
+def _seconds_to_duration(total_seconds: int) -> str:
+    safe_total = max(0, _safe_int(total_seconds))
+    hours = safe_total // 3600
+    minutes = (safe_total % 3600) // 60
+    seconds = safe_total % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def _default_timezone_name() -> str:
+    local_dt = datetime.now().astimezone()
+    return getattr(local_dt.tzinfo, "key", None) or str(local_dt.tzinfo or "")
+
+
+def _format_ha_datetime(timestamp_value: float, timezone_name: str) -> str:
+    tz_name = _normalize_value(timezone_name) or _default_timezone_name()
+    tz = datetime.now().astimezone().tzinfo
+    if tz_name:
+        try:
+            tz = ZoneInfo(tz_name)
+        except Exception:
+            tz = datetime.now().astimezone().tzinfo
+    dt_value = datetime.fromtimestamp(float(timestamp_value), tz=tz)
+    return dt_value.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _active_timers_for_client(storage: dict[str, dict[str, Any]], client_id: str) -> list[dict[str, Any]]:

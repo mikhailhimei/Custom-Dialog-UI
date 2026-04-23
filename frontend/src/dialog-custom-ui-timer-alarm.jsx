@@ -278,6 +278,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         clientId,
         userId: clientId,
         deviceId: String(item?.deviceId ?? item?.device_id ?? ''),
+        ha_managed: Boolean(item?.ha_managed ?? item?.haManaged ?? false),
         status: String(item?.status ?? 'on') === 'off' ? 'off' : 'on',
         time: { date_end: dateEnd, count_timer: countTimer, timezone, time_zone: timezone },
       };
@@ -415,6 +416,9 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
       }
 
       if (item.type === 'timer') {
+        if (item.ha_managed) {
+          return item;
+        }
         if (field === 'count_timer') {
           return { ...item, time: { ...item.time, count_timer: value } };
         }
@@ -497,6 +501,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         userId: clientId,
         type: 'timer',
         deviceId: item.deviceId,
+        ha_managed: Boolean(item.ha_managed),
         status: item.status,
         time: {
           date_end: String(item.time.date_end ?? item.time.end_at ?? ''),
@@ -642,6 +647,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
 
   _renderTimerItem(item) {
     const devices = this._devices();
+    const isHaManaged = Boolean(item.ha_managed);
     const progress = this._timerProgress(item);
     const duration = item.time.count_timer || '00:30:00';
     const remainingLabel = progress.totalSeconds ? `${humanDuration(progress.leftSeconds)} осталось` : 'ожидание';
@@ -686,7 +692,7 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
         <div class="item-grid">
           <label>
             <span>Устройство</span>
-            <select data-item-id="${esc(item.id)}" data-field="deviceId">
+            <select data-item-id="${esc(item.id)}" data-field="deviceId" ${isHaManaged ? 'disabled' : ''}>
               <option value="">Выберите media_player</option>
               ${devices.map((device) => `<option value="${esc(device.entity_id)}" ${device.entity_id === item.deviceId ? 'selected' : ''}>${esc(device.attributes.friendly_name || device.entity_id)} (${esc(device.entity_id)})</option>`).join('')}
             </select>
@@ -700,21 +706,22 @@ class DialogCustomUiTimerAlarm extends HTMLElement {
           </label>
           <label>
             <span>Длительность</span>
-            <input data-item-id="${esc(item.id)}" data-field="count_timer" value="${esc(item.time.count_timer ?? '')}" placeholder="00:10:00" />
+            <input data-item-id="${esc(item.id)}" data-field="count_timer" value="${esc(item.time.count_timer ?? '')}" placeholder="00:10:00" ${isHaManaged ? 'readonly' : ''} />
           </label>
           <label>
             <span>Дата окончания</span>
-            <input type="text" data-item-id="${esc(item.id)}" data-field="date_end" value="${esc(item.time.date_end ?? '')}" placeholder="2026-04-08 16:44:06" />
+            <input type="text" data-item-id="${esc(item.id)}" data-field="date_end" value="${esc(item.time.date_end ?? '')}" placeholder="2026-04-08 16:44:06" ${isHaManaged ? 'readonly' : ''} />
           </label>
           <label style="grid-column: 1 / -1;">
             <span>Timezone</span>
-            <input data-item-id="${esc(item.id)}" data-field="timezone" value="${esc(item.time.timezone ?? item.time.time_zone ?? getBrowserTimeZone())}" placeholder="Asia/Yekaterinburg" />
+            <input data-item-id="${esc(item.id)}" data-field="timezone" value="${esc(item.time.timezone ?? item.time.time_zone ?? getBrowserTimeZone())}" placeholder="Asia/Yekaterinburg" ${isHaManaged ? 'readonly' : ''} />
           </label>
         </div>
         <div class="item-footer">
           <span class="badge ${item.status === 'on' ? 'badge-on' : 'badge-off'}">${esc(item.status)}</span>
           <span class="badge">${esc(duration)}</span>
           <span class="badge">${esc(this._deviceName(item.deviceId))}</span>
+          ${isHaManaged ? '<span class="badge">HA</span>' : ''}
         </div>
       </article>
     `;

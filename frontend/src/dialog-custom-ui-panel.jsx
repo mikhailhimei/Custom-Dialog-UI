@@ -49,7 +49,6 @@ class DialogCustomUiPanel extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     initializePanelState(this, DEFAULT_CONFIG);
-    this._applyTheme();
   }
 
   set hass(hass) {

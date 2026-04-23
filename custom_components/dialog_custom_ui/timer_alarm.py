@@ -476,6 +476,30 @@ async def _ws_get_timer_alarm_config(
 
     state = dict(hass.data.get(DOMAIN, {}).get("timer_alarm_state", {}))
     options = _get_options(entry)
+    items = list(state.get("items", list(options[CONF_TIMER_ALARM_ITEMS])))
+    active_items = list(state.get("active_items", []))
+
+    main_coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    ha_timer_items: list[dict[str, Any]] = []
+    if main_coordinator is not None and hasattr(main_coordinator, "get_ha_timer_items"):
+        try:
+            raw_ha_items = main_coordinator.get_ha_timer_items()
+        except Exception:
+            raw_ha_items = []
+        ha_timer_items = [_normalize_item(item) for item in raw_ha_items if isinstance(item, dict)]
+
+    if ha_timer_items:
+        existing_ids = {_normalize_value(item.get("id")) for item in items if isinstance(item, dict)}
+        for item in ha_timer_items:
+            if _normalize_value(item.get("id")) in existing_ids:
+                continue
+            items.append(item)
+        active_ids = {_normalize_value(item.get("id")) for item in active_items if isinstance(item, dict)}
+        for item in ha_timer_items:
+            if _normalize_value(item.get("id")) in active_ids:
+                continue
+            active_items.append(item)
+
     connection.send_result(
         msg["id"],
         {
@@ -483,8 +507,8 @@ async def _ws_get_timer_alarm_config(
             "client_id": options[CONF_CLIENT_ID],
             "interval": options[CONF_TIMEOUT],
             "device_ids": options[CONF_TIMER_ALARM_DEVICE_IDS],
-            "items": state.get("items", list(options[CONF_TIMER_ALARM_ITEMS])),
-            "active_items": state.get("active_items", []),
+            "items": items,
+            "active_items": active_items,
             "last_updated": state.get("last_updated"),
         },
     )
@@ -513,14 +537,43 @@ async def _ws_save_timer_alarm_config(
         _normalize_item({**item, "userId": _normalize_value(item.get("userId") or shared_client_id)})
         for item in msg[CONF_TIMER_ALARM_ITEMS]
     ]
+    domain_data = hass.data.get(DOMAIN, {})
+    main_coordinator = domain_data.get(entry.entry_id)
+    ha_timer_ids: set[str] = set()
+    if main_coordinator is not None and hasattr(main_coordinator, "get_ha_timer_ids"):
+        try:
+            ha_timer_ids = set(main_coordinator.get_ha_timer_ids())
+        except Exception:
+            ha_timer_ids = set()
+
+    regular_items: list[dict[str, Any]] = []
+    requested_ha_on_ids: set[str] = set()
+    for item in timer_alarm_items:
+        item_id = _normalize_value(item.get("id"))
+        is_ha_item = bool(item.get("ha_managed")) or item_id in ha_timer_ids or item_id.startswith("ha_timer:")
+        if is_ha_item:
+            if _is_on(item):
+                requested_ha_on_ids.add(item_id)
+            continue
+        regular_items.append(item)
+
+    if ha_timer_ids and main_coordinator is not None and hasattr(main_coordinator, "async_cancel_ha_timer"):
+        for timer_id in ha_timer_ids:
+            if timer_id in requested_ha_on_ids:
+                continue
+            try:
+                await main_coordinator.async_cancel_ha_timer(timer_id)
+            except Exception:
+                _LOGGER.debug("Failed to cancel HA timer from UI: %s", timer_id)
+
     coordinator = hass.data[DOMAIN].get(_coordinator_key(entry))
     if coordinator is not None:
-        timer_alarm_items = await coordinator.async_sync_timer_alarm_items(
+        regular_items = await coordinator.async_sync_timer_alarm_items(
             previous_items,
-            timer_alarm_items,
+            regular_items,
             shared_client_id,
         )
-    options[CONF_TIMER_ALARM_ITEMS] = timer_alarm_items
+    options[CONF_TIMER_ALARM_ITEMS] = regular_items
 
     hass.config_entries.async_update_entry(entry, options=options)
     if coordinator is not None:
