@@ -479,14 +479,17 @@ async def _ws_get_timer_alarm_config(
     items = list(state.get("items", list(options[CONF_TIMER_ALARM_ITEMS])))
     active_items = list(state.get("active_items", []))
 
-    main_coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     ha_timer_items: list[dict[str, Any]] = []
-    if main_coordinator is not None and hasattr(main_coordinator, "get_ha_timer_items"):
+    for main_coordinator in _iter_main_coordinators(hass):
+        if not hasattr(main_coordinator, "get_ha_timer_items"):
+            continue
         try:
             raw_ha_items = main_coordinator.get_ha_timer_items()
         except Exception:
             raw_ha_items = []
-        ha_timer_items = [_normalize_item(item) for item in raw_ha_items if isinstance(item, dict)]
+        ha_timer_items.extend(
+            _normalize_item(item) for item in raw_ha_items if isinstance(item, dict)
+        )
 
     if ha_timer_items:
         existing_ids = {_normalize_value(item.get("id")) for item in items if isinstance(item, dict)}
@@ -537,14 +540,17 @@ async def _ws_save_timer_alarm_config(
         _normalize_item({**item, "userId": _normalize_value(item.get("userId") or shared_client_id)})
         for item in msg[CONF_TIMER_ALARM_ITEMS]
     ]
-    domain_data = hass.data.get(DOMAIN, {})
-    main_coordinator = domain_data.get(entry.entry_id)
-    ha_timer_ids: set[str] = set()
-    if main_coordinator is not None and hasattr(main_coordinator, "get_ha_timer_ids"):
+    coordinator_by_timer_id: dict[str, Any] = {}
+    for main_coordinator in _iter_main_coordinators(hass):
+        if not hasattr(main_coordinator, "get_ha_timer_ids"):
+            continue
         try:
-            ha_timer_ids = set(main_coordinator.get_ha_timer_ids())
+            timer_ids = set(main_coordinator.get_ha_timer_ids())
         except Exception:
-            ha_timer_ids = set()
+            timer_ids = set()
+        for timer_id in timer_ids:
+            coordinator_by_timer_id[_normalize_value(timer_id)] = main_coordinator
+    ha_timer_ids = set(coordinator_by_timer_id.keys())
 
     regular_items: list[dict[str, Any]] = []
     requested_ha_on_ids: set[str] = set()
@@ -557,9 +563,12 @@ async def _ws_save_timer_alarm_config(
             continue
         regular_items.append(item)
 
-    if ha_timer_ids and main_coordinator is not None and hasattr(main_coordinator, "async_cancel_ha_timer"):
+    if ha_timer_ids:
         for timer_id in ha_timer_ids:
             if timer_id in requested_ha_on_ids:
+                continue
+            main_coordinator = coordinator_by_timer_id.get(timer_id)
+            if main_coordinator is None or not hasattr(main_coordinator, "async_cancel_ha_timer"):
                 continue
             try:
                 await main_coordinator.async_cancel_ha_timer(timer_id)
@@ -736,6 +745,7 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
         "userId": _normalize_value(item.get("userId") or item.get("user_id") or item.get("client_id")),
         "deviceId": _normalize_value(item.get("deviceId") or item.get("device_id")),
         "status": "on" if _is_on(item) else "off",
+        "ha_managed": bool(item.get("ha_managed") or item.get("haManaged")),
     }
 
     time_value = item.get("time")
@@ -756,6 +766,19 @@ def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
         normalized["time"] = _normalize_timer_time(item, normalized["time"])
 
     return normalized
+
+
+def _iter_main_coordinators(hass: HomeAssistant) -> list[Any]:
+    domain_data = hass.data.get(DOMAIN, {})
+    coordinators: list[Any] = []
+    for key, value in domain_data.items():
+        if not isinstance(key, str):
+            continue
+        if key.endswith(_COORDINATOR_SUFFIX):
+            continue
+        if hasattr(value, "get_ha_timer_items") or hasattr(value, "get_ha_timer_ids"):
+            coordinators.append(value)
+    return coordinators
 
 
 def _normalize_alarm_time(item: dict[str, Any], value: Any) -> dict[str, Any]:
