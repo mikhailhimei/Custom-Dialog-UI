@@ -85,7 +85,7 @@ export const renderMainModal = (ctx) => {
                       data-response-item-id="${escapeHtml(responseItem.id)}"
                     >
                       <span>Элемент ${index + 1}</span>
-                      <span class="response-accordion-icon">${isOpen ? 'в€’' : '+'}</span>
+                      <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
                     </button>
                     ${isOpen ? `
                       <div class="response-item-grid">
@@ -175,7 +175,7 @@ export const renderMainModal = (ctx) => {
                     data-next-action-item-id="${escapeHtml(item.id)}"
                   >
                     <span>${escapeHtml(item.uuid ? (item.displayValue || item.uuid) : `Элемент ${index + 1}`)}</span>
-                    <span class="response-accordion-icon">${isOpen ? 'в€’' : '+'}</span>
+                    <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
                   </button>
                   ${isOpen ? `
                     <div class="response-item-grid">
@@ -242,7 +242,7 @@ export const renderMainModal = (ctx) => {
                     data-direct-control-item-id="${escapeHtml(item.id)}"
                   >
                     <span>${escapeHtml(item.uuid ? (item.displayValue || item.uuid) : `Элемент ${index + 1}`)}</span>
-                    <span class="response-accordion-icon">${isOpen ? 'в€’' : '+'}</span>
+                    <span class="response-accordion-icon">${isOpen ? '−' : '+'}</span>
                   </button>
                   ${isOpen ? `
                     <div class="response-item-grid">
@@ -257,7 +257,7 @@ export const renderMainModal = (ctx) => {
                           ${ctx._searchActiveType === 'directControl' && ctx._searchActiveItemId === item.id && ctx._searchResults.length > 0 ? `
                             <div class="dropdown-options">
                               ${ctx._searchResults.map((result) => `
-                                <div class="dropdown-option" data-action="select-search-result" data-direct-control-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title)}">
+                                <div class="dropdown-option" data-action="select-search-result" data-direct-control-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title)}" data-result-active-type="${escapeHtml(result.actionType ?? '')}">
                                   ${escapeHtml(result.title)} (${escapeHtml(result.uuid)})
                                 </div>
                               `).join('')}
@@ -265,6 +265,12 @@ export const renderMainModal = (ctx) => {
                           ` : ''}
                         </div>
                       </label>
+                      ${String(item.activeType ?? '').trim() ? `
+                        <label>
+                          <span>activeType</span>
+                          <input value="${escapeHtml(item.activeType)}" disabled />
+                        </label>
+                      ` : ''}
                       <div class="response-item-actions">
                         <button
                           type="button"

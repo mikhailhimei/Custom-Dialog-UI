@@ -32,7 +32,11 @@ export const performUuidSearch = async (ctx, searchText, searchType, itemId = nu
         const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
           .map((item) => (
             item.id === itemId
-              ? { ...item, displayValue: String(exactMatch.title) }
+              ? {
+                ...item,
+                displayValue: String(exactMatch.title),
+                actionType: String(exactMatch.actionType ?? ''),
+              }
               : item
           ));
         ctx._draft = {
@@ -65,7 +69,12 @@ export const selectSearchResult = (ctx, itemId, result) => {
     const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
       .map((item) => (
         item.id === normalizedItemId
-          ? { ...item, uuid: String(result.uuid ?? ''), displayValue: String(result.title ?? '') }
+          ? {
+            ...item,
+            uuid: String(result.uuid ?? ''),
+            displayValue: String(result.title ?? ''),
+            actionType: String(result.actionType ?? ''),
+          }
           : item
       ));
     ctx._draft = {

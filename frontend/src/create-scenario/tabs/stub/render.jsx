@@ -6,6 +6,6 @@ export const renderStub = (title, description) => `
     <p>${escapeHtml(description)}</p>
   </section>
   <section class="help-card">
-    <div class="empty">Р Р°Р·РґРµР» РїРѕРґРіРѕС‚РѕРІР»РµРЅ.</div>
+    <div class="empty">Раздел подготовлен.</div>
   </section>
 `;

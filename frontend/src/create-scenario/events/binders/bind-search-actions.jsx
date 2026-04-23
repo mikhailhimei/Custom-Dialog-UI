@@ -7,6 +7,7 @@ export const bindSearchActions = (ctx, root, on) => {
       const result = {
         uuid: element.dataset.resultUuid,
         title: element.dataset.resultTitle,
+        activeType: element.dataset.resultActiveType,
       };
       ctx._selectSearchResult(itemId, result);
     });

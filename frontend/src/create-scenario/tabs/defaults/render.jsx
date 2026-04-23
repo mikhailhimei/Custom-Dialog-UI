@@ -25,10 +25,10 @@ export const renderDefaultsTab = (ctx) => {
 
   return `
     <section class="hero-card">
-      <h2>Р”РµС„РѕР»С‚РЅС‹Рµ РєРѕРјР°РЅРґС‹</h2>
-      <p>РќР°СЃС‚СЂРѕР№РєР° РґРµС„РѕР»С‚РЅРѕР№ СЂРµР°РєС†РёРё, РµСЃР»Рё РєРѕРјР°РЅРґР° РЅРµ РЅР°Р№РґРµРЅР°.</p>
+      <h2>Дефолтные команды</h2>
+      <p>Настройка дефолтной реакции, если команда не найдена.</p>
       <div class="toolbar">
-        <button type="button" class="secondary" data-action="reload-defaults" ${ctx._defaultsLoading ? 'disabled' : ''}>${ctx._defaultsLoading ? 'РћР±РЅРѕРІР»РµРЅРёРµ...' : 'РћР±РЅРѕРІРёС‚СЊ'}</button>
+        <button type="button" class="secondary" data-action="reload-defaults" ${ctx._defaultsLoading ? 'disabled' : ''}>${ctx._defaultsLoading ? 'Обновление...' : 'Обновить'}</button>
       </div>
       ${ctx._defaultsError ? `<div class="status error">${escapeHtml(ctx._defaultsError)}</div>` : ''}
     </section>
