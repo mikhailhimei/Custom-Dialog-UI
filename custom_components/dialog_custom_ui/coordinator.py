@@ -299,8 +299,9 @@ class DialogCommandCoordinator:
             {
                 "children_type": "",
                 "parent_type": "timer_stop",
-                "data": {
+                "variable": {
                     "commands": _extract_commands_text(payload),
+                    "message": _extract_commands_text(payload)
                 },
                 "client_id": client_id,
                 "device_id": _normalize_value(timer_entry.get("device_id")),
