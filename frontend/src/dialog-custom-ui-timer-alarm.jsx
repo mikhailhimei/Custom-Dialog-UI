@@ -117,7 +117,20 @@ class TimerAlarmPanel extends HTMLElement {
     try {
       const res = await this._hass.callWS({ type: GET_WS });
       const rawItems = Array.isArray(res?.items) ? res.items : [];
-      this._items = rawItems.map((x) => (String(x?.type ?? '').toLowerCase() === 'timer' ? normalizeTimer(x) : normalizeAlarm(x)));
+      const rawActiveItems = Array.isArray(res?.active_items) ? res.active_items : [];
+      const merged = new Map();
+      [...rawItems, ...rawActiveItems].forEach((item) => {
+        if (!item || typeof item !== 'object') {
+          return;
+        }
+        const key = String(item.id ?? '');
+        if (!key) {
+          return;
+        }
+        merged.set(key, { ...(merged.get(key) || {}), ...item });
+      });
+      this._items = [...merged.values()]
+        .map((x) => (String(x?.type ?? '').toLowerCase() === 'timer' ? normalizeTimer(x) : normalizeAlarm(x)));
       this._presets = Array.isArray(res?.alarm_presets) ? res.alarm_presets.map((x) => String(x)) : [];
       this._status = res?.last_updated ? `Updated: ${res.last_updated}` : '';
       this._error = '';
