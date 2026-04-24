@@ -107,6 +107,9 @@ class DialogTimerAlarmManager:
             if parent_type == "timer_stop":
                 await self.async_handle_timer_stop(payload, options)
                 return True
+            if parent_type == "timer_count":
+                await self.async_handle_timer_count(payload, options)
+                return True
             if parent_type == "timer_info":
                 await self.async_handle_timer_info(payload, options)
                 return True
@@ -125,7 +128,10 @@ class DialogTimerAlarmManager:
         if parent_type == "alarm_stop":
             await self.async_handle_alarm_stop(payload, options)
             return True
-        if parent_type in {"alarm_info", "alarm_count"}:
+        if parent_type == "alarm_count":
+            await self.async_handle_alarm_count(payload, options)
+            return True
+        if parent_type == "alarm_info":
             await self.async_handle_alarm_info(payload, options)
             return True
         return False
@@ -179,6 +185,17 @@ class DialogTimerAlarmManager:
             return
 
         target_count = _extract_count(payload)
+        if target_count is None and len(timers) > 1:
+            await self._post_save_commands(
+                options,
+                {
+                    "typeNext": "timer_count",
+                    "variable": {
+                        "massage": self._timer_count_message(timers),
+                    },
+                },
+            )
+            return
         selected_index = len(timers) - 1 if target_count is None else max(0, target_count - 1)
         selected_index = min(selected_index, len(timers) - 1)
         timer_id = _normalize_value(timers[selected_index].get("id"))
@@ -187,6 +204,19 @@ class DialogTimerAlarmManager:
             return
         self._cancel_timer_task(timer_entry)
         self._mark_updated()
+
+    async def async_handle_timer_count(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
+        client_id = _extract_client_id(payload, options)
+        timers = self._timers_for_client(client_id)
+        await self._post_save_commands(
+            options,
+            {
+                "typeNext": "timer_count",
+                "variable": {
+                    "massage": self._timer_count_message(timers),
+                },
+            },
+        )
 
     async def async_handle_timer_pause(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
@@ -259,6 +289,19 @@ class DialogTimerAlarmManager:
                         }
                         for item in alarms
                     ]
+                },
+            },
+        )
+
+    async def async_handle_alarm_count(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
+        client_id = _extract_client_id(payload, options)
+        alarms = self._alarms_for_client(client_id)
+        await self._post_save_commands(
+            options,
+            {
+                "typeNext": "alarm_count",
+                "variable": {
+                    "massage": self._alarm_count_message(alarms),
                 },
             },
         )
@@ -367,7 +410,6 @@ class DialogTimerAlarmManager:
                 "time": alarm_time,
                 "created_at": float(self._alarms.get(alarm_id, {}).get("created_at") or datetime.now().timestamp()),
             }
-            self._alarm_presets.add(alarm_time)
 
         if self._alarms:
             self._ensure_alarm_tick_task()
@@ -687,6 +729,32 @@ class DialogTimerAlarmManager:
             except Exception:
                 ts = 10**18
         return (ts, item_type, _normalize_value(item.get("id")))
+
+    def _timer_count_message(self, timers: list[dict[str, Any]]) -> str:
+        if not timers:
+            return "Активных таймеров нет."
+        lines: list[str] = []
+        now_ts = datetime.now().timestamp()
+        for index, item in enumerate(timers, start=1):
+            total_seconds = max(1, _safe_int(item.get("total_seconds")))
+            remaining = max(0, _safe_int(item.get("remaining_seconds")))
+            if not bool(item.get("paused")):
+                ends_at = float(item.get("ends_at") or now_ts)
+                remaining = max(0, int(ends_at - now_ts))
+            lines.append(
+                f"{index}. на {_seconds_to_minute_phrase(total_seconds)} осталось {_seconds_to_minute_phrase(max(1, remaining))}"
+            )
+        return "\n".join(lines)
+
+    def _alarm_count_message(self, alarms: list[dict[str, Any]]) -> str:
+        active_alarms = [alarm for alarm in alarms if _normalize_value(alarm.get("status")).lower() != "off"]
+        if not active_alarms:
+            return "Активных будильников нет."
+        lines = [
+            f"{index}. на {_normalize_alarm_clock(_normalize_value(item.get('time') or '08:00'))}"
+            for index, item in enumerate(active_alarms, start=1)
+        ]
+        return "\n".join(lines)
 
     def _mark_updated(self) -> None:
         self._last_updated = dt_util.now().isoformat()
@@ -1099,10 +1167,12 @@ def _extract_count(payload: dict[str, Any]) -> int | None:
 
 
 def _resolve_timer_parent_type(payload: dict[str, Any], parent_type: str) -> str:
-    if parent_type in {"timer_start", "timer_stop", "timer_info", "timer_pause", "timer_resume"}:
+    if parent_type in {"timer_start", "timer_stop", "timer_info", "timer_pause", "timer_resume", "timer_count"}:
         return parent_type
 
     text = _extract_commands_text(payload).lower()
+    if any(token in text for token in ("сколько", "какие", "count", "список")):
+        return "timer_count"
     if any(token in text for token in ("пауз", "pause")):
         return "timer_pause"
     if any(token in text for token in ("возобн", "resume", "продолж")):
@@ -1119,6 +1189,8 @@ def _resolve_alarm_parent_type(payload: dict[str, Any], parent_type: str) -> str
         return parent_type
 
     text = _extract_commands_text(payload).lower()
+    if any(token in text for token in ("сколько", "какие", "count", "список")):
+        return "alarm_count"
     if any(token in text for token in ("стоп", "отмен", "удал", "выключ", "stop")):
         return "alarm_stop"
     if any(token in text for token in ("сколько", "какие", "info", "инфо")):
@@ -1151,6 +1223,11 @@ def _seconds_to_duration(total_seconds: int) -> str:
     minutes = (safe_total % 3600) // 60
     seconds = safe_total % 60
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def _seconds_to_minute_phrase(total_seconds: int) -> str:
+    minutes = max(1, int(round(max(0, _safe_int(total_seconds)) / 60)))
+    return f"{minutes} минут"
 
 
 def _duration_to_seconds(value: str) -> int:

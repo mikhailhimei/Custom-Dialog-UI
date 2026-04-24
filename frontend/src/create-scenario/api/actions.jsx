@@ -153,13 +153,25 @@ export const hydrateDirectControlTitles = async (ctx) => {
     items.map(async (item) => {
       const uuid = String(item.uuid ?? '').trim();
       const displayValue = String(item.displayValue ?? '').trim();
-      if (!uuid || displayValue) {
+      const mappingType = String(item.mappingType ?? '').trim();
+      if (!uuid || (displayValue && mappingType)) {
         return item;
       }
-      const title = await ctx._resolveTitleByUuid(uuid, ['sub-direct-controls']);
+      const results = await ctx._searchUuid(uuid, ['sub-direct-controls']);
+      const exactMatch = results.find((entry) => String(entry?.uuid ?? '').trim() === uuid) || results[0] || null;
+      const title = String(exactMatch?.title ?? '');
+      const resolvedMappingType = String(
+        exactMatch?.mappingType
+        ?? exactMatch?.mapping_type
+        ?? exactMatch?.actionType
+        ?? exactMatch?.action_type
+        ?? exactMatch?.type
+        ?? ''
+      ).trim();
       return {
         ...item,
-        displayValue: title,
+        displayValue: displayValue || title,
+        mappingType: mappingType || resolvedMappingType,
       };
     })
   );

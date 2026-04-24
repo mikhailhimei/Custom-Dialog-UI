@@ -37,7 +37,7 @@ export const createDirectControlItem = (item = {}) => ({
   id: createUuid(),
   uuid: String(item.uuid ?? ''),
   displayValue: String(item.displayValue ?? ''),
-  mappingType: String(item.mappingType ?? ''),
+  mappingType: String(item.mappingType ?? item.mapping_type ?? item.actionType ?? item.action_type ?? item.type ?? ''),
 });
 
 export const createNextActionItem = (item = {}) => ({
@@ -46,8 +46,8 @@ export const createNextActionItem = (item = {}) => ({
     item.actionTypeComponent
     ?? (String(item.actionType ?? item.mappingType ?? '').trim() ? 'custom' : 'children')
   ),
-  actionType: String(item.actionType ?? item.mappingType ?? ''),
-  mappingType: String(item.mappingType ?? item.actionType ?? ''),
+  actionType: String(item.actionType ?? item.action_type ?? item.mappingType ?? item.mapping_type ?? ''),
+  mappingType: String(item.mappingType ?? item.mapping_type ?? item.actionType ?? item.action_type ?? ''),
   uuid: String(item.uuid ?? ''),
   displayValue: String(item.displayValue ?? ''),
 });

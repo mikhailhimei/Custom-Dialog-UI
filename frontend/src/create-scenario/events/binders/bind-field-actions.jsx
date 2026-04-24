@@ -94,9 +94,15 @@ export const bindFieldActions = (ctx, root, on) => {
   root.querySelectorAll('[data-next-action-item-id][data-next-action-item-field]').forEach((element) => {
     const itemId = element.dataset.nextActionItemId;
     const field = element.dataset.nextActionItemField;
-    const handler = (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value);
-    on(element, 'input', handler);
-    on(element, 'change', handler);
+    const isTextField = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
+    if (isTextField) {
+      on(element, 'input', (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, false));
+      on(element, 'change', (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, true));
+    } else {
+      const handler = (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, true);
+      on(element, 'input', handler);
+      on(element, 'change', handler);
+    }
   });
 
   root.querySelectorAll('[data-direct-sub-control-item-id][data-direct-sub-control-item-field]').forEach((element) => {

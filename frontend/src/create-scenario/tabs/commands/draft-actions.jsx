@@ -143,7 +143,7 @@ export const removeNextActionItem = (ctx, itemId) => {
   ctx._render();
 };
 
-export const updateNextActionItem = (ctx, itemId, field, value) => {
+export const updateNextActionItem = (ctx, itemId, field, value, rerender = true) => {
   const normalizedItemId = String(itemId ?? '').trim();
   const nextItems = (Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : [])
     .map((item) => {
@@ -179,7 +179,9 @@ export const updateNextActionItem = (ctx, itemId, field, value) => {
     ...ctx._draft,
     nextActionItems: nextItems,
   };
-  ctx._render();
+  if (rerender || field === 'actionTypeComponent') {
+    ctx._render();
+  }
   if (field === 'uuid' && value.length > 0) {
     ctx._debouncedPerformUuidSearch(value, 'nextAction', normalizedItemId);
   }
