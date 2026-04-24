@@ -137,6 +137,7 @@ class TimerAlarmPanel extends HTMLElement {
       this._status = res?.last_updated ? `Updated: ${res.last_updated}` : '';
       this._error = '';
     } catch (e) {
+      this._debugWsPayload = { ws_error: String(e?.message || e || 'unknown error') };
       this._error = e?.message || 'Failed to load timer/alarm state.';
     } finally {
       this._loading = false;

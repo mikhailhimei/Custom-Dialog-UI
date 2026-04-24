@@ -314,6 +314,15 @@ class DialogTimerAlarmManager:
 
             if timer_entry is None:
                 self._create_timer(timer_id, client_id, device_id, duration_seconds, "", status == "paused")
+                self._append_log(
+                    "info",
+                    (
+                        "Timer requested from UI: "
+                        f"id={timer_id} client_id={client_id or '<empty>'} "
+                        f"device_id={device_id or '<empty>'} "
+                        f"duration={_seconds_to_duration(duration_seconds)}"
+                    ),
+                )
                 continue
 
             timer_entry["client_id"] = client_id
@@ -743,6 +752,18 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
             if snapshot_updated and (last_updated is None or snapshot_updated > last_updated):
                 last_updated = snapshot_updated
 
+    # Hard fallback: read timer/alarm runtime straight from coordinator-like objects.
+    for value in hass.data.get(DOMAIN, {}).values():
+        for item in _coerce_items_from_runtime_holder(value):
+            item_id = _normalize_value(item.get("id"))
+            if not item_id:
+                continue
+            if item_id not in all_items:
+                all_items[item_id] = item
+            status = _normalize_value(item.get("status")).lower()
+            if status in {"on", "paused"} and item_id not in all_active:
+                all_active[item_id] = item
+
     items = list(all_items.values()) if all_items else (manager.get_items() if manager is not None else [])
     active_items = list(all_active.values()) if all_active else (manager.get_active_items() if manager is not None else [])
     alarm_presets = sorted(all_presets) if all_presets else (manager.get_alarm_presets() if manager is not None else [])
@@ -759,6 +780,12 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
             "active_items": active_items,
             "alarm_presets": alarm_presets,
             "last_updated": last_updated,
+            "debug_meta": {
+                "managers_detected": len(managers),
+                "runtime_snapshots_detected": len(runtime_snapshots) if isinstance(runtime_snapshots, dict) else 0,
+                "all_items_count": len(items),
+                "all_active_items_count": len(active_items),
+            },
         },
     )
 
@@ -780,6 +807,17 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
     options = dict(entry.options)
     shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
     requested_items = [item for item in msg.get(CONF_TIMER_ALARM_ITEMS, []) if isinstance(item, dict)]
+    requested_timers = sum(1 for item in requested_items if _normalize_value(item.get("type")).lower() == "timer")
+    requested_alarms = sum(1 for item in requested_items if _normalize_value(item.get("type")).lower() == "alarm")
+    _append_integration_log(
+        hass,
+        "request",
+        (
+            "Timer/alarm update requested from UI: "
+            f"items={len(requested_items)} timers={requested_timers} alarms={requested_alarms} "
+            f"client_id={shared_client_id or '<empty>'}"
+        ),
+    )
     target_manager = _select_manager(managers or ([manager] if manager is not None else []), requested_items, shared_client_id) or manager
     if target_manager is None:
         connection.send_error(msg["id"], "not_ready", "Timer/alarm manager not found")
@@ -787,6 +825,7 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
     await target_manager.async_apply_ui_items(requested_items, shared_client_id)
     options[CONF_TIMER_ALARM_ITEMS] = target_manager.serialize_persisted_items()
     hass.config_entries.async_update_entry(entry, options=options)
+    _append_integration_log(hass, "success", "Timer/alarm update from UI applied")
     connection.send_result(msg["id"], {"saved": True})
 
 
@@ -1090,3 +1129,75 @@ def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str
     if hass.states.get(device_ref):
         return device_ref
     return ""
+
+
+def _append_integration_log(hass: HomeAssistant, level: str, message: str) -> None:
+    logs = hass.data.setdefault(DOMAIN, {}).setdefault("logs", [])
+    logs.appendleft(
+        {
+            "ts": datetime.now().strftime("%H:%M:%S"),
+            "level": level,
+            "message": message,
+        }
+    )
+
+
+def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
+    timer_map = getattr(holder, "_timers", None)
+    alarm_map = getattr(holder, "_alarms", None)
+    if not isinstance(timer_map, dict) and not isinstance(alarm_map, dict):
+        manager = getattr(holder, "timer_alarm_manager", None)
+        timer_map = getattr(manager, "_timers", None)
+        alarm_map = getattr(manager, "_alarms", None)
+
+    items: list[dict[str, Any]] = []
+    now_ts = datetime.now().timestamp()
+    timezone_name = _default_timezone_name()
+
+    if isinstance(timer_map, dict):
+        for timer_id, entry in timer_map.items():
+            if not isinstance(entry, dict):
+                continue
+            total_seconds = _safe_int(entry.get("total_seconds"))
+            remaining_seconds = _safe_int(entry.get("remaining_seconds"))
+            paused = bool(entry.get("paused"))
+            ends_at = float(entry.get("ends_at") or (now_ts + remaining_seconds))
+            remaining_view = remaining_seconds if paused else max(0, int(ends_at - now_ts))
+            items.append(
+                {
+                    "id": _normalize_value(timer_id or entry.get("id")),
+                    "type": "timer",
+                    "status": "paused" if paused else "on",
+                    "clientId": _normalize_value(entry.get("client_id")),
+                    "userId": _normalize_value(entry.get("client_id")),
+                    "deviceId": _normalize_value(entry.get("device_id")),
+                    "ha_managed": True,
+                    "time": {
+                        "count_timer": _seconds_to_duration(max(1, total_seconds)),
+                        "date_end": _format_datetime(ends_at, timezone_name),
+                        "timezone": timezone_name,
+                        "time_zone": timezone_name,
+                        "remaining_seconds": remaining_view,
+                        "total_seconds": total_seconds,
+                    },
+                }
+            )
+
+    if isinstance(alarm_map, dict):
+        for alarm_id, entry in alarm_map.items():
+            if not isinstance(entry, dict):
+                continue
+            items.append(
+                {
+                    "id": _normalize_value(alarm_id or entry.get("id")),
+                    "type": "alarm",
+                    "status": "off" if _normalize_value(entry.get("status")).lower() == "off" else "on",
+                    "clientId": _normalize_value(entry.get("client_id")),
+                    "userId": _normalize_value(entry.get("client_id")),
+                    "deviceId": _normalize_value(entry.get("device_id")),
+                    "ha_managed": True,
+                    "time": {"time": _normalize_value(entry.get("time") or "08:00")},
+                }
+            )
+
+    return [item for item in items if _normalize_value(item.get("id"))]
