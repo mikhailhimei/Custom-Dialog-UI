@@ -59,6 +59,7 @@ class DialogTimerAlarmManager:
         self._alarm_tick_task: asyncio.Task | None = None
         self._last_updated: str | None = None
         self._restored = False
+        self._runtime_state_key = f"timer_alarm_runtime:{id(self)}"
 
     async def async_restore_from_options(self, options: dict[str, Any]) -> None:
         if self._restored:
@@ -83,6 +84,7 @@ class DialogTimerAlarmManager:
             except asyncio.CancelledError:
                 pass
             self._alarm_tick_task = None
+        self._remove_runtime_state()
 
     async def async_handle_builtin(
         self,
@@ -652,6 +654,23 @@ class DialogTimerAlarmManager:
 
     def _mark_updated(self) -> None:
         self._last_updated = dt_util.now().isoformat()
+        self._publish_runtime_state()
+
+    def _publish_runtime_state(self) -> None:
+        domain_data = self.hass.data.setdefault(DOMAIN, {})
+        runtime = domain_data.setdefault("timer_alarm_runtime", {})
+        runtime[self._runtime_state_key] = {
+            "items": self.get_items(),
+            "active_items": self.get_active_items(),
+            "alarm_presets": self.get_alarm_presets(),
+            "last_updated": self._last_updated,
+        }
+
+    def _remove_runtime_state(self) -> None:
+        domain_data = self.hass.data.get(DOMAIN, {})
+        runtime = domain_data.get("timer_alarm_runtime")
+        if isinstance(runtime, dict):
+            runtime.pop(self._runtime_state_key, None)
 
 
 def async_register_timer_alarm_websockets(hass: HomeAssistant) -> None:
@@ -689,6 +708,37 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
         all_presets.update(current.get_alarm_presets())
         if current.last_updated and (last_updated is None or current.last_updated > last_updated):
             last_updated = current.last_updated
+
+    runtime_snapshots = hass.data.get(DOMAIN, {}).get("timer_alarm_runtime", {})
+    if isinstance(runtime_snapshots, dict):
+        for snapshot in runtime_snapshots.values():
+            if not isinstance(snapshot, dict):
+                continue
+            raw_items = snapshot.get("items")
+            if isinstance(raw_items, list):
+                for item in raw_items:
+                    if not isinstance(item, dict):
+                        continue
+                    item_id = _normalize_value(item.get("id"))
+                    if item_id and item_id not in all_items:
+                        all_items[item_id] = item
+            raw_active_items = snapshot.get("active_items")
+            if isinstance(raw_active_items, list):
+                for item in raw_active_items:
+                    if not isinstance(item, dict):
+                        continue
+                    item_id = _normalize_value(item.get("id"))
+                    if item_id and item_id not in all_active:
+                        all_active[item_id] = item
+            raw_presets = snapshot.get("alarm_presets")
+            if isinstance(raw_presets, list):
+                for preset in raw_presets:
+                    normalized = _normalize_value(preset)
+                    if normalized:
+                        all_presets.add(normalized)
+            snapshot_updated = _normalize_value(snapshot.get("last_updated"))
+            if snapshot_updated and (last_updated is None or snapshot_updated > last_updated):
+                last_updated = snapshot_updated
 
     items = list(all_items.values()) if all_items else (manager.get_items() if manager is not None else [])
     active_items = list(all_active.values()) if all_active else (manager.get_active_items() if manager is not None else [])
