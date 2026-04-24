@@ -103,7 +103,8 @@ class DialogCustomUiPanel extends HTMLElement {
     }
     if (!this._timerAlarmLoadPromise) {
       this._timerAlarmLoading = true;
-      this._timerAlarmLoadPromise = import(/* @vite-ignore */ TIMER_ALARM_MODULE_URL)
+      const cacheBustedTimerAlarmUrl = `${TIMER_ALARM_MODULE_URL}${TIMER_ALARM_MODULE_URL.includes('?') ? '&' : '?'}ts=${Date.now()}`;
+      this._timerAlarmLoadPromise = import(/* @vite-ignore */ cacheBustedTimerAlarmUrl)
         .then(() => {
           this._timerAlarmLoaded = true;
           this._error = '';
