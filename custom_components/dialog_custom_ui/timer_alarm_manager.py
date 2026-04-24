@@ -191,7 +191,7 @@ class DialogTimerAlarmManager:
                 {
                     "actionType": "timer_count",
                     "variable": {
-                        "massage": self._timer_count_message(timers),
+                        "message": self._timer_count_message(timers),
                     },
                 },
             )
@@ -213,7 +213,7 @@ class DialogTimerAlarmManager:
             {
                 "actionType": "timer_count",
                 "variable": {
-                    "massage": self._timer_count_message(timers),
+                    "message": self._timer_count_message(timers),
                 },
             },
         )
@@ -301,7 +301,7 @@ class DialogTimerAlarmManager:
             {
                 "actionType": "alarm_count",
                 "variable": {
-                    "massage": self._alarm_count_message(alarms),
+                    "message": self._alarm_count_message(alarms),
                 },
             },
         )
