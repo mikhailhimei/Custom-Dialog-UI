@@ -28,14 +28,14 @@ export const performUuidSearch = async (ctx, searchText, searchType, itemId = nu
       const exactMatch = results.find(
         (entry) => String(entry?.uuid ?? '').trim() === normalizedSearchText
       );
-      if (exactMatch?.title) {
+      if (exactMatch && (exactMatch?.title || exactMatch?.mappingType || exactMatch?.actionType || exactMatch?.type)) {
         const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
           .map((item) => (
             item.id === itemId
               ? {
                 ...item,
-                displayValue: String(exactMatch.title),
-                mappingType: String(exactMatch.mappingType ?? ''),
+                displayValue: String(exactMatch.title ?? item.displayValue ?? ''),
+                mappingType: String(exactMatch.mappingType ?? exactMatch.actionType ?? exactMatch.type ?? ''),
               }
               : item
           ));
@@ -73,7 +73,7 @@ export const selectSearchResult = (ctx, itemId, result) => {
             ...item,
             uuid: String(result.uuid ?? ''),
             displayValue: String(result.title ?? ''),
-            mappingType: String(result.mappingType ?? ''),
+            mappingType: String(result.mappingType ?? result.actionType ?? result.type ?? ''),
           }
           : item
       ));

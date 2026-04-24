@@ -98,6 +98,7 @@ class DialogTimerAlarmManager:
 
         parent_type = _normalize_value(payload.get("parent_type")).lower()
         if script_entity_id == "timer":
+            parent_type = _resolve_timer_parent_type(payload, parent_type)
             if parent_type == "timer_start":
                 await self.async_handle_timer_start(payload, options)
                 return True
@@ -115,6 +116,7 @@ class DialogTimerAlarmManager:
                 return True
             return False
 
+        parent_type = _resolve_alarm_parent_type(payload, parent_type)
         if parent_type == "alarm_start":
             await self.async_handle_alarm_start(payload, options)
             return True
@@ -157,6 +159,7 @@ class DialogTimerAlarmManager:
                 "children_direct_type": [{"mapping_type": "timer", "value": {"timer": timer_parts}}],
             },
         )
+        self._append_log("success", f"Timer started: {timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}")
 
     async def async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
@@ -931,6 +934,34 @@ def _extract_count(payload: dict[str, Any]) -> int | None:
     if guess and guess > 0:
         return guess
     return None
+
+
+def _resolve_timer_parent_type(payload: dict[str, Any], parent_type: str) -> str:
+    if parent_type in {"timer_start", "timer_stop", "timer_info", "timer_pause", "timer_resume"}:
+        return parent_type
+
+    text = _extract_commands_text(payload).lower()
+    if any(token in text for token in ("пауз", "pause")):
+        return "timer_pause"
+    if any(token in text for token in ("возобн", "resume", "продолж")):
+        return "timer_resume"
+    if any(token in text for token in ("стоп", "отмен", "удал", "выключ", "stop")):
+        return "timer_stop"
+    if any(token in text for token in ("сколько", "остал", "info", "инфо")):
+        return "timer_info"
+    return "timer_start"
+
+
+def _resolve_alarm_parent_type(payload: dict[str, Any], parent_type: str) -> str:
+    if parent_type in {"alarm_start", "alarm_stop", "alarm_info", "alarm_count"}:
+        return parent_type
+
+    text = _extract_commands_text(payload).lower()
+    if any(token in text for token in ("стоп", "отмен", "удал", "выключ", "stop")):
+        return "alarm_stop"
+    if any(token in text for token in ("сколько", "какие", "info", "инфо")):
+        return "alarm_info"
+    return "alarm_start"
 
 
 def _extract_first_int(text: str) -> int | None:

@@ -179,6 +179,7 @@ export const updateNextActionItem = (ctx, itemId, field, value) => {
     ...ctx._draft,
     nextActionItems: nextItems,
   };
+  ctx._render();
   if (field === 'uuid' && value.length > 0) {
     ctx._debouncedPerformUuidSearch(value, 'nextAction', normalizedItemId);
   }

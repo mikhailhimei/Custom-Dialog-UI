@@ -276,10 +276,10 @@ export const renderMainModal = (ctx) => {
                           ` : ''}
                         </div>
                       </label>
-                      ${String(item.mappingType ?? '').trim() ? `
+                      ${(String(item.uuid ?? '').trim() || String(item.mappingType ?? '').trim()) ? `
                         <label>
                           <span>mappingType</span>
-                          <input value="${escapeHtml(item.mappingType)}" disabled />
+                          <input value="${escapeHtml(item.mappingType ?? '')}" placeholder="mappingType" disabled />
                         </label>
                       ` : ''}
                       <div class="response-item-actions">
