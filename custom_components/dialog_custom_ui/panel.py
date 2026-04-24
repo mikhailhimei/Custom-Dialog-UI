@@ -28,6 +28,7 @@ _PANEL_REGISTERED_KEY = f"{DOMAIN}_panel_registered"
 def _module_url_with_version() -> str:
     """Return module URL with version query to avoid stale frontend cache."""
     manifest_path = Path(__file__).parent / "manifest.json"
+    panel_module_path = Path(__file__).parent / "static" / PANEL_MODULE_BASENAME
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -36,10 +37,18 @@ def _module_url_with_version() -> str:
         _LOGGER.exception("Failed to read manifest version for dialog_custom_ui panel")
         version = ""
 
-    if not version:
+    build_marker = ""
+    try:
+        if panel_module_path.exists():
+            build_marker = str(panel_module_path.stat().st_mtime_ns)
+    except Exception:
+        _LOGGER.debug("Failed to read panel module mtime for cache buster", exc_info=True)
+
+    if not version and not build_marker:
         return PANEL_MODULE_PATH
 
-    return f"/dialog_custom_ui_static/{PANEL_MODULE_BASENAME}?v={version}"
+    version_value = ".".join(part for part in (version, build_marker) if part)
+    return f"/dialog_custom_ui_static/{PANEL_MODULE_BASENAME}?v={version_value}"
 
 
 async def async_register_panel(hass: HomeAssistant) -> None:

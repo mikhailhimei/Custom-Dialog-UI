@@ -25,10 +25,11 @@ export const performUuidSearch = async (ctx, searchText, searchType, itemId = nu
     ctx._searchResults = results;
     if (searchType === 'directControl' && itemId) {
       const normalizedSearchText = String(searchText ?? '').trim();
+      const normalizedSearchLower = normalizedSearchText.toLowerCase();
       const exactMatch = results.find(
-        (entry) => String(entry?.uuid ?? '').trim() === normalizedSearchText
-      );
-      if (exactMatch && (exactMatch?.title || exactMatch?.mappingType || exactMatch?.actionType || exactMatch?.type)) {
+        (entry) => String(entry?.uuid ?? '').trim().toLowerCase() === normalizedSearchLower
+      ) || (results.length === 1 ? results[0] : null);
+      if (exactMatch && (exactMatch?.title || exactMatch?.mappingType || exactMatch?.actionType || exactMatch?.type || exactMatch?.uuid)) {
         const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
           .map((item) => (
             item.id === itemId

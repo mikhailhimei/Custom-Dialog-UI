@@ -7,7 +7,7 @@ export const bindSearchActions = (ctx, root, on) => {
       const result = {
         uuid: element.dataset.resultUuid,
         title: element.dataset.resultTitle,
-        mappingType: element.dataset.resultMappingType,
+        mappingType: element.dataset.resultMappingType || element.dataset.resultActiveType || element.dataset.resultType,
       };
       ctx._selectSearchResult(itemId, result);
     });
