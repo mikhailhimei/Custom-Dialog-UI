@@ -160,6 +160,12 @@ class DialogTimerAlarmManager:
             },
         )
         self._append_log("success", f"Timer started: {timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}")
+        _LOGGER.info(
+            "Dialog Custom UI timer created from scenario: client_id=%s device_id=%s duration=%s",
+            client_id or "<empty>",
+            device_id or "<empty>",
+            f"{timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}",
+        )
 
     async def async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
@@ -322,6 +328,13 @@ class DialogTimerAlarmManager:
                         f"device_id={device_id or '<empty>'} "
                         f"duration={_seconds_to_duration(duration_seconds)}"
                     ),
+                )
+                _LOGGER.info(
+                    "Dialog Custom UI timer requested from UI: id=%s client_id=%s device_id=%s duration=%s",
+                    timer_id,
+                    client_id or "<empty>",
+                    device_id or "<empty>",
+                    _seconds_to_duration(duration_seconds),
                 )
                 continue
 
@@ -1140,6 +1153,12 @@ def _append_integration_log(hass: HomeAssistant, level: str, message: str) -> No
             "message": message,
         }
     )
+    if level == "error":
+        _LOGGER.error(message)
+    elif level in {"warning", "warn"}:
+        _LOGGER.warning(message)
+    else:
+        _LOGGER.info(message)
 
 
 def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
