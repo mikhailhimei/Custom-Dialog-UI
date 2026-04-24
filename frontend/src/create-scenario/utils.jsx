@@ -42,7 +42,12 @@ export const createDirectControlItem = (item = {}) => ({
 
 export const createNextActionItem = (item = {}) => ({
   id: createUuid(),
-  actionTypeComponent: String(item.actionTypeComponent ?? item.actionType ?? 'children'),
+  actionTypeComponent: String(
+    item.actionTypeComponent
+    ?? (String(item.actionType ?? item.mappingType ?? '').trim() ? 'custom' : 'children')
+  ),
+  actionType: String(item.actionType ?? item.mappingType ?? ''),
+  mappingType: String(item.mappingType ?? item.actionType ?? ''),
   uuid: String(item.uuid ?? ''),
   displayValue: String(item.displayValue ?? ''),
 });
@@ -183,9 +188,15 @@ export const buildCommandPayloadFromDraft = (draft = {}) => {
       actionTypeComponent: TYPE_COMPONENT_OPTIONS.includes(String(item.actionTypeComponent ?? '').trim())
         ? String(item.actionTypeComponent ?? '').trim()
         : 'children',
+      actionType: String(item.actionType ?? item.mappingType ?? '').trim(),
       uuid: String(item.uuid ?? '').trim(),
     }))
-    .filter((item) => item.uuid);
+    .filter((item) => item.uuid)
+    .map((item) => (
+      item.actionTypeComponent === 'custom'
+        ? item
+        : { ...item, actionType: '' }
+    ));
 
   const dialogPayload = {
     endStatus: Boolean(draft.endStatus),

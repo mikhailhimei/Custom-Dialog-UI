@@ -83,6 +83,8 @@ export const selectSearchResult = (ctx, itemId, result) => {
     };
   } else if (activeType === 'nextAction') {
     ctx._updateNextActionItem(normalizedItemId, 'displayValue', result.title);
+    ctx._updateNextActionItem(normalizedItemId, 'mappingType', String(result.mappingType ?? ''));
+    ctx._updateNextActionItem(normalizedItemId, 'actionType', String(result.mappingType ?? ''));
     const nextItems = (Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : [])
       .map((item) => (item.id === normalizedItemId ? { ...item, uuid: result.uuid } : item));
     ctx._draft = {

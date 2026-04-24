@@ -158,6 +158,19 @@ export const updateNextActionItem = (ctx, itemId, field, value) => {
           ...item,
           uuid: nextUuid,
           displayValue: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.displayValue : '',
+          mappingType: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.mappingType : '',
+          actionType: nextTrimmedUuid && nextTrimmedUuid === currentTrimmedUuid ? item.actionType : '',
+        };
+      }
+      if (field === 'actionTypeComponent') {
+        const nextComponent = String(value ?? '').trim();
+        if (nextComponent === 'custom') {
+          return { ...item, actionTypeComponent: nextComponent };
+        }
+        return {
+          ...item,
+          actionTypeComponent: nextComponent,
+          actionType: '',
         };
       }
       return { ...item, [field]: value };
