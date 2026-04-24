@@ -618,13 +618,24 @@ class DialogTimerAlarmManager:
 
     def _timers_for_client(self, client_id: str) -> list[dict[str, Any]]:
         normalized_client = _normalize_value(client_id)
-        items = [entry for entry in self._timers.values() if _normalize_value(entry.get("client_id")) == normalized_client]
+        if normalized_client:
+            items = [entry for entry in self._timers.values() if _normalize_value(entry.get("client_id")) == normalized_client]
+            # Fallback for mixed payload formats where client identifiers differ.
+            if not items:
+                items = list(self._timers.values())
+        else:
+            items = list(self._timers.values())
         items.sort(key=lambda item: float(item.get("created_at") or 0.0))
         return items
 
     def _alarms_for_client(self, client_id: str) -> list[dict[str, Any]]:
         normalized_client = _normalize_value(client_id)
-        items = [entry for entry in self._alarms.values() if _normalize_value(entry.get("client_id")) == normalized_client]
+        if normalized_client:
+            items = [entry for entry in self._alarms.values() if _normalize_value(entry.get("client_id")) == normalized_client]
+            if not items:
+                items = list(self._alarms.values())
+        else:
+            items = list(self._alarms.values())
         items.sort(key=lambda item: float(item.get("created_at") or 0.0))
         return items
 

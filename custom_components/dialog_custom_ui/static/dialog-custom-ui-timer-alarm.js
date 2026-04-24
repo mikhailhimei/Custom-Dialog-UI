@@ -18,8 +18,8 @@ Error generating stack: `+i.message+`
               <div class="meta">\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u0432\u0440\u0435\u043C\u044F: <span data-now-clock>${M(this._nowTimeLabel())}</span></div>
             </div>
             <div class="actions">
-              ${n.status==="paused"?`<button class="btn ghost" data-action="resume-timer" data-item-id="${M(n.id)}">Resume</button>`:`<button class="btn ghost" data-action="pause-timer" data-item-id="${M(n.id)}">Pause</button>`}
-              <button class="btn danger" data-action="remove-item" data-item-id="${M(n.id)}">Stop</button>
+              ${n.status==="paused"?`<button type="button" class="btn ghost" data-action="resume-timer" data-item-id="${M(n.id)}">Resume</button>`:`<button type="button" class="btn ghost" data-action="pause-timer" data-item-id="${M(n.id)}">Pause</button>`}
+              <button type="button" class="btn danger" data-action="remove-item" data-item-id="${M(n.id)}">Stop</button>
             </div>
           </div>
           <label>
@@ -31,7 +31,7 @@ Error generating stack: `+i.message+`
         </article>
       `}).join(""):'<div class="empty">No timers yet.</div>'}_renderAlarms(){let t=this._items.filter(n=>n.type==="alarm");return`
       <section class="preset-row">
-        ${this._presets.map(n=>`<button class="btn ghost" data-action="add-alarm-preset" data-preset="${M(n)}">+ ${M(n)}</button>`).join("")}
+        ${this._presets.map(n=>`<button type="button" class="btn ghost" data-action="add-alarm-preset" data-preset="${M(n)}">+ ${M(n)}</button>`).join("")}
       </section>
       ${t.length?t.map(n=>`
         <article class="card">
@@ -41,7 +41,7 @@ Error generating stack: `+i.message+`
               <div class="meta">${M(n.time.time)}</div>
               <div class="meta">\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u0432\u0440\u0435\u043C\u044F: <span data-now-clock>${M(this._nowTimeLabel())}</span></div>
             </div>
-            <button class="btn danger" data-action="remove-item" data-item-id="${M(n.id)}">Delete</button>
+            <button type="button" class="btn danger" data-action="remove-item" data-item-id="${M(n.id)}">Delete</button>
           </div>
           <div class="grid">
             <label>
@@ -97,16 +97,16 @@ Error generating stack: `+i.message+`
       <div class="panel">
         <section class="hero">
           <div class="tabs">
-            <button data-tab="timer" class="${this._tab==="timer"?"active":""}">Timer</button>
-            <button data-tab="alarm" class="${this._tab==="alarm"?"active":""}">Alarm</button>
+            <button type="button" data-tab="timer" class="${this._tab==="timer"?"active":""}">Timer</button>
+            <button type="button" data-tab="alarm" class="${this._tab==="alarm"?"active":""}">Alarm</button>
           </div>
           <div class="meta" style="margin-top:8px;">\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u0432\u0440\u0435\u043C\u044F: <span data-now-clock>${M(this._nowTimeLabel())}</span></div>
           <div class="toolbar" style="margin-top:10px;">
             <select data-action="select-global-device">
               ${this._renderDeviceOptions(this._selectedDevice,"Device for quick start")}
             </select>
-            ${ap.map(r=>`<button class="btn ghost" data-action="quick-timer" data-minutes="${r}">+${r}m</button>`).join("")}
-            <button class="btn ghost" data-action="add-alarm">+ alarm</button>
+            ${ap.map(r=>`<button type="button" class="btn ghost" data-action="quick-timer" data-minutes="${r}">+${r}m</button>`).join("")}
+            <button type="button" class="btn ghost" data-action="add-alarm">+ alarm</button>
           </div>
           ${this._status?`<div class="status ok" style="margin-top:10px;">${M(this._status)}</div>`:""}
           ${this._error?`<div class="status err" style="margin-top:10px;">${M(this._error)}</div>`:""}

@@ -1,3 +1,14 @@
+const resolveResultTitle = (result) => String(result?.title ?? result?.name ?? '').trim();
+
+const resolveResultMappingType = (result) => String(
+  result?.mappingType
+  ?? result?.mapping_type
+  ?? result?.actionType
+  ?? result?.action_type
+  ?? result?.type
+  ?? ''
+).trim();
+
 export const performUuidSearch = async (ctx, searchText, searchType, itemId = null) => {
   if (!searchText || searchText.length === 0) {
     ctx._searchResults = [];
@@ -35,8 +46,8 @@ export const performUuidSearch = async (ctx, searchText, searchType, itemId = nu
             item.id === itemId
               ? {
                 ...item,
-                displayValue: String(exactMatch.title ?? item.displayValue ?? ''),
-                mappingType: String(exactMatch.mappingType ?? exactMatch.actionType ?? exactMatch.type ?? ''),
+                displayValue: resolveResultTitle(exactMatch) || String(item.displayValue ?? ''),
+                mappingType: resolveResultMappingType(exactMatch),
               }
               : item
           ));
@@ -73,8 +84,8 @@ export const selectSearchResult = (ctx, itemId, result) => {
           ? {
             ...item,
             uuid: String(result.uuid ?? ''),
-            displayValue: String(result.title ?? ''),
-            mappingType: String(result.mappingType ?? result.actionType ?? result.type ?? ''),
+            displayValue: resolveResultTitle(result),
+            mappingType: resolveResultMappingType(result),
           }
           : item
       ));
@@ -83,9 +94,10 @@ export const selectSearchResult = (ctx, itemId, result) => {
       directControlItems: nextItems,
     };
   } else if (activeType === 'nextAction') {
-    ctx._updateNextActionItem(normalizedItemId, 'displayValue', result.title);
-    ctx._updateNextActionItem(normalizedItemId, 'mappingType', String(result.mappingType ?? ''));
-    ctx._updateNextActionItem(normalizedItemId, 'actionType', String(result.mappingType ?? ''));
+    const resolvedMappingType = resolveResultMappingType(result);
+    ctx._updateNextActionItem(normalizedItemId, 'displayValue', resolveResultTitle(result));
+    ctx._updateNextActionItem(normalizedItemId, 'mappingType', resolvedMappingType);
+    ctx._updateNextActionItem(normalizedItemId, 'actionType', resolvedMappingType);
     const nextItems = (Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : [])
       .map((item) => (item.id === normalizedItemId ? { ...item, uuid: result.uuid } : item));
     ctx._draft = {

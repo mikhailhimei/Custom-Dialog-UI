@@ -200,8 +200,8 @@ export const renderMainModal = (ctx) => {
                             ${ctx._searchActiveType === 'nextAction' && ctx._searchActiveItemId === item.id && ctx._searchResults.length > 0 ? `
                               <div class="dropdown-options">
                                 ${ctx._searchResults.map((result) => `
-                                  <div class="dropdown-option" data-action="select-search-result" data-next-action-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title)}" data-result-mapping-type="${escapeHtml(result.mappingType ?? '')}">
-                                    ${escapeHtml(result.title)} (${escapeHtml(result.uuid)})
+                                  <div class="dropdown-option" data-action="select-search-result" data-next-action-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title ?? result.name ?? '')}" data-result-mapping-type="${escapeHtml(result.mappingType ?? result.mapping_type ?? result.actionType ?? result.action_type ?? result.type ?? '')}">
+                                    ${escapeHtml(result.title ?? result.name ?? '')} (${escapeHtml(result.uuid)})
                                   </div>
                                 `).join('')}
                               </div>
@@ -268,8 +268,8 @@ export const renderMainModal = (ctx) => {
                           ${ctx._searchActiveType === 'directControl' && ctx._searchActiveItemId === item.id && ctx._searchResults.length > 0 ? `
                             <div class="dropdown-options">
                               ${ctx._searchResults.map((result) => `
-                                <div class="dropdown-option" data-action="select-search-result" data-direct-control-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title)}" data-result-mapping-type="${escapeHtml(result.mappingType ?? result.actionType ?? result.type ?? '')}" data-result-active-type="${escapeHtml(result.mappingType ?? result.actionType ?? result.type ?? '')}" data-result-type="${escapeHtml(result.type ?? '')}">
-                                  ${escapeHtml(result.title)} (${escapeHtml(result.uuid)})
+                                <div class="dropdown-option" data-action="select-search-result" data-direct-control-item-id="${escapeHtml(item.id)}" data-result-uuid="${escapeHtml(result.uuid)}" data-result-title="${escapeHtml(result.title ?? result.name ?? '')}" data-result-mapping-type="${escapeHtml(result.mappingType ?? result.mapping_type ?? result.actionType ?? result.action_type ?? result.type ?? '')}" data-result-active-type="${escapeHtml(result.mappingType ?? result.mapping_type ?? result.actionType ?? result.action_type ?? result.type ?? '')}" data-result-type="${escapeHtml(result.type ?? '')}">
+                                  ${escapeHtml(result.title ?? result.name ?? '')} (${escapeHtml(result.uuid)})
                                 </div>
                               `).join('')}
                             </div>
