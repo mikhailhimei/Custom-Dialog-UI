@@ -1,6 +1,3 @@
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-
 const GET_WS = 'dialog_custom_ui/get_timer_alarm_config';
 const SAVE_WS = 'dialog_custom_ui/save_timer_alarm_config';
 const TICK_MS = 1000;
@@ -74,7 +71,6 @@ class TimerAlarmPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._root = null;
     this._hass = null;
     this._tab = 'timer';
     this._items = [];
@@ -105,10 +101,6 @@ class TimerAlarmPanel extends HTMLElement {
 
   disconnectedCallback() {
     this._stopLoops();
-    if (this._root) {
-      this._root.unmount();
-      this._root = null;
-    }
   }
 
   async _load() {
@@ -502,11 +494,9 @@ class TimerAlarmPanel extends HTMLElement {
         ${body}
       </div>
     `;
-    if (!this._root) {
-      this._root = createRoot(this.shadowRoot);
-    }
-    this._root.render(React.createElement('div', { dangerouslySetInnerHTML: { __html: html } }));
+    this.shadowRoot.innerHTML = html;
     this._bind();
+    this._refreshLiveFields();
   }
 }
 
