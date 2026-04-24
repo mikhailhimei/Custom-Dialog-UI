@@ -189,7 +189,7 @@ class DialogTimerAlarmManager:
             await self._post_save_commands(
                 options,
                 {
-                    "typeNext": "timer_count",
+                    "actionType": "timer_count",
                     "variable": {
                         "massage": self._timer_count_message(timers),
                     },
@@ -211,7 +211,7 @@ class DialogTimerAlarmManager:
         await self._post_save_commands(
             options,
             {
-                "typeNext": "timer_count",
+                "actionType": "timer_count",
                 "variable": {
                     "massage": self._timer_count_message(timers),
                 },
@@ -299,7 +299,7 @@ class DialogTimerAlarmManager:
         await self._post_save_commands(
             options,
             {
-                "typeNext": "alarm_count",
+                "actionType": "alarm_count",
                 "variable": {
                     "massage": self._alarm_count_message(alarms),
                 },

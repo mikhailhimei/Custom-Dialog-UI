@@ -84,7 +84,7 @@ export const removeDirectControlItem = (ctx, itemId) => {
   ctx._render();
 };
 
-export const updateDirectControlItem = (ctx, itemId, value) => {
+export const updateDirectControlItem = (ctx, itemId, value, triggerSearch = true) => {
   const normalizedItemId = String(itemId ?? '').trim();
   const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
     .map((item) => {
@@ -105,7 +105,7 @@ export const updateDirectControlItem = (ctx, itemId, value) => {
     ...ctx._draft,
     directControlItems: nextItems,
   };
-  if (value.length > 0) {
+  if (triggerSearch && value.length > 0) {
     ctx._debouncedPerformUuidSearch(value, 'directControl', normalizedItemId);
   }
 };
@@ -143,7 +143,7 @@ export const removeNextActionItem = (ctx, itemId) => {
   ctx._render();
 };
 
-export const updateNextActionItem = (ctx, itemId, field, value, rerender = true) => {
+export const updateNextActionItem = (ctx, itemId, field, value, rerender = true, triggerSearch = true) => {
   const normalizedItemId = String(itemId ?? '').trim();
   const nextItems = (Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : [])
     .map((item) => {
@@ -182,7 +182,7 @@ export const updateNextActionItem = (ctx, itemId, field, value, rerender = true)
   if (rerender || field === 'actionTypeComponent') {
     ctx._render();
   }
-  if (field === 'uuid' && value.length > 0) {
+  if (triggerSearch && field === 'uuid' && value.length > 0) {
     ctx._debouncedPerformUuidSearch(value, 'nextAction', normalizedItemId);
   }
 };

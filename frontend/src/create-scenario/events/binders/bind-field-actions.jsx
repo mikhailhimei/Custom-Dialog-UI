@@ -87,8 +87,14 @@ export const bindFieldActions = (ctx, root, on) => {
 
   root.querySelectorAll('[data-direct-control-item-id]').forEach((element) => {
     const itemId = element.dataset.directControlItemId;
-    on(element, 'input', (event) => ctx._updateDirectControlItem(itemId, event.currentTarget.value));
-    on(element, 'change', (event) => ctx._updateDirectControlItem(itemId, event.currentTarget.value));
+    const isTextField = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
+    if (isTextField) {
+      on(element, 'input', (event) => ctx._updateDirectControlItem(itemId, event.currentTarget.value, false));
+      on(element, 'change', (event) => ctx._updateDirectControlItem(itemId, event.currentTarget.value, true));
+    } else {
+      on(element, 'input', (event) => ctx._updateDirectControlItem(itemId, event.currentTarget.value, true));
+      on(element, 'change', (event) => ctx._updateDirectControlItem(itemId, event.currentTarget.value, true));
+    }
   });
 
   root.querySelectorAll('[data-next-action-item-id][data-next-action-item-field]').forEach((element) => {
@@ -96,10 +102,10 @@ export const bindFieldActions = (ctx, root, on) => {
     const field = element.dataset.nextActionItemField;
     const isTextField = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
     if (isTextField) {
-      on(element, 'input', (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, false));
-      on(element, 'change', (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, true));
+      on(element, 'input', (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, false, false));
+      on(element, 'change', (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, true, true));
     } else {
-      const handler = (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, true);
+      const handler = (event) => ctx._updateNextActionItem(itemId, field, event.currentTarget.value, true, true);
       on(element, 'input', handler);
       on(element, 'change', handler);
     }
