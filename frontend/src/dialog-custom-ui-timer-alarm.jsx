@@ -75,6 +75,7 @@ class TimerAlarmPanel extends HTMLElement {
     this._tab = 'timer';
     this._items = [];
     this._presets = [];
+    this._deviceLabels = {};
     this._selectedDevice = '';
     this._loading = false;
     this._saving = false;
@@ -127,6 +128,7 @@ class TimerAlarmPanel extends HTMLElement {
       this._items = [...merged.values()]
         .map((x) => (String(x?.type ?? '').toLowerCase() === 'timer' ? normalizeTimer(x) : normalizeAlarm(x)));
       this._presets = Array.isArray(res?.alarm_presets) ? res.alarm_presets.map((x) => String(x)) : [];
+      this._deviceLabels = res?.device_labels && typeof res.device_labels === 'object' ? res.device_labels : {};
       this._status = res?.last_updated ? `Updated: ${res.last_updated}` : '';
       this._error = '';
     } catch (e) {
@@ -238,9 +240,10 @@ class TimerAlarmPanel extends HTMLElement {
   _renderDeviceOptions(selectedDevice, placeholder = 'Select media_player') {
     const devices = this._devices();
     const hasSelected = selectedDevice && devices.some((d) => d.entity_id === selectedDevice);
+    const selectedLabel = String(this._deviceLabels?.[selectedDevice] || '').trim();
     const fallbackOption = hasSelected || !selectedDevice
       ? ''
-      : `<option value="${esc(selectedDevice)}" selected>device_id: ${esc(selectedDevice)}</option>`;
+      : `<option value="${esc(selectedDevice)}" selected>${esc(selectedLabel || selectedDevice)} (${esc(selectedDevice)})</option>`;
     return `
       <option value="">${esc(placeholder)}</option>
       ${fallbackOption}

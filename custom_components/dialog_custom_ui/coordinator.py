@@ -24,6 +24,7 @@ from .const import (
     CONF_SCENARIOS,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_ITEMS,
+    CONF_TIMER_ALARM_PRESETS,
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
@@ -395,4 +396,5 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_SCENARIOS: list(stored.get(CONF_SCENARIOS, [])),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
+        CONF_TIMER_ALARM_PRESETS: list(stored.get(CONF_TIMER_ALARM_PRESETS, [])),
     }

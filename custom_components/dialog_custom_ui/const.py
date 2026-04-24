@@ -28,6 +28,7 @@ CONF_TIMER_ALARM_TOKEN = "timer_alarm_token"
 CONF_TIMER_ALARM_INTERVAL_SECONDS = "timer_alarm_interval_seconds"
 CONF_TIMER_ALARM_ITEMS = "timer_alarm_items"
 CONF_TIMER_ALARM_DEVICE_IDS = "timer_alarm_device_ids"
+CONF_TIMER_ALARM_PRESETS = "timer_alarm_presets"
 CONF_VOICE_AGENT_IP = "voice_agent_ip"
 CONF_VOICE_AGENT_USER_ID = "voice_agent_user_id"
 

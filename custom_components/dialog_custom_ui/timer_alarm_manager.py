@@ -15,6 +15,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
@@ -24,6 +25,7 @@ from .const import (
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
+    CONF_TIMER_ALARM_PRESETS,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
@@ -64,6 +66,7 @@ class DialogTimerAlarmManager:
         if self._restored:
             return
         shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        self._alarm_presets.update(_normalize_alarm_presets(options.get(CONF_TIMER_ALARM_PRESETS, [])))
         raw_items = options.get(CONF_TIMER_ALARM_ITEMS)
         items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
         await self.async_apply_ui_items(items, shared_client_id)
@@ -543,8 +546,10 @@ class DialogTimerAlarmManager:
         timer_entry = self._timers.get(timer_id)
         if timer_entry is None:
             return
+        expired = False
         try:
             await asyncio.sleep(max(1, _safe_int(timer_entry.get("remaining_seconds"))))
+            expired = True
             timer_entry = self._timers.get(timer_id)
             if timer_entry is None:
                 return
@@ -560,10 +565,15 @@ class DialogTimerAlarmManager:
                 blocking=False,
             )
         except asyncio.CancelledError:
-            raise
+            return
         finally:
-            self._timers.pop(timer_id, None)
-            self._mark_updated()
+            current_entry = self._timers.get(timer_id)
+            current_task = asyncio.current_task()
+            if current_entry is not None and current_entry.get("task") is current_task:
+                current_entry["task"] = None
+            if expired:
+                self._timers.pop(timer_id, None)
+                self._mark_updated()
 
     def _ensure_alarm_tick_task(self) -> None:
         if self._alarm_tick_task is not None and not self._alarm_tick_task.done():
@@ -690,6 +700,7 @@ class DialogTimerAlarmManager:
         try:
             options = dict(entry.options)
             options[CONF_TIMER_ALARM_ITEMS] = self.serialize_persisted_items()
+            options[CONF_TIMER_ALARM_PRESETS] = self.get_alarm_presets()
             self.hass.config_entries.async_update_entry(entry, options=options)
         except Exception as err:  # pragma: no cover - defensive path
             _LOGGER.debug("Failed to persist timer/alarm items to entry options: %s", err)
@@ -731,6 +742,7 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
     all_active: dict[str, dict[str, Any]] = {}
     all_presets: set[str] = set()
     last_updated: str | None = None
+    all_presets.update(_normalize_alarm_presets(options.get(CONF_TIMER_ALARM_PRESETS, [])))
     for current in managers:
         for item in current.get_items():
             item_id = _normalize_value(item.get("id"))
@@ -808,6 +820,7 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
             "items": items,
             "active_items": active_items,
             "alarm_presets": alarm_presets,
+            "device_labels": _collect_device_labels(hass, items, options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])),
             "last_updated": last_updated,
             "debug_meta": {
                 "managers_detected": len(managers),
@@ -863,6 +876,7 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
             _LOGGER.warning("Failed to apply UI timer/alarm update to runtime manager: %s", err)
 
     options[CONF_TIMER_ALARM_ITEMS] = target_manager.serialize_persisted_items()
+    options[CONF_TIMER_ALARM_PRESETS] = target_manager.get_alarm_presets()
     hass.config_entries.async_update_entry(entry, options=options)
     _append_integration_log(
         hass,
@@ -942,6 +956,7 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_TIMER_ALARM_DEVICE_IDS: _normalize_device_ids(stored.get(CONF_TIMER_ALARM_DEVICE_IDS, [])),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
+        CONF_TIMER_ALARM_PRESETS: _normalize_alarm_presets(stored.get(CONF_TIMER_ALARM_PRESETS, [])),
     }
 
 
@@ -957,6 +972,15 @@ def _normalize_device_ids(values: Any) -> list[str]:
     if not isinstance(values, Iterable):
         return []
     return [device_id for device_id in (_normalize_value(value) for value in values) if device_id]
+
+
+def _normalize_alarm_presets(values: Any) -> list[str]:
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, Iterable):
+        return []
+    normalized = {_normalize_alarm_clock(_normalize_value(value)) for value in values if _normalize_value(value)}
+    return sorted(normalized)
 
 
 def _extract_commands_text(payload: dict[str, Any]) -> str:
@@ -1201,6 +1225,50 @@ def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str
     if hass.states.get(device_ref):
         return device_ref
     return ""
+
+
+def _resolve_device_label(hass: HomeAssistant, device_ref: str) -> str:
+    normalized = _normalize_value(device_ref)
+    if not normalized:
+        return ""
+    state = hass.states.get(normalized)
+    if state is not None:
+        return _normalize_value(state.attributes.get("friendly_name")) or normalized
+
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_device(registry, normalized)
+    for entry in entities:
+        if not entry.entity_id.startswith("media_player."):
+            continue
+        entity_state = hass.states.get(entry.entity_id)
+        if entity_state is None:
+            continue
+        return _normalize_value(entity_state.attributes.get("friendly_name")) or entry.entity_id
+    for entry in entities:
+        if entry.entity_id:
+            return entry.entity_id
+
+    device_registry = dr.async_get(hass)
+    device_entry = device_registry.async_get(normalized)
+    if device_entry is not None:
+        return _normalize_value(device_entry.name_by_user or device_entry.name) or normalized
+    return normalized
+
+
+def _collect_device_labels(hass: HomeAssistant, items: list[dict[str, Any]], configured_device_ids: Any) -> dict[str, str]:
+    candidates: set[str] = set()
+    for item in items:
+        ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
+        if ref:
+            candidates.add(ref)
+    candidates.update(_normalize_device_ids(configured_device_ids))
+
+    result: dict[str, str] = {}
+    for ref in sorted(candidates):
+        label = _resolve_device_label(hass, ref)
+        if label:
+            result[ref] = label
+    return result
 
 
 def _append_integration_log(hass: HomeAssistant, level: str, message: str) -> None:

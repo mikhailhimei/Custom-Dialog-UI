@@ -22,6 +22,8 @@ from .const import (
     CONF_THEME,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_DEVICE_IDS,
+    CONF_TIMER_ALARM_ITEMS,
+    CONF_TIMER_ALARM_PRESETS,
     CONF_TIMER_ALARM_TOKEN,
     CONF_VOICE_AGENT_IP,
     CONF_VOICE_AGENT_USER_ID,
@@ -137,6 +139,9 @@ async def _ws_save_config(
             for device_id in msg[CONF_TIMER_ALARM_DEVICE_IDS]
             if device_id.strip()
         ],
+        # Keep runtime timer/alarm state and learned presets when user saves main settings.
+        CONF_TIMER_ALARM_ITEMS: list(previous_options.get(CONF_TIMER_ALARM_ITEMS, [])),
+        CONF_TIMER_ALARM_PRESETS: list(previous_options.get(CONF_TIMER_ALARM_PRESETS, [])),
         CONF_SCENARIOS: scenarios,
     }
 
