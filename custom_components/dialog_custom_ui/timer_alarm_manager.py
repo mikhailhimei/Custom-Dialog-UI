@@ -159,7 +159,7 @@ class DialogTimerAlarmManager:
             },
         )
         self._append_log("success", f"Timer started: {timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}")
-        _LOGGER.info(
+        _LOGGER.warning(
             "Dialog Custom UI timer created from scenario: client_id=%s device_id=%s duration=%s",
             client_id or "<empty>",
             device_id or "<empty>",
@@ -328,7 +328,7 @@ class DialogTimerAlarmManager:
                         f"duration={_seconds_to_duration(duration_seconds)}"
                     ),
                 )
-                _LOGGER.info(
+                _LOGGER.warning(
                     "Dialog Custom UI timer requested from UI: id=%s client_id=%s device_id=%s duration=%s",
                     timer_id,
                     client_id or "<empty>",
@@ -712,9 +712,6 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
         return
     manager = _get_manager(hass, entry)
     managers = _iter_managers(hass)
-    if manager is None and not managers:
-        connection.send_error(msg["id"], "not_ready", "Main coordinator not found")
-        return
     options = _get_options(entry)
     all_items: dict[str, dict[str, Any]] = {}
     all_active: dict[str, dict[str, Any]] = {}
@@ -781,6 +778,12 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
     alarm_presets = sorted(all_presets) if all_presets else (manager.get_alarm_presets() if manager is not None else [])
     if last_updated is None and manager is not None:
         last_updated = manager.last_updated
+    _LOGGER.warning(
+        "dialog_custom_ui/get_timer_alarm_config: managers=%s items=%s active_items=%s",
+        len(managers),
+        len(items),
+        len(active_items),
+    )
     connection.send_result(
         msg["id"],
         {
@@ -1145,10 +1148,8 @@ def _append_integration_log(hass: HomeAssistant, level: str, message: str) -> No
     )
     if level == "error":
         _LOGGER.error(message)
-    elif level in {"warning", "warn"}:
-        _LOGGER.warning(message)
     else:
-        _LOGGER.info(message)
+        _LOGGER.warning(message)
 
 
 def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
