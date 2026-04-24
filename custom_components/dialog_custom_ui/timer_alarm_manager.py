@@ -833,14 +833,28 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
             f"client_id={shared_client_id or '<empty>'}"
         ),
     )
-    target_manager = _select_manager(managers or ([manager] if manager is not None else []), requested_items, shared_client_id) or manager
-    if target_manager is None:
+    manager_targets = managers or ([manager] if manager is not None else [])
+    target_manager = _select_manager(manager_targets, requested_items, shared_client_id) or manager
+    if not manager_targets or target_manager is None:
         connection.send_error(msg["id"], "not_ready", "Timer/alarm manager not found")
         return
-    await target_manager.async_apply_ui_items(requested_items, shared_client_id)
+
+    # Apply state to all active managers to avoid split-brain across multiple config entries.
+    applied = 0
+    for runtime_manager in manager_targets:
+        try:
+            await runtime_manager.async_apply_ui_items(requested_items, shared_client_id)
+            applied += 1
+        except Exception as err:  # pragma: no cover - defensive path
+            _LOGGER.warning("Failed to apply UI timer/alarm update to runtime manager: %s", err)
+
     options[CONF_TIMER_ALARM_ITEMS] = target_manager.serialize_persisted_items()
     hass.config_entries.async_update_entry(entry, options=options)
-    _append_integration_log(hass, "success", "Timer/alarm update from UI applied")
+    _append_integration_log(
+        hass,
+        "success",
+        f"Timer/alarm update from UI applied (runtime_managers_updated={applied}/{len(manager_targets)})",
+    )
     connection.send_result(msg["id"], {"saved": True})
 
 
