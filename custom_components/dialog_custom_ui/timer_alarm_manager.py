@@ -668,10 +668,33 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
         connection.send_error(msg["id"], "not_configured", "Integration entry not found")
         return
     manager = _get_manager(hass, entry)
-    if manager is None:
+    managers = _iter_managers(hass)
+    if manager is None and not managers:
         connection.send_error(msg["id"], "not_ready", "Main coordinator not found")
         return
     options = _get_options(entry)
+    all_items: dict[str, dict[str, Any]] = {}
+    all_active: dict[str, dict[str, Any]] = {}
+    all_presets: set[str] = set()
+    last_updated: str | None = None
+    for current in managers:
+        for item in current.get_items():
+            item_id = _normalize_value(item.get("id"))
+            if item_id:
+                all_items[item_id] = item
+        for item in current.get_active_items():
+            item_id = _normalize_value(item.get("id"))
+            if item_id:
+                all_active[item_id] = item
+        all_presets.update(current.get_alarm_presets())
+        if current.last_updated and (last_updated is None or current.last_updated > last_updated):
+            last_updated = current.last_updated
+
+    items = list(all_items.values()) if all_items else (manager.get_items() if manager is not None else [])
+    active_items = list(all_active.values()) if all_active else (manager.get_active_items() if manager is not None else [])
+    alarm_presets = sorted(all_presets) if all_presets else (manager.get_alarm_presets() if manager is not None else [])
+    if last_updated is None and manager is not None:
+        last_updated = manager.last_updated
     connection.send_result(
         msg["id"],
         {
@@ -679,10 +702,10 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
             "client_id": options[CONF_CLIENT_ID],
             "interval": options[CONF_TIMEOUT],
             "device_ids": options[CONF_TIMER_ALARM_DEVICE_IDS],
-            "items": manager.get_items(),
-            "active_items": manager.get_active_items(),
-            "alarm_presets": manager.get_alarm_presets(),
-            "last_updated": manager.last_updated,
+            "items": items,
+            "active_items": active_items,
+            "alarm_presets": alarm_presets,
+            "last_updated": last_updated,
         },
     )
 
@@ -696,15 +719,20 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
         connection.send_error(msg["id"], "not_configured", "Integration entry not found")
         return
     manager = _get_manager(hass, entry)
-    if manager is None:
+    managers = _iter_managers(hass)
+    if manager is None and not managers:
         connection.send_error(msg["id"], "not_ready", "Main coordinator not found")
         return
 
     options = dict(entry.options)
     shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
     requested_items = [item for item in msg.get(CONF_TIMER_ALARM_ITEMS, []) if isinstance(item, dict)]
-    await manager.async_apply_ui_items(requested_items, shared_client_id)
-    options[CONF_TIMER_ALARM_ITEMS] = manager.serialize_persisted_items()
+    target_manager = _select_manager(managers or ([manager] if manager is not None else []), requested_items, shared_client_id) or manager
+    if target_manager is None:
+        connection.send_error(msg["id"], "not_ready", "Timer/alarm manager not found")
+        return
+    await target_manager.async_apply_ui_items(requested_items, shared_client_id)
+    options[CONF_TIMER_ALARM_ITEMS] = target_manager.serialize_persisted_items()
     hass.config_entries.async_update_entry(entry, options=options)
     connection.send_result(msg["id"], {"saved": True})
 
@@ -718,6 +746,39 @@ def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> DialogTimerAlarmMan
     coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     manager = getattr(coordinator, "timer_alarm_manager", None)
     return manager if isinstance(manager, DialogTimerAlarmManager) else None
+
+
+def _iter_managers(hass: HomeAssistant) -> list[DialogTimerAlarmManager]:
+    managers: list[DialogTimerAlarmManager] = []
+    for value in hass.data.get(DOMAIN, {}).values():
+        manager = getattr(value, "timer_alarm_manager", None)
+        if isinstance(manager, DialogTimerAlarmManager):
+            managers.append(manager)
+    return managers
+
+
+def _select_manager(
+    managers: list[DialogTimerAlarmManager],
+    requested_items: list[dict[str, Any]],
+    shared_client_id: str,
+) -> DialogTimerAlarmManager | None:
+    if not managers:
+        return None
+    requested_ids = {_normalize_value(item.get("id")) for item in requested_items if _normalize_value(item.get("id"))}
+    best_manager: DialogTimerAlarmManager | None = None
+    best_score = -1
+    for manager in managers:
+        score = 0
+        items = manager.get_items()
+        item_ids = {_normalize_value(item.get("id")) for item in items}
+        if requested_ids:
+            score += len(item_ids.intersection(requested_ids))
+        if shared_client_id:
+            score += sum(1 for item in items if _normalize_value(item.get("clientId") or item.get("userId")) == shared_client_id)
+        if score > best_score:
+            best_score = score
+            best_manager = manager
+    return best_manager or managers[0]
 
 
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
