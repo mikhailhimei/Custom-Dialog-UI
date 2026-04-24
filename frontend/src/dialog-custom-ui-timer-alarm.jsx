@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 const GET_WS = 'dialog_custom_ui/get_timer_alarm_config';
 const SAVE_WS = 'dialog_custom_ui/save_timer_alarm_config';
 const TICK_MS = 1000;
+const POLL_MS = 3000;
 const QUICK_MINUTES = [5, 10, 15, 30, 60];
 
 const esc = (v) => String(v ?? '')
@@ -170,8 +171,13 @@ class TimerAlarmPanel extends HTMLElement {
 
   _startLoops() {
     this._stopLoops();
-    this._tick = window.setInterval(() => this._render(), TICK_MS);
-    this._poll = window.setInterval(() => this._load(), TICK_MS);
+    this._tick = window.setInterval(() => this._refreshLiveFields(), TICK_MS);
+    this._poll = window.setInterval(() => {
+      if (this._isInteractiveControlFocused()) {
+        return;
+      }
+      this._load();
+    }, POLL_MS);
   }
 
   _stopLoops() {
@@ -195,14 +201,59 @@ class TimerAlarmPanel extends HTMLElement {
   }
 
   _timerLeft(timer) {
+    const fromRemaining = Math.max(0, Number(timer?.time?.remaining_seconds) || 0);
     if (timer.status === 'paused') {
-      return Math.max(0, Number(timer.time.remaining_seconds) || 0);
+      return fromRemaining;
+    }
+    if (fromRemaining > 0) {
+      return fromRemaining;
     }
     const end = parseDate(timer.time.date_end);
     if (!end) {
-      return Math.max(0, Number(timer.time.remaining_seconds) || 0);
+      return fromRemaining;
     }
     return Math.max(0, Math.floor((end.getTime() - Date.now()) / 1000));
+  }
+
+  _isInteractiveControlFocused() {
+    const active = this.shadowRoot?.activeElement;
+    if (!active) {
+      return false;
+    }
+    const tag = String(active.tagName || '').toUpperCase();
+    return tag === 'SELECT' || tag === 'INPUT' || tag === 'TEXTAREA';
+  }
+
+  _nowTimeLabel() {
+    const now = new Date();
+    return `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  }
+
+  _refreshLiveFields() {
+    this.shadowRoot?.querySelectorAll('[data-timer-left-id]').forEach((el) => {
+      const itemId = String(el.getAttribute('data-timer-left-id') || '');
+      const timer = this._items.find((item) => item.type === 'timer' && item.id === itemId);
+      if (!timer) {
+        return;
+      }
+      el.textContent = `${toDuration(this._timerLeft(timer))} left`;
+    });
+    this.shadowRoot?.querySelectorAll('[data-now-clock]').forEach((el) => {
+      el.textContent = this._nowTimeLabel();
+    });
+  }
+
+  _renderDeviceOptions(selectedDevice, placeholder = 'Select media_player') {
+    const devices = this._devices();
+    const hasSelected = selectedDevice && devices.some((d) => d.entity_id === selectedDevice);
+    const fallbackOption = hasSelected || !selectedDevice
+      ? ''
+      : `<option value="${esc(selectedDevice)}" selected>device_id: ${esc(selectedDevice)}</option>`;
+    return `
+      <option value="">${esc(placeholder)}</option>
+      ${fallbackOption}
+      ${devices.map((d) => `<option value="${esc(d.entity_id)}" ${selectedDevice === d.entity_id ? 'selected' : ''}>${esc(d.attributes.friendly_name || d.entity_id)}</option>`).join('')}
+    `;
   }
 
   _addTimer(minutes) {
@@ -286,7 +337,8 @@ class TimerAlarmPanel extends HTMLElement {
           <div class="head">
             <div>
               <div class="title">Timer</div>
-              <div class="meta">${esc(toDuration(left))} left</div>
+              <div class="meta" data-timer-left-id="${esc(item.id)}">${esc(toDuration(left))} left</div>
+              <div class="meta">Текущее время: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
             </div>
             <div class="actions">
               ${item.status === 'paused'
@@ -299,8 +351,7 @@ class TimerAlarmPanel extends HTMLElement {
           <label>
             <span>Device</span>
             <select data-action="set-device" data-item-id="${esc(item.id)}">
-              <option value="">Select media_player</option>
-              ${this._devices().map((d) => `<option value="${esc(d.entity_id)}" ${item.deviceId === d.entity_id ? 'selected' : ''}>${esc(d.attributes.friendly_name || d.entity_id)}</option>`).join('')}
+              ${this._renderDeviceOptions(item.deviceId)}
             </select>
           </label>
         </article>
@@ -320,6 +371,7 @@ class TimerAlarmPanel extends HTMLElement {
             <div>
               <div class="title">Alarm</div>
               <div class="meta">${esc(item.time.time)}</div>
+              <div class="meta">Текущее время: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
             </div>
             <button class="btn danger" data-action="remove-item" data-item-id="${esc(item.id)}">Delete</button>
           </div>
@@ -328,18 +380,18 @@ class TimerAlarmPanel extends HTMLElement {
               <span>Time</span>
               <input type="time" data-action="set-alarm-time" data-item-id="${esc(item.id)}" value="${esc(item.time.time)}" />
             </label>
-            <label>
+            <div>
               <span>Status</span>
-              <select data-action="set-alarm-status" data-item-id="${esc(item.id)}">
-                <option value="on" ${item.status === 'on' ? 'selected' : ''}>on</option>
-                <option value="off" ${item.status === 'off' ? 'selected' : ''}>off</option>
-              </select>
-            </label>
+              <label class="switch-control">
+                <input type="checkbox" data-action="set-alarm-enabled" data-item-id="${esc(item.id)}" ${item.status !== 'off' ? 'checked' : ''} />
+                <span class="switch-slider" aria-hidden="true"></span>
+                <span class="switch-label">${item.status !== 'off' ? 'on' : 'off'}</span>
+              </label>
+            </div>
             <label class="full">
               <span>Device</span>
               <select data-action="set-device" data-item-id="${esc(item.id)}">
-                <option value="">Select media_player</option>
-                ${this._devices().map((d) => `<option value="${esc(d.entity_id)}" ${item.deviceId === d.entity_id ? 'selected' : ''}>${esc(d.attributes.friendly_name || d.entity_id)}</option>`).join('')}
+                ${this._renderDeviceOptions(item.deviceId)}
               </select>
             </label>
           </div>
@@ -385,8 +437,8 @@ class TimerAlarmPanel extends HTMLElement {
         this._save();
       };
     });
-    this.shadowRoot.querySelectorAll('[data-action="set-alarm-status"]').forEach((el) => {
-      el.onchange = (e) => this._updateItem(String(el.dataset.itemId || ''), { status: String(e.currentTarget.value || 'on') });
+    this.shadowRoot.querySelectorAll('[data-action="set-alarm-enabled"]').forEach((el) => {
+      el.onchange = (e) => this._updateItem(String(el.dataset.itemId || ''), { status: e.currentTarget.checked ? 'on' : 'off' });
     });
   }
 
@@ -413,6 +465,13 @@ class TimerAlarmPanel extends HTMLElement {
         label span { font-size:12px; text-transform:uppercase; color:#2f4f7d; font-weight:600; }
         select, input { border:1px solid #cfd9e9; border-radius:10px; padding:8px 10px; }
         .preset-row { display:flex; gap:8px; flex-wrap:wrap; }
+        .switch-control { margin-top:0; display:inline-flex; align-items:center; gap:8px; }
+        .switch-control input[type="checkbox"] { position:absolute; opacity:0; pointer-events:none; }
+        .switch-slider { width:44px; height:24px; background:#ccd7ea; border-radius:999px; position:relative; transition:background .2s ease; }
+        .switch-slider::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform .2s ease; }
+        .switch-control input[type="checkbox"]:checked + .switch-slider { background:#2c5b9b; }
+        .switch-control input[type="checkbox"]:checked + .switch-slider::after { transform:translateX(20px); }
+        .switch-label { font-size:13px; text-transform:none; color:#1f3457; font-weight:600; }
       </style>
       <div class="panel">
         <section class="hero">
@@ -420,10 +479,10 @@ class TimerAlarmPanel extends HTMLElement {
             <button data-tab="timer" class="${this._tab === 'timer' ? 'active' : ''}">Timer</button>
             <button data-tab="alarm" class="${this._tab === 'alarm' ? 'active' : ''}">Alarm</button>
           </div>
+          <div class="meta" style="margin-top:8px;">Текущее время: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
           <div class="toolbar" style="margin-top:10px;">
             <select data-action="select-global-device">
-              <option value="">Device for quick start</option>
-              ${this._devices().map((d) => `<option value="${esc(d.entity_id)}">${esc(d.attributes.friendly_name || d.entity_id)}</option>`).join('')}
+              ${this._renderDeviceOptions(this._selectedDevice, 'Device for quick start')}
             </select>
             ${QUICK_MINUTES.map((m) => `<button class="btn ghost" data-action="quick-timer" data-minutes="${m}">+${m}m</button>`).join('')}
             <button class="btn ghost" data-action="add-alarm">+ alarm</button>

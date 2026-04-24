@@ -128,8 +128,8 @@ class DialogTimerAlarmManager:
         return False
 
     async def async_handle_timer_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
-        device_id = _normalize_value(payload.get("device_id") or payload.get("deviceId"))
+        client_id = _extract_client_id(payload, options)
+        device_id = _extract_device_id(payload)
         if not client_id:
             self._append_log("error", "Timer start skipped: client_id is empty")
             return
@@ -167,7 +167,7 @@ class DialogTimerAlarmManager:
         )
 
     async def async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        client_id = _extract_client_id(payload, options)
         if not client_id:
             return
 
@@ -176,18 +176,7 @@ class DialogTimerAlarmManager:
             return
 
         target_count = _extract_count(payload)
-        if target_count is None and len(timers) > 1:
-            await self._post_save_commands(
-                options,
-                {
-                    "clientId": client_id,
-                    "activeType": "timer_count",
-                    "data": {"timer": [self._timer_info_for_response(item) for item in timers]},
-                },
-            )
-            return
-
-        selected_index = max(0, (target_count or 1) - 1)
+        selected_index = len(timers) - 1 if target_count is None else max(0, target_count - 1)
         selected_index = min(selected_index, len(timers) - 1)
         timer_id = _normalize_value(timers[selected_index].get("id"))
         timer_entry = self._timers.pop(timer_id, None)
@@ -197,33 +186,33 @@ class DialogTimerAlarmManager:
         self._mark_updated()
 
     async def async_handle_timer_pause(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        client_id = _extract_client_id(payload, options)
         timers = self._timers_for_client(client_id)
         if not timers:
             return
-        target_count = _extract_count(payload) or 1
-        index = min(max(target_count - 1, 0), len(timers) - 1)
+        target_count = _extract_count(payload)
+        index = len(timers) - 1 if target_count is None else min(max(target_count - 1, 0), len(timers) - 1)
         await self._pause_timer(_normalize_value(timers[index].get("id")))
 
     async def async_handle_timer_resume(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        client_id = _extract_client_id(payload, options)
         timers = self._timers_for_client(client_id)
         if not timers:
             return
-        target_count = _extract_count(payload) or 1
-        index = min(max(target_count - 1, 0), len(timers) - 1)
+        target_count = _extract_count(payload)
+        index = len(timers) - 1 if target_count is None else min(max(target_count - 1, 0), len(timers) - 1)
         await self._resume_timer(_normalize_value(timers[index].get("id")))
 
     async def async_handle_timer_info(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        client_id = _extract_client_id(payload, options)
         if not client_id:
             return
         timers = self._timers_for_client(client_id)
         await self._post_save_commands(options, {"clientId": client_id, "data": {"timer": [self._timer_info_for_response(item) for item in timers]}})
 
     async def async_handle_alarm_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
-        device_id = _normalize_value(payload.get("device_id") or payload.get("deviceId"))
+        client_id = _extract_client_id(payload, options)
+        device_id = _extract_device_id(payload)
         if not client_id:
             return
         alarm_time = _extract_alarm_time(payload)
@@ -241,18 +230,18 @@ class DialogTimerAlarmManager:
         self._mark_updated()
 
     async def async_handle_alarm_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        client_id = _extract_client_id(payload, options)
         alarms = self._alarms_for_client(client_id)
         if not alarms:
             return
-        target_count = _extract_count(payload) or 1
-        index = min(max(target_count - 1, 0), len(alarms) - 1)
+        target_count = _extract_count(payload)
+        index = len(alarms) - 1 if target_count is None else min(max(target_count - 1, 0), len(alarms) - 1)
         alarm_id = _normalize_value(alarms[index].get("id"))
         self._alarms.pop(alarm_id, None)
         self._mark_updated()
 
     async def async_handle_alarm_info(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _normalize_value(payload.get("client_id") or payload.get("clientId") or options.get(CONF_CLIENT_ID))
+        client_id = _extract_client_id(payload, options)
         alarms = self._alarms_for_client(client_id)
         await self._post_save_commands(
             options,
@@ -624,6 +613,8 @@ class DialogTimerAlarmManager:
             target={"entity_id": media_player_entity_id},
             blocking=False,
         )
+        alarm["status"] = "off"
+        self._mark_updated()
 
     def _timers_for_client(self, client_id: str) -> list[dict[str, Any]]:
         normalized_client = _normalize_value(client_id)
@@ -678,7 +669,19 @@ class DialogTimerAlarmManager:
 
     def _mark_updated(self) -> None:
         self._last_updated = dt_util.now().isoformat()
+        self._persist_items_to_entry()
         self._publish_runtime_state()
+
+    def _persist_items_to_entry(self) -> None:
+        entry = _get_entry(self.hass)
+        if entry is None:
+            return
+        try:
+            options = dict(entry.options)
+            options[CONF_TIMER_ALARM_ITEMS] = self.serialize_persisted_items()
+            self.hass.config_entries.async_update_entry(entry, options=options)
+        except Exception as err:  # pragma: no cover - defensive path
+            _LOGGER.debug("Failed to persist timer/alarm items to entry options: %s", err)
 
     def _publish_runtime_state(self) -> None:
         domain_data = self.hass.data.setdefault(DOMAIN, {})
@@ -951,7 +954,45 @@ def _extract_commands_text(payload: dict[str, Any]) -> str:
         command = _normalize_value(value.get("commands") or value.get("command"))
         if command:
             return command
-    return _normalize_value(payload.get("commands"))
+    direct_command = _normalize_value(payload.get("commands") or payload.get("command"))
+    if direct_command:
+        return direct_command
+    normalized = _normalize_value(payload.get("normalize_numbers"))
+    if normalized:
+        return normalized
+    client_command = payload.get("client_command") if isinstance(payload.get("client_command"), dict) else {}
+    request = client_command.get("request") if isinstance(client_command.get("request"), dict) else {}
+    nested_command = _normalize_value(request.get("command") or request.get("original_utterance"))
+    if nested_command:
+        return nested_command
+    return ""
+
+
+def _extract_client_id(payload: dict[str, Any], options: dict[str, Any]) -> str:
+    direct = _normalize_value(payload.get("client_id") or payload.get("clientId") or payload.get("user_id") or payload.get("userId"))
+    if direct:
+        return direct
+    client_command = payload.get("client_command") if isinstance(payload.get("client_command"), dict) else {}
+    session = client_command.get("session") if isinstance(client_command.get("session"), dict) else {}
+    user = session.get("user") if isinstance(session.get("user"), dict) else {}
+    nested = _normalize_value(user.get("user_id") or user.get("id"))
+    if nested:
+        return nested
+    return _normalize_value(options.get(CONF_CLIENT_ID))
+
+
+def _extract_device_id(payload: dict[str, Any]) -> str:
+    direct = _normalize_value(payload.get("device_id") or payload.get("deviceId") or payload.get("application_id") or payload.get("applicationId"))
+    if direct:
+        return direct
+    target = payload.get("target") if isinstance(payload.get("target"), dict) else {}
+    target_device = _normalize_value(target.get("device_id") or target.get("deviceId") or target.get("entity_id") or target.get("entityId"))
+    if target_device:
+        return target_device
+    client_command = payload.get("client_command") if isinstance(payload.get("client_command"), dict) else {}
+    session = client_command.get("session") if isinstance(client_command.get("session"), dict) else {}
+    application = session.get("application") if isinstance(session.get("application"), dict) else {}
+    return _normalize_value(application.get("application_id") or application.get("device_id"))
 
 
 def _extract_timer_parts(payload: dict[str, Any]) -> dict[str, int]:
