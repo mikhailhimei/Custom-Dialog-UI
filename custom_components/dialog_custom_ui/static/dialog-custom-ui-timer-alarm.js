@@ -110,4 +110,4 @@ Error generating stack: `+i.message+`
         </section>
         ${t}
       </div>
-    `;this._root||(this._root=(0,Mc.createRoot)(this.shadowRoot)),this._root.render(Dc.default.createElement("div",{dangerouslySetInnerHTML:{__html:n}})),this._bind()}};customElements.define("dialog-custom-ui-timer-alarm",Yo);
+    `;this._root||(this._root=(0,Mc.createRoot)(this.shadowRoot)),this._root.render(Dc.default.createElement("div",{dangerouslySetInnerHTML:{__html:n}})),this._bind()}};customElements.get("dialog-custom-ui-timer-alarm")||customElements.define("dialog-custom-ui-timer-alarm",Yo);

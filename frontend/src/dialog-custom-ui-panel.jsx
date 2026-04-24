@@ -699,6 +699,17 @@ class DialogCustomUiPanel extends HTMLElement {
     `;
     this._mountReact(markup);
     this._bindEvents();
+    this._syncEmbeddedTimerAlarmHass();
+  }
+
+  _syncEmbeddedTimerAlarmHass() {
+    if (!this._hass || !this.shadowRoot) {
+      return;
+    }
+    const timerAlarmElement = this.shadowRoot.querySelector('dialog-custom-ui-timer-alarm');
+    if (timerAlarmElement) {
+      timerAlarmElement.hass = this._hass;
+    }
   }
 }
 

@@ -2261,4 +2261,4 @@ Error generating stack: `+o.message+`
           </section>
         </div>
       </div>
-    `;this._mountReact(n),this._bindEvents()}};customElements.get("dialog-custom-ui-panel")||customElements.define("dialog-custom-ui-panel",$l);
+    `;this._mountReact(n),this._bindEvents(),this._syncEmbeddedTimerAlarmHass()}_syncEmbeddedTimerAlarmHass(){if(!this._hass||!this.shadowRoot)return;let t=this.shadowRoot.querySelector("dialog-custom-ui-timer-alarm");t&&(t.hass=this._hass)}};customElements.get("dialog-custom-ui-panel")||customElements.define("dialog-custom-ui-panel",$l);

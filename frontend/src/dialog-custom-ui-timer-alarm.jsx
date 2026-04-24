@@ -451,4 +451,6 @@ class TimerAlarmPanel extends HTMLElement {
   }
 }
 
-customElements.define('dialog-custom-ui-timer-alarm', TimerAlarmPanel);
+if (!customElements.get('dialog-custom-ui-timer-alarm')) {
+  customElements.define('dialog-custom-ui-timer-alarm', TimerAlarmPanel);
+}
