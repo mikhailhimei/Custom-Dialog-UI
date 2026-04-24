@@ -21,11 +21,19 @@ _LOGGER = logging.getLogger(__name__)
 class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     """Minimal compatible voice agent moved from custom_voice_agent."""
 
-    def __init__(self, hass, ip_address: str, user_id: str, fallback_application_id: str) -> None:
+    def __init__(
+        self,
+        hass,
+        ip_address: str,
+        user_id: str,
+        fallback_application_id: str,
+        authorization_token: str = "",
+    ) -> None:
         self.hass = hass
         self._ip_address = ip_address
         self._user_id = user_id
         self._fallback_application_id = fallback_application_id
+        self._authorization_token = authorization_token
 
     @property
     def supported_languages(self) -> list[str]:
@@ -34,7 +42,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         session_id = user_input.conversation_id or str(uuid.uuid4())
         application_id = getattr(user_input, "device_id", None) or self._fallback_application_id
-        url = f"http://{self._ip_address}/api/dialog/commands"
+        url = self._build_commands_url(self._ip_address)
+        headers: dict[str, str] = {}
+        if self._authorization_token:
+            headers["Authorization"] = self._authorization_token
 
         data: dict[str, Any] = {}
         try:
@@ -51,6 +62,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                         },
                         "version": "1.0",
                     },
+                    headers=headers,
                     timeout=60,
                 ) as resp:
                     data = await resp.json(content_type=None)
@@ -69,3 +81,12 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             conversation_id=session_id if should_continue else None,
             continue_conversation=should_continue,
         )
+
+    @staticmethod
+    def _build_commands_url(ip_address: str) -> str:
+        base = str(ip_address or "").strip().rstrip("/")
+        if not base:
+            return ""
+        if not base.startswith(("http://", "https://")):
+            base = f"http://{base}"
+        return f"{base}/api/dialog/commands"
