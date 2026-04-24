@@ -175,6 +175,13 @@ class DialogCommandCoordinator:
         base_url = _normalize_value(options.get(CONF_BASE_URL)).rstrip("/")
         if not base_url:
             return
+        payload = dict(body or {})
+        configured_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        if configured_client_id and not _normalize_value(payload.get("clientId")):
+            payload["clientId"] = configured_client_id
+        # Keep backward compatibility for consumers that still read snake_case.
+        if configured_client_id and not _normalize_value(payload.get("client_id")):
+            payload["client_id"] = configured_client_id
         url = f"{base_url}{_SAVE_COMMANDS_PATH}"
         timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -183,7 +190,7 @@ class DialogCommandCoordinator:
             headers["Authorization"] = authorization
         try:
             async with async_timeout.timeout(timeout):
-                response = await self._session.post(url, json=body, headers=headers)
+                response = await self._session.post(url, json=payload, headers=headers)
             if response.status >= 400:
                 body_text = await response.text()
                 self._append_log("error", f"save-commands returned {response.status}")
