@@ -9,7 +9,6 @@ import uuid
 from collections.abc import Awaitable, Callable, Iterable
 from datetime import datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import voluptuous as vol
 
@@ -1095,13 +1094,8 @@ def _default_timezone_name() -> str:
 
 
 def _format_datetime(timestamp_value: float, timezone_name: str) -> str:
-    tz_name = _normalize_value(timezone_name) or _default_timezone_name()
-    tz = datetime.now().astimezone().tzinfo
-    if tz_name:
-        try:
-            tz = ZoneInfo(tz_name)
-        except Exception:
-            tz = datetime.now().astimezone().tzinfo
+    # Avoid ZoneInfo lazy loads in the event loop (HA reports import/open blocking calls).
+    tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
     dt_value = datetime.fromtimestamp(float(timestamp_value), tz=tz)
     return dt_value.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1117,12 +1111,8 @@ def _parse_datetime(value: str, timezone_name: str) -> datetime | None:
         except ValueError:
             return None
     if parsed.tzinfo is None:
-        tz = datetime.now().astimezone().tzinfo
-        if timezone_name:
-            try:
-                tz = ZoneInfo(timezone_name)
-            except Exception:
-                pass
+        # Keep parsing fully non-blocking for asyncio loop: use current local tzinfo.
+        tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
         parsed = parsed.replace(tzinfo=tz)
     return dt_util.as_local(parsed)
 
