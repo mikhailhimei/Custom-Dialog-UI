@@ -795,30 +795,48 @@ def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
     return entries[0] if entries else None
 
 
-def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> DialogTimerAlarmManager | None:
+def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> Any | None:
     coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     manager = getattr(coordinator, "timer_alarm_manager", None)
-    return manager if isinstance(manager, DialogTimerAlarmManager) else None
+    if manager is None:
+        return None
+    required_attrs = (
+        "get_items",
+        "get_active_items",
+        "get_alarm_presets",
+        "async_apply_ui_items",
+        "serialize_persisted_items",
+    )
+    return manager if all(hasattr(manager, attr) for attr in required_attrs) else None
 
 
-def _iter_managers(hass: HomeAssistant) -> list[DialogTimerAlarmManager]:
-    managers: list[DialogTimerAlarmManager] = []
+def _iter_managers(hass: HomeAssistant) -> list[Any]:
+    managers: list[Any] = []
     for value in hass.data.get(DOMAIN, {}).values():
         manager = getattr(value, "timer_alarm_manager", None)
-        if isinstance(manager, DialogTimerAlarmManager):
+        if manager is None:
+            continue
+        required_attrs = (
+            "get_items",
+            "get_active_items",
+            "get_alarm_presets",
+            "async_apply_ui_items",
+            "serialize_persisted_items",
+        )
+        if all(hasattr(manager, attr) for attr in required_attrs):
             managers.append(manager)
     return managers
 
 
 def _select_manager(
-    managers: list[DialogTimerAlarmManager],
+    managers: list[Any],
     requested_items: list[dict[str, Any]],
     shared_client_id: str,
-) -> DialogTimerAlarmManager | None:
+) -> Any | None:
     if not managers:
         return None
     requested_ids = {_normalize_value(item.get("id")) for item in requested_items if _normalize_value(item.get("id"))}
-    best_manager: DialogTimerAlarmManager | None = None
+    best_manager: Any | None = None
     best_score = -1
     for manager in managers:
         score = 0

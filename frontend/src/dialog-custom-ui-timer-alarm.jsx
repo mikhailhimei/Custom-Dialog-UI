@@ -85,6 +85,7 @@ class TimerAlarmPanel extends HTMLElement {
     this._status = '';
     this._tick = null;
     this._poll = null;
+    this._debugWsPayload = null;
   }
 
   set hass(v) {
@@ -116,6 +117,7 @@ class TimerAlarmPanel extends HTMLElement {
     this._loading = true;
     try {
       const res = await this._hass.callWS({ type: GET_WS });
+      this._debugWsPayload = res;
       const rawItems = Array.isArray(res?.items) ? res.items : [];
       const rawActiveItems = Array.isArray(res?.active_items) ? res.active_items : [];
       const merged = new Map();
@@ -427,6 +429,15 @@ class TimerAlarmPanel extends HTMLElement {
           </div>
           ${this._status ? `<div class="status ok" style="margin-top:10px;">${esc(this._status)}</div>` : ''}
           ${this._error ? `<div class="status err" style="margin-top:10px;">${esc(this._error)}</div>` : ''}
+          <details style="margin-top:10px;">
+            <summary>Debug WS</summary>
+            <div style="margin-top:8px; font-size:12px; color:#40516f;">
+              items: ${Array.isArray(this._debugWsPayload?.items) ? this._debugWsPayload.items.length : 0},
+              active_items: ${Array.isArray(this._debugWsPayload?.active_items) ? this._debugWsPayload.active_items.length : 0},
+              alarm_presets: ${Array.isArray(this._debugWsPayload?.alarm_presets) ? this._debugWsPayload.alarm_presets.length : 0}
+            </div>
+            <pre style="margin-top:8px; max-height:220px; overflow:auto; background:#f7f9fd; border:1px solid #d9e1ef; border-radius:8px; padding:8px;">${esc(JSON.stringify(this._debugWsPayload ?? {}, null, 2))}</pre>
+          </details>
         </section>
         ${body}
       </div>
