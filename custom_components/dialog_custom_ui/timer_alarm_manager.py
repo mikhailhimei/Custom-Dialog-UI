@@ -1148,12 +1148,63 @@ def _extract_alarm_time(payload: dict[str, Any]) -> str:
                 value = value.get("alarm")
             clock = _normalize_value(value.get("time") or value.get("alarm_time"))
             if clock:
-                return _normalize_alarm_clock(clock)
+                keep_raw_time = _extract_times_of_day_flag(payload, value)
+                return _resolve_alarm_time_for_today(clock, keep_raw_time)
     match = re.search(r"(\d{1,2})[:\.](\d{1,2})", _extract_commands_text(payload))
     if match:
-        return _normalize_alarm_clock(f"{match.group(1)}:{match.group(2)}")
+        keep_raw_time = _extract_times_of_day_flag(payload, {})
+        return _resolve_alarm_time_for_today(f"{match.group(1)}:{match.group(2)}", keep_raw_time)
     return "08:00"
 
+
+
+
+def _extract_times_of_day_flag(payload: dict[str, Any], value: dict[str, Any]) -> bool:
+    candidates: list[Any] = [
+        value.get("times_of_Day"),
+        value.get("times_of_day"),
+        value.get("time_of_day"),
+        value.get("timesOfDay"),
+        payload.get("times_of_Day"),
+        payload.get("times_of_day"),
+        payload.get("time_of_day"),
+        payload.get("timesOfDay"),
+    ]
+    for candidate in candidates:
+        if isinstance(candidate, bool):
+            return candidate
+        normalized = _normalize_value(candidate).lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    return False
+
+
+def _resolve_alarm_time_for_today(value: str, keep_raw_time: bool) -> str:
+    normalized = _normalize_alarm_clock(value)
+    if keep_raw_time:
+        return normalized
+
+    try:
+        hour_str, minute_str = normalized.split(":", 1)
+        hour = int(hour_str)
+        minute = int(minute_str)
+    except (TypeError, ValueError):
+        return normalized
+
+    if hour == 0 or hour >= 12:
+        return normalized
+
+    now = dt_util.now()
+    morning_candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    evening_candidate = now.replace(hour=hour + 12, minute=minute, second=0, microsecond=0)
+
+    if morning_candidate > now:
+        return f"{hour:02d}:{minute:02d}"
+    if evening_candidate > now:
+        return f"{hour + 12:02d}:{minute:02d}"
+    return f"{hour:02d}:{minute:02d}"
 
 def _extract_count(payload: dict[str, Any]) -> int | None:
     direct_values = payload.get("children_direct_type")
