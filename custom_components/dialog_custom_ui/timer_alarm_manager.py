@@ -249,6 +249,24 @@ class DialogTimerAlarmManager:
         if not client_id:
             return
         alarm_time = _extract_alarm_time(payload)
+        for existing in self._alarms.values():
+            if _normalize_value(existing.get("client_id")) != client_id:
+                continue
+            existing_device_id = _normalize_value(existing.get("device_id"))
+            if device_id and existing_device_id and existing_device_id != device_id:
+                continue
+            if _normalize_alarm_clock(_normalize_value(existing.get("time") or "08:00")) != alarm_time:
+                continue
+            if _normalize_value(existing.get("status")).lower() != "off":
+                continue
+            existing["status"] = "on"
+            existing["time"] = alarm_time
+            if device_id:
+                existing["device_id"] = device_id
+            self._alarm_presets.add(alarm_time)
+            self._ensure_alarm_tick_task()
+            self._mark_updated()
+            return
         alarm_id = f"{_ALARM_PREFIX}{client_id}:{uuid.uuid4().hex[:8]}"
         self._alarms[alarm_id] = {
             "id": alarm_id,
@@ -1141,12 +1159,14 @@ def _extract_alarm_time(payload: dict[str, Any]) -> str:
             if not isinstance(item, dict):
                 continue
             mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
-            if mapping_type not in {"alarm", "time"}:
+            if mapping_type not in {"alarm", "time", "cotimers"}:
                 continue
             value = item.get("value") if isinstance(item.get("value"), dict) else {}
+            if isinstance(value.get("cotimers"), dict):
+                value = value.get("cotimers")
             if isinstance(value.get("alarm"), dict):
                 value = value.get("alarm")
-            clock = _normalize_value(value.get("time") or value.get("alarm_time"))
+            clock = _extract_alarm_clock(value)
             if clock:
                 keep_raw_time = _extract_times_of_day_flag(payload, value)
                 return _resolve_alarm_time_for_today(clock, keep_raw_time)
@@ -1155,6 +1175,21 @@ def _extract_alarm_time(payload: dict[str, Any]) -> str:
         keep_raw_time = _extract_times_of_day_flag(payload, {})
         return _resolve_alarm_time_for_today(f"{match.group(1)}:{match.group(2)}", keep_raw_time)
     return "08:00"
+
+
+def _extract_alarm_clock(value: dict[str, Any]) -> str:
+    direct_clock = _normalize_value(value.get("time") or value.get("alarm_time"))
+    if direct_clock:
+        return _normalize_alarm_clock(direct_clock)
+
+    has_hour = "hour" in value
+    has_minute = "minut" in value or "minute" in value
+    if not has_hour and not has_minute:
+        return ""
+
+    hour = min(23, max(0, _safe_int(value.get("hour"))))
+    minute = min(59, max(0, _safe_int(value.get("minut") or value.get("minute"))))
+    return f"{hour:02d}:{minute:02d}"
 
 
 
@@ -1199,10 +1234,12 @@ def _resolve_alarm_time_for_today(value: str, keep_raw_time: bool) -> str:
     now = dt_util.now()
     morning_candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
     evening_candidate = now.replace(hour=hour + 12, minute=minute, second=0, microsecond=0)
+    if morning_candidate <= now:
+        morning_candidate = morning_candidate + timedelta(days=1)
+    if evening_candidate <= now:
+        evening_candidate = evening_candidate + timedelta(days=1)
 
-    if morning_candidate > now:
-        return f"{hour:02d}:{minute:02d}"
-    if evening_candidate > now:
+    if evening_candidate < morning_candidate:
         return f"{hour + 12:02d}:{minute:02d}"
     return f"{hour:02d}:{minute:02d}"
 
