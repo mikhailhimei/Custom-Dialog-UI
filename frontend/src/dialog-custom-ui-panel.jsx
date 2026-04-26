@@ -258,6 +258,43 @@ class DialogCustomUiPanel extends HTMLElement {
     };
   }
 
+  _cloneYandexDraft(source) {
+    const normalized = this._normalizeYandexScenarioForUi(source ?? {});
+    return {
+      ...normalized,
+      subVoice: Array.isArray(normalized.subVoice)
+        ? normalized.subVoice.map((entry) => ({ ...entry }))
+        : [],
+      subCommands: Array.isArray(normalized.subCommands)
+        ? normalized.subCommands.map((entry) => ({ ...entry }))
+        : [],
+    };
+  }
+
+  _yandexScenarioKey(item) {
+    return String(item?.mainCommand ?? '').trim();
+  }
+
+  _findYandexScenarioByKey(key) {
+    const normalizedKey = String(key ?? '').trim();
+    return this._yandexScenarios.find((item) => this._yandexScenarioKey(item) === normalizedKey) || null;
+  }
+
+  _syncYandexSelection(preferredKey = '') {
+    const normalizedKey = String(preferredKey || this._yandexActiveScenarioKey || '').trim();
+    const scenarios = Array.isArray(this._yandexScenarios) ? this._yandexScenarios : [];
+    if (!scenarios.length) {
+      this._yandexActiveScenarioKey = '__new__';
+      this._yandexDraft = this._newYandexDraft();
+      this._yandexEditorOpen = true;
+      return;
+    }
+    const active = this._findYandexScenarioByKey(normalizedKey) || scenarios[0];
+    this._yandexActiveScenarioKey = this._yandexScenarioKey(active);
+    this._yandexDraft = this._cloneYandexDraft(active);
+    this._yandexEditorOpen = true;
+  }
+
   async _loadYandexScenarios() {
     if (!this._hass || this._yandexLoading) {
       return;
@@ -272,6 +309,7 @@ class DialogCustomUiPanel extends HTMLElement {
       const result = await this._hass.callWS({ type: 'dialog_custom_ui/get_yandex_scenarios' });
       const scenarios = Array.isArray(result?.scenarios) ? result.scenarios : [];
       this._yandexScenarios = scenarios.map((item) => this._normalizeYandexScenarioForUi(item));
+      this._syncYandexSelection();
       this._yandexLoaded = true;
       this._yandexStatus = 'Сценарии обновлены.';
       this._yandexError = '';
@@ -284,21 +322,42 @@ class DialogCustomUiPanel extends HTMLElement {
     }
   }
 
-  _openYandexModal() {
+  _startYandexScenarioCreate() {
     this._yandexDraft = this._newYandexDraft();
-    this._yandexModalOpen = true;
+    this._yandexActiveScenarioKey = '__new__';
+    this._yandexEditorOpen = true;
+    this._yandexStatus = '';
     this._yandexError = '';
     this._render();
   }
 
-  _closeYandexModal() {
-    this._yandexModalOpen = false;
-    this._yandexDraft = null;
+  _setYandexActiveScenario(key) {
+    const normalizedKey = String(key ?? '').trim();
+    if (!normalizedKey) {
+      return;
+    }
+    if (normalizedKey === '__new__') {
+      this._startYandexScenarioCreate();
+      return;
+    }
+    const scenario = this._findYandexScenarioByKey(normalizedKey);
+    if (!scenario) {
+      return;
+    }
+    this._yandexActiveScenarioKey = normalizedKey;
+    this._yandexDraft = this._cloneYandexDraft(scenario);
+    this._yandexEditorOpen = true;
+    this._yandexError = '';
+    this._render();
+  }
+
+  _toggleYandexEditorAccordion() {
+    this._yandexEditorOpen = !this._yandexEditorOpen;
     this._render();
   }
 
   _updateYandexDraftField(field, value, rerender = false) {
-    if (!this._yandexDraft) {
+    if (!this._yandexDraft || typeof this._yandexDraft !== 'object') {
       this._yandexDraft = this._newYandexDraft();
     }
     this._yandexDraft = { ...this._yandexDraft, [field]: value };
@@ -309,7 +368,7 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _addYandexDraftSubItem(type) {
-    if (!this._yandexDraft) {
+    if (!this._yandexDraft || typeof this._yandexDraft !== 'object') {
       this._yandexDraft = this._newYandexDraft();
     }
     const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
@@ -324,7 +383,7 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _removeYandexDraftSubItem(type, index) {
-    if (!this._yandexDraft) {
+    if (!this._yandexDraft || typeof this._yandexDraft !== 'object') {
       return;
     }
     const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
@@ -336,7 +395,7 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _updateYandexDraftSubItem(type, index, field, value, rerender = false) {
-    if (!this._yandexDraft) {
+    if (!this._yandexDraft || typeof this._yandexDraft !== 'object') {
       return;
     }
     const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
@@ -380,7 +439,12 @@ class DialogCustomUiPanel extends HTMLElement {
     this._yandexError = '';
     this._render();
     try {
-      const payload = [...this._yandexScenarios, item];
+      const activeKey = String(this._yandexActiveScenarioKey ?? '').trim();
+      const payload = activeKey && activeKey !== '__new__'
+        ? this._yandexScenarios.map((entry) => (
+          this._yandexScenarioKey(entry) === activeKey ? item : entry
+        ))
+        : [...this._yandexScenarios, item];
       const result = await this._hass.callWS({
         type: 'dialog_custom_ui/save_yandex_scenarios',
         scenarios: payload,
@@ -389,10 +453,36 @@ class DialogCustomUiPanel extends HTMLElement {
       this._yandexScenarios = scenarios.map((entry) => this._normalizeYandexScenarioForUi(entry));
       this._yandexStatus = 'Сценарий сохранен и файл обновлен.';
       this._yandexLoaded = true;
-      this._yandexModalOpen = false;
-      this._yandexDraft = null;
+      this._syncYandexSelection(item.mainCommand);
     } catch (err) {
       this._yandexError = err?.message || 'Не удалось сохранить yandex_intents.yaml.';
+    } finally {
+      this._yandexSaving = false;
+      this._render();
+    }
+  }
+
+  async _deleteActiveYandexScenario() {
+    const activeKey = String(this._yandexActiveScenarioKey ?? '').trim();
+    if (!activeKey || activeKey === '__new__') {
+      return;
+    }
+    this._yandexSaving = true;
+    this._yandexError = '';
+    this._render();
+    try {
+      const payload = this._yandexScenarios.filter((item) => this._yandexScenarioKey(item) !== activeKey);
+      const result = await this._hass.callWS({
+        type: 'dialog_custom_ui/save_yandex_scenarios',
+        scenarios: payload,
+      });
+      const scenarios = Array.isArray(result?.scenarios) ? result.scenarios : [];
+      this._yandexScenarios = scenarios.map((entry) => this._normalizeYandexScenarioForUi(entry));
+      this._yandexStatus = 'Сценарий удален.';
+      this._yandexLoaded = true;
+      this._syncYandexSelection();
+    } catch (err) {
+      this._yandexError = err?.message || 'Не удалось удалить сценарий из yandex_intents.yaml.';
     } finally {
       this._yandexSaving = false;
       this._render();

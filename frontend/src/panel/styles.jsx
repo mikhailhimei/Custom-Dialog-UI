@@ -794,6 +794,16 @@ export const PANEL_STYLES = `
           .condition-header {
             align-items: flex-start;
           }
+          .scenario-toggle > span:last-child {
+            min-width: 0;
+            display: block;
+            width: 100%;
+          }
+          .scenario-toggle .scenario-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
           .condition-actions {
             width: 100%;
             justify-content: stretch;

@@ -214,7 +214,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _removeModalBackdrop() {
-    this._modalCount--;
+    this._modalCount = Math.max(0, this._modalCount - 1);
     if (this._modalCount === 0 && typeof document !== 'undefined' && document.body) {
       document.body.classList.remove('modal-open');
     }

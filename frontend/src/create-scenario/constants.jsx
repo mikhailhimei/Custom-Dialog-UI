@@ -41,16 +41,4 @@ export const DEFAULT_COMMAND_CONFIGS = [
     supportsLlm: true,
     hasModal: true,
   },
-  {
-    type: 'default_miss',
-    title: 'Default Miss',
-    supportsLlm: false,
-    hasModal: true,
-  },
-  {
-    type: 'default_integrations',
-    title: 'Default Integrations',
-    supportsLlm: false,
-    hasModal: true,
-  },
 ];

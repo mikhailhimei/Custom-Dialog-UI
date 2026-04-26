@@ -1,35 +1,4 @@
-﻿import { escapeHtml } from '../utils.jsx';
-
-const renderScenarioCard = (scenario, index) => {
-  const subVoice = Array.isArray(scenario.subVoice) ? scenario.subVoice : [];
-  const subCommands = Array.isArray(scenario.subCommands) ? scenario.subCommands : [];
-  return `
-    <article class="scenario-card">
-      <div class="scenario-header">
-        <div>
-          <span class="scenario-kicker">Yandex Scenario ${index + 1}</span>
-          <span class="scenario-title">${escapeHtml(scenario.mainCommand || '')}</span>
-        </div>
-      </div>
-      ${scenario.voiceResponse ? `<div class="condition-preview">voiceResponse: ${escapeHtml(scenario.voiceResponse)}</div>` : ''}
-      ${scenario.accounts ? `<div class="condition-preview">accounts: ${escapeHtml(scenario.accounts)}</div>` : ''}
-      <div class="conditions-list">
-        <details class="condition-card" ${subVoice.length ? 'open' : ''}>
-          <summary class="condition-title">subVoice (${subVoice.length})</summary>
-          <div class="condition-body open">
-            ${subVoice.length ? subVoice.map((item, subIndex) => `<div class="condition-preview">${subIndex + 1}. ${escapeHtml(item.text || '')}</div>`).join('') : '<div class="condition-preview">Нет данных</div>'}
-          </div>
-        </details>
-        <details class="condition-card" ${subCommands.length ? 'open' : ''}>
-          <summary class="condition-title">subCommands (${subCommands.length})</summary>
-          <div class="condition-body open">
-            ${subCommands.length ? subCommands.map((item, subIndex) => `<div class="condition-preview">${subIndex + 1}. ${escapeHtml(item.text || '')}</div>`).join('') : '<div class="condition-preview">Нет данных</div>'}
-          </div>
-        </details>
-      </div>
-    </article>
-  `;
-};
+import { escapeHtml } from '../utils.jsx';
 
 const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
   const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
@@ -68,38 +37,70 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
   `;
 };
 
-const renderModal = (ctx) => {
-  if (!ctx._yandexModalOpen) {
-    return '';
-  }
+const renderScenarioTabs = (ctx, scenarios) => {
+  const active = String(ctx._yandexActiveScenarioKey ?? '').trim();
+  const rows = scenarios.map((scenario, index) => {
+    const key = String(scenario.mainCommand ?? '').trim();
+    return `
+      <button
+        type="button"
+        class="subtab-button ${active === key ? 'active' : ''}"
+        data-action="select-yandex-tab"
+        data-yandex-tab="${escapeHtml(key)}"
+      >
+        ${escapeHtml(scenario.mainCommand || `Сценарий ${index + 1}`)}
+      </button>
+    `;
+  }).join('');
 
   return `
-    <div class="command-modal-backdrop" data-action="close-yandex-modal"></div>
-    <section class="command-modal" role="dialog" aria-modal="true">
-      <div class="command-modal-header">
-        <h2>Создать сценарий</h2>
-        <button type="button" class="ghost compact-button" data-action="close-yandex-modal">Закрыть</button>
+    <section class="hero-card">
+      <div class="subtabs">
+        ${rows}
+        <button type="button" class="subtab-button ${active === '__new__' ? 'active' : ''}" data-action="create-yandex-tab" data-yandex-tab="__new__">+ Новый</button>
       </div>
-      <div class="command-modal-grid">
-        <label>
-          <span>mainCommand *</span>
-          <input data-yandex-field="mainCommand" value="${escapeHtml(ctx._yandexDraft?.mainCommand || '')}" placeholder="Включи распознавание лица" />
-        </label>
-        <label>
-          <span>voiceResponse</span>
-          <input data-yandex-field="voiceResponse" value="${escapeHtml(ctx._yandexDraft?.voiceResponse || '')}" placeholder="Опционально" />
-        </label>
-        <label class="field-span-2">
-          <span>accounts (через ;)</span>
-          <input data-yandex-field="accounts" value="${escapeHtml(ctx._yandexDraft?.accounts || '')}" placeholder="mihailhimei;another_account" />
-        </label>
+    </section>
+  `;
+};
+
+const renderEditor = (ctx) => {
+  const isNew = String(ctx._yandexActiveScenarioKey ?? '') === '__new__';
+  const title = isNew
+    ? 'Новый сценарий'
+    : String(ctx._yandexDraft?.mainCommand ?? '').trim() || 'Сценарий';
+  const isOpen = Boolean(ctx._yandexEditorOpen);
+
+  return `
+    <section class="scenario-card expanded">
+      <button type="button" class="condition-header" data-action="toggle-yandex-editor">
+        <div class="condition-heading">
+          <span class="condition-title">${isNew ? 'Создание' : 'Редактирование'}</span>
+          <span class="scenario-title">${escapeHtml(title)}</span>
+        </div>
+        <span class="condition-accordion-icon">${isOpen ? '−' : '+'}</span>
+      </button>
+      <div class="condition-body ${isOpen ? 'open' : 'hidden'}">
+        <div class="condition-grid">
+          <label>
+            <span>mainCommand *</span>
+            <input data-yandex-field="mainCommand" value="${escapeHtml(ctx._yandexDraft?.mainCommand || '')}" placeholder="Включи распознавание лица" />
+          </label>
+          <label>
+            <span>voiceResponse</span>
+            <input data-yandex-field="voiceResponse" value="${escapeHtml(ctx._yandexDraft?.voiceResponse || '')}" placeholder="Опционально" />
+          </label>
+          <label class="field-span-2">
+            <span>accounts (через ;)</span>
+            <input data-yandex-field="accounts" value="${escapeHtml(ctx._yandexDraft?.accounts || '')}" placeholder="mihailhimei;another_account" />
+          </label>
+        </div>
+        ${renderSubItemsEditor(ctx, 'subVoice', 'subVoice (до 3)', 3)}
+        ${renderSubItemsEditor(ctx, 'subCommands', 'subCommands')}
+        <div class="toolbar">
+          <button type="button" class="primary" data-action="save-yandex-scenario" ${ctx._yandexSaving ? 'disabled' : ''}>${ctx._yandexSaving ? 'Сохранение...' : 'Сохранить'}</button>
+          ${isNew ? '' : `<button type="button" class="ghost" data-action="delete-yandex-scenario" ${ctx._yandexSaving ? 'disabled' : ''}>Удалить</button>`}
+        </div>
       </div>
-      ${renderSubItemsEditor(ctx, 'subVoice', 'subVoice (до 3)', 3)}
-      ${renderSubItemsEditor(ctx, 'subCommands', 'subCommands')}
-      <div class="command-modal-footer">
-        <button type="button" class="primary" data-action="save-yandex-scenario" ${ctx._yandexSaving ? 'disabled' : ''}>${ctx._yandexSaving ? 'Сохранение...' : 'Сохранить'}</button>
-      </div>
-      ${ctx._yandexError ? `<div class="status error">${escapeHtml(ctx._yandexError)}</div>` : ''}
     </section>
   `;
 };
@@ -109,17 +110,14 @@ export const renderYandexScenarios = (ctx) => {
   return `
     <section class="hero-card">
       <h1>Яндекс сценарии</h1>
-      <p>Источник: <code>homeassistant/yandex_intents.yaml</code>. Данные читаются из файла и после сохранения полностью перезаписываются.</p>
+      <p>Источник: <code>homeassistant/yandex_intents.yaml</code>. Выберите сценарий во вкладке и отредактируйте его в аккордеоне ниже.</p>
       <div class="toolbar">
-        <button type="button" class="secondary" data-action="open-yandex-modal">Создать сценарий</button>
         <button type="button" class="ghost" data-action="reload-yandex-scenarios" ${ctx._yandexLoading ? 'disabled' : ''}>${ctx._yandexLoading ? 'Обновление...' : 'Обновить'}</button>
       </div>
       ${ctx._yandexStatus ? `<div class="status ok">${escapeHtml(ctx._yandexStatus)}</div>` : ''}
       ${ctx._yandexError ? `<div class="status error">${escapeHtml(ctx._yandexError)}</div>` : ''}
     </section>
-    <section class="scenario-list">
-      ${scenarios.length ? scenarios.map((scenario, index) => renderScenarioCard(scenario, index)).join('') : '<div class="empty">Сценарии не найдены.</div>'}
-    </section>
-    ${renderModal(ctx)}
+    ${renderScenarioTabs(ctx, scenarios)}
+    ${renderEditor(ctx)}
   `;
 };

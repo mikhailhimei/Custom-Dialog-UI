@@ -111,6 +111,7 @@ export const applyItemStatus = async (ctx) => {
     }
     ctx._itemActionsStatus = nextStatus;
     ctx._status = nextStatus ? 'Сценарий опубликован.' : 'Сценарий скрыт.';
+    ctx._itemActionsSaving = false;
     ctx._closeItemActionsModal();
   } catch (error) {
     if (ctx._itemActionsKind === 'direct') {

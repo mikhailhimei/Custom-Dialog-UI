@@ -8,6 +8,12 @@ export const CREATE_SCENARIO_STYLES = `
           --ui-accent-warm: #a64b2a;
           --ui-card-bg: linear-gradient(175deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.86));
           --ui-card-bg-soft: rgba(255, 255, 255, 0.8);
+          --ui-surface: rgba(255, 255, 255, 0.92);
+          --ui-input-bg: rgba(255, 255, 255, 0.95);
+          --ui-input-bg-focus: #ffffff;
+          --ui-popup-bg: rgba(255, 255, 255, 0.98);
+          --ui-hover: rgba(34, 45, 67, 0.06);
+          --ui-backdrop: rgba(15, 23, 42, 0.5);
           --ui-ring: rgba(35, 79, 125, 0.2);
           --ui-elev-1: 0 12px 32px rgba(31, 41, 55, 0.1);
           --ui-elev-2: 0 18px 40px rgba(31, 41, 55, 0.14);
@@ -24,6 +30,12 @@ export const CREATE_SCENARIO_STYLES = `
           --ui-accent-warm: #ff8a5a;
           --ui-card-bg: linear-gradient(175deg, rgba(19, 28, 44, 0.96), rgba(14, 22, 36, 0.92));
           --ui-card-bg-soft: rgba(20, 30, 47, 0.84);
+          --ui-surface: rgba(23, 34, 52, 0.9);
+          --ui-input-bg: rgba(17, 27, 41, 0.92);
+          --ui-input-bg-focus: rgba(24, 37, 55, 0.98);
+          --ui-popup-bg: rgba(15, 24, 38, 0.98);
+          --ui-hover: rgba(164, 180, 214, 0.12);
+          --ui-backdrop: rgba(2, 8, 20, 0.72);
           --ui-ring: rgba(79, 134, 216, 0.26);
           --ui-elev-1: 0 12px 32px rgba(1, 5, 14, 0.44);
           --ui-elev-2: 0 18px 40px rgba(1, 5, 14, 0.54);
@@ -56,7 +68,7 @@ export const CREATE_SCENARIO_STYLES = `
         .subtab-button {
           border: 1px solid var(--ui-border);
           border-radius: 999px;
-          background: rgba(255,255,255,.88);
+          background: var(--ui-surface);
           color: var(--ui-muted);
           padding: 10px 16px;
           cursor: pointer;
@@ -66,7 +78,7 @@ export const CREATE_SCENARIO_STYLES = `
         .subtab-button:hover {
           transform: translateY(-1px);
           box-shadow: 0 7px 16px rgba(31,41,55,.12);
-          background: rgba(255,255,255,.98);
+          background: var(--ui-input-bg-focus);
         }
         .subtab-button.active {
           color: #fff;
@@ -162,9 +174,9 @@ export const CREATE_SCENARIO_STYLES = `
           padding: 18px 6px;
           color: var(--ui-muted);
           text-align: center;
-          border: 1px dashed rgba(34,45,67,.2);
+          border: 1px dashed var(--ui-border);
           border-radius: 12px;
-          background: rgba(255,255,255,.56);
+          background: var(--ui-surface);
         }
         label { display:grid; gap:8px; }
         label span { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ui-accent); }
@@ -174,7 +186,7 @@ export const CREATE_SCENARIO_STYLES = `
           border-radius:14px;
           padding:12px 14px;
           font:inherit;
-          background:rgba(255,255,255,.95);
+          background: var(--ui-input-bg);
           color:var(--ui-text);
           transition: border-color .2s ease, box-shadow .2s ease;
         }
@@ -182,7 +194,7 @@ export const CREATE_SCENARIO_STYLES = `
           outline: none;
           border-color: rgba(35,79,125,.48);
           box-shadow: 0 0 0 3px var(--ui-ring);
-          background: #fff;
+          background: var(--ui-input-bg-focus);
         }
         textarea { resize: vertical; }
         .switch-control {
@@ -276,7 +288,7 @@ export const CREATE_SCENARIO_STYLES = `
           gap: 0;
           border: 1px solid var(--ui-border);
           border-radius: 14px;
-          background: rgba(255,255,255,.9);
+          background: var(--ui-surface);
         }
         .response-item-toggle {
           width: 100%;
@@ -354,7 +366,7 @@ export const CREATE_SCENARIO_STYLES = `
           padding: 7px 12px;
           font-size: 12px;
         }
-        .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:40; }
+        .modal-backdrop { position:fixed; inset:0; background: var(--ui-backdrop); z-index:40; }
         .modal {
           position:fixed;
           top:50%;
@@ -366,7 +378,7 @@ export const CREATE_SCENARIO_STYLES = `
           padding:18px;
           border-radius:20px;
           border:1px solid var(--ui-border);
-          background:rgba(255,255,255,.98);
+          background: var(--ui-popup-bg);
           z-index:41;
           display:grid;
           gap:14px;
@@ -428,7 +440,8 @@ export const CREATE_SCENARIO_STYLES = `
           right: 0;
           max-height: 200px;
           overflow-y: auto;
-          background: white;
+          background: var(--ui-popup-bg);
+          color: var(--ui-text);
           border: 1px solid var(--ui-border);
           border-radius: 8px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
@@ -440,7 +453,7 @@ export const CREATE_SCENARIO_STYLES = `
           border-bottom: 1px solid var(--ui-border);
         }
         .dropdown-option:hover {
-          background: rgba(34,45,67,.04);
+          background: var(--ui-hover);
         }
         .dropdown-option:last-child {
           border-bottom: none;
@@ -452,11 +465,21 @@ export const CREATE_SCENARIO_STYLES = `
         }
         datalist option {
           padding: 8px;
-          background: white;
+          background: var(--ui-popup-bg);
           border-bottom: 1px solid var(--ui-border);
         }
         datalist option:hover {
-          background: rgba(34,45,67,.04);
+          background: var(--ui-hover);
+        }
+        :host([data-theme="dark"]) .status.error {
+          background: rgba(180,43,43,.18);
+          color: #ffd2d2;
+          border-color: rgba(255,140,140,.35);
+        }
+        :host([data-theme="dark"]) .status.ok {
+          background: rgba(35,111,73,.2);
+          color: #cbffe4;
+          border-color: rgba(122,232,173,.32);
         }
         @keyframes rise-in {
           from {
@@ -473,6 +496,20 @@ export const CREATE_SCENARIO_STYLES = `
           .response-inline-row { grid-template-columns: 1fr; }
           .array-item-row-2 { grid-template-columns: 1fr; }
           .array-item-row { flex-direction: column; align-items: stretch; }
+          .subtabs-dock {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+          }
+          .subtabs {
+            flex-wrap: nowrap;
+            width: max-content;
+          }
+          .subtabs .subtab-button {
+            flex: 0 0 auto;
+            white-space: nowrap;
+          }
         }
         @media (max-width: 700px) {
           .modal { inset:0; transform:none; width:100vw; height:100vh; max-height:none; border-radius:0; border:none; padding:16px; }

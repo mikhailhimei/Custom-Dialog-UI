@@ -3,6 +3,14 @@ const SAVE_WS = 'dialog_custom_ui/save_timer_alarm_config';
 const TICK_MS = 1000;
 const POLL_MS = 3000;
 const QUICK_MINUTES = [5, 10, 15, 30, 60];
+const HARD_CODED_MEDIA_FOLDER = 'media-source://media_source/local/timer_alarm/';
+const HARD_CODED_MEDIA_CHOICES = [
+  'morning-meadow-birdsongs-looping_zyb7nhnu.mp3',
+  'gentle-chimes-soft-loop.mp3',
+  'sunrise-piano-calm-loop.mp3',
+  'digital-beep-short-loop.mp3',
+  'forest-rain-ambient-loop.mp3',
+];
 
 const esc = (v) => String(v ?? '')
   .replaceAll('&', '&amp;')
@@ -263,6 +271,24 @@ class TimerAlarmPanel extends HTMLElement {
     `;
   }
 
+  _renderGlobalMediaOptions(selectedMedia) {
+    const normalized = String(selectedMedia ?? '').trim();
+    const options = HARD_CODED_MEDIA_CHOICES.map((fileName) => `${HARD_CODED_MEDIA_FOLDER}${fileName}`);
+    const hasSelected = normalized && options.includes(normalized);
+    const fallback = hasSelected || !normalized
+      ? ''
+      : `<option value="${esc(normalized)}" selected>${esc(normalized.replace(HARD_CODED_MEDIA_FOLDER, ''))}</option>`;
+    return `
+      <option value="">Select track from timer_alarm folder</option>
+      ${fallback}
+      ${options.map((value) => `
+        <option value="${esc(value)}" ${normalized === value ? 'selected' : ''}>
+          ${esc(value.replace(HARD_CODED_MEDIA_FOLDER, ''))}
+        </option>
+      `).join('')}
+    `;
+  }
+
   _addTimer(minutes) {
     const total = Math.max(60, Number(minutes) * 60 || 300);
     const end = new Date(Date.now() + total * 1000);
@@ -382,7 +408,7 @@ class TimerAlarmPanel extends HTMLElement {
             </div>
             <button type="button" class="btn danger" data-action="remove-item" data-item-id="${esc(item.id)}">Delete</button>
           </div>
-          <div class="grid">
+          <div class="alarm-grid">
             <label>
               <span>Time</span>
               <input type="time" data-action="set-alarm-time" data-item-id="${esc(item.id)}" value="${esc(item.time.time)}" />
@@ -455,6 +481,12 @@ class TimerAlarmPanel extends HTMLElement {
 
   _render() {
     const body = this._tab === 'timer' ? this._renderTimers() : this._renderAlarms();
+    const quickTimerToolbar = this._tab === 'timer'
+      ? QUICK_MINUTES.map((m) => `<button type="button" class="btn ghost quick-btn" data-action="quick-timer" data-minutes="${m}">+${m}m</button>`).join('')
+      : '';
+    const alarmToolbar = this._tab === 'alarm'
+      ? '<button type="button" class="btn ghost quick-btn" data-action="add-alarm">+ alarm</button>'
+      : '';
     const html = `
       <style>
         :host {
@@ -469,8 +501,24 @@ class TimerAlarmPanel extends HTMLElement {
           font-family: "Manrope", "Segoe UI", sans-serif;
         }
         .panel { display:grid; gap:14px; }
-        .toolbar, .tabs, .grid { display:flex; gap:10px; flex-wrap:wrap; }
-        .tabs button { border:0; border-radius:999px; padding:8px 14px; cursor:pointer; background:var(--ta-bg-soft); color: var(--ta-muted); }
+        .toolbar, .tabs { display:flex; gap:10px; flex-wrap:wrap; }
+        .tabs {
+          overflow-x: auto;
+          flex-wrap: nowrap;
+          scrollbar-width: thin;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 2px;
+        }
+        .tabs button {
+          border:0;
+          border-radius:999px;
+          padding:8px 14px;
+          cursor:pointer;
+          background:var(--ta-bg-soft);
+          color: var(--ta-muted);
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
         .tabs button.active { background:var(--ta-accent); color:#fff; }
         .card, .hero, .empty { background:var(--ta-bg); border:1px solid var(--ta-border); border-radius:14px; padding:14px; }
         .head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
@@ -487,7 +535,28 @@ class TimerAlarmPanel extends HTMLElement {
         label { display:grid; gap:6px; margin-top:10px; }
         label span { font-size:12px; text-transform:uppercase; color:var(--ta-accent); font-weight:700; letter-spacing:0.08em; }
         select, input { border:1px solid var(--ta-border); border-radius:10px; padding:10px 12px; background:var(--ta-bg-soft); color: var(--ta-text); }
-        .preset-row { display:flex; gap:8px; flex-wrap:wrap; }
+        .preset-row {
+          display:flex;
+          gap:8px;
+          flex-wrap:nowrap;
+          overflow-x:auto;
+          scrollbar-width:thin;
+          -webkit-overflow-scrolling:touch;
+          padding-bottom:4px;
+        }
+        .preset-row .btn {
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
+        .alarm-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+          align-items: start;
+        }
+        .alarm-grid .full {
+          grid-column: 1 / -1;
+        }
         .switch-control { margin-top:0; display:inline-flex; align-items:center; gap:8px; }
         .switch-control input[type="checkbox"] { position:absolute; opacity:0; pointer-events:none; }
         .switch-slider { width:44px; height:24px; background:#ccd7ea; border-radius:999px; position:relative; transition:background .2s ease; }
@@ -496,6 +565,8 @@ class TimerAlarmPanel extends HTMLElement {
         .switch-control input[type="checkbox"]:checked + .switch-slider::after { transform:translateX(20px); }
         .switch-label { font-size:13px; text-transform:none; color:var(--ta-muted); font-weight:600; }
         .media-field { min-width: min(100%, 420px); flex: 1 1 340px; }
+        .toolbar select { min-width: min(100%, 280px); flex: 1 1 260px; }
+        .quick-btn { min-width: 74px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
         @media (max-width: 760px) {
           .head {
@@ -508,8 +579,14 @@ class TimerAlarmPanel extends HTMLElement {
           .actions .btn {
             flex: 1 1 auto;
           }
-          .toolbar > * {
+          .toolbar > select {
             flex: 1 1 100%;
+          }
+          .toolbar > .quick-btn {
+            flex: 0 0 auto;
+          }
+          .alarm-grid {
+            grid-template-columns: 1fr;
           }
         }
       </style>
@@ -524,12 +601,14 @@ class TimerAlarmPanel extends HTMLElement {
             <select data-action="select-global-device">
               ${this._renderDeviceOptions(this._selectedDevice, 'Device for quick start')}
             </select>
-            ${QUICK_MINUTES.map((m) => `<button type="button" class="btn ghost" data-action="quick-timer" data-minutes="${m}">+${m}m</button>`).join('')}
-            <button type="button" class="btn ghost" data-action="add-alarm">+ alarm</button>
+            ${quickTimerToolbar}
+            ${alarmToolbar}
           </div>
           <label class="media-field">
-            <span>Global music (default for timer/alarm)</span>
-            <input data-action="set-global-media" value="${esc(this._defaultMediaContentId)}" placeholder="media-source://media_source/local/your-song.mp3" />
+            <span>Global music (folder: local/timer_alarm)</span>
+            <select data-action="set-global-media">
+              ${this._renderGlobalMediaOptions(this._defaultMediaContentId)}
+            </select>
           </label>
           ${this._status ? `<div class="status ok" style="margin-top:10px;">${esc(this._status)}</div>` : ''}
           ${this._error ? `<div class="status err" style="margin-top:10px;">${esc(this._error)}</div>` : ''}

@@ -24,6 +24,7 @@ export const initializePanelState = (ctx, defaultConfig) => {
   ctx._yandexScenarios = [];
   ctx._yandexStatus = '';
   ctx._yandexError = '';
-  ctx._yandexModalOpen = false;
-  ctx._yandexDraft = null;
+  ctx._yandexActiveScenarioKey = '';
+  ctx._yandexEditorOpen = true;
+  ctx._yandexDraft = {};
 };

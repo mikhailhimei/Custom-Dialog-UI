@@ -9,16 +9,18 @@ export const bindPanelActions = (ctx, root, on) => {
   on(root.querySelector('[data-action="upload-json"]'), 'click', () => ctx._openJsonFilePicker());
   on(root.querySelector('[data-action="reset-commands-cache"]'), 'click', () => ctx._resetCommandsCache());
   on(root.querySelector('[data-action="reload-yandex-scenarios"]'), 'click', () => ctx._loadYandexScenarios());
-  on(root.querySelector('[data-action="open-yandex-modal"]'), 'click', () => ctx._openYandexModal());
+  on(root.querySelector('[data-action="create-yandex-tab"]'), 'click', () => ctx._startYandexScenarioCreate());
+  on(root.querySelector('[data-action="toggle-yandex-editor"]'), 'click', () => ctx._toggleYandexEditorAccordion());
   on(root.querySelector('[data-action="save-yandex-scenario"]'), 'click', () => ctx._saveYandexScenarioFromModal());
+  on(root.querySelector('[data-action="delete-yandex-scenario"]'), 'click', () => ctx._deleteActiveYandexScenario());
 
   const addScenarioButton = root.querySelector('[data-action="add-scenario"]');
   if (addScenarioButton) {
     addScenarioButton.onclick = () => ctx._addScenario();
   }
 
-  root.querySelectorAll('[data-action="close-yandex-modal"]').forEach((element) => {
-    on(element, 'click', () => ctx._closeYandexModal());
+  root.querySelectorAll('[data-action="select-yandex-tab"]').forEach((element) => {
+    on(element, 'click', () => ctx._setYandexActiveScenario(element.dataset.yandexTab));
   });
   root.querySelectorAll('[data-action="add-yandex-sub"]').forEach((element) => {
     on(element, 'click', () => ctx._addYandexDraftSubItem(element.dataset.subType));
