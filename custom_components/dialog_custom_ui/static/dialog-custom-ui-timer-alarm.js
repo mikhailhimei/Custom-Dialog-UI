@@ -106,9 +106,17 @@ var g="dialog_custom_ui/get_timer_alarm_config",b="dialog_custom_ui/save_timer_a
         .tabs button.active { background:var(--ta-accent); color:#fff; }
         .quick-actions-row {
           display: flex;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
           gap: 8px;
           flex: 1 1 100%;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 2px;
+        }
+        .quick-actions-row .quick-btn {
+          flex: 0 0 auto;
+          white-space: nowrap;
         }
         .card, .hero, .empty { background:var(--ta-bg); border:1px solid var(--ta-border); border-radius:14px; padding:14px; }
         .head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
@@ -204,13 +212,13 @@ var g="dialog_custom_ui/get_timer_alarm_config",b="dialog_custom_ui/save_timer_a
             flex: 1 1 100%;
           }
           .quick-actions-row {
-            display: grid;
-            grid-template-columns: 1fr;
+            display: flex;
+            flex-wrap: nowrap;
             width: 100%;
           }
           .quick-actions-row .quick-btn {
-            width: 100%;
-            min-width: 0;
+            width: auto;
+            min-width: 74px;
           }
           .alarm-grid {
             grid-template-columns: 1fr;

@@ -3,8 +3,34 @@ import { escapeHtml } from '../utils.jsx';
 
 export const renderScenarios = (ctx) => {
   const scripts = ctx._scripts();
-  const scenarioMarkup = ctx._config.scenarios.length
-    ? ctx._config.scenarios.map((scenario, index) => {
+  const allScenarios = Array.isArray(ctx._config.scenarios) ? ctx._config.scenarios : [];
+  const pageSize = Math.max(1, Number(ctx._scenariosPageSize) || 20);
+  const totalScenarios = allScenarios.length;
+  const totalPages = Math.max(1, Math.ceil(totalScenarios / pageSize));
+  const requestedPage = Number(ctx._scenariosPage) || 1;
+  const currentPage = Math.min(Math.max(1, Math.trunc(requestedPage)), totalPages);
+  if (ctx._scenariosPage !== currentPage) {
+    ctx._scenariosPage = currentPage;
+  }
+  const startIndex = (currentPage - 1) * pageSize;
+  const visibleScenarios = allScenarios.slice(startIndex, startIndex + pageSize);
+  const pageStart = Math.max(1, currentPage - 2);
+  const pageEnd = Math.min(totalPages, pageStart + 4);
+  const pageButtons = [];
+  for (let page = pageStart; page <= pageEnd; page += 1) {
+    pageButtons.push(`
+      <button
+        type="button"
+        class="${page === currentPage ? 'primary compact-button' : 'ghost compact-button'}"
+        data-action="scenarios-page"
+        data-page="${page}"
+        ${page === currentPage ? 'disabled' : ''}
+      >${page}</button>
+    `);
+  }
+
+  const scenarioMarkup = visibleScenarios.length
+    ? visibleScenarios.map((scenario, index) => {
       const isExpanded = ctx._expandedScenarios.has(scenario.id);
       const conditionsMarkup = scenario.conditions.map((condition, conditionIndex) => `
             ${(() => {
@@ -144,7 +170,7 @@ export const renderScenarios = (ctx) => {
                 <button type="button" class="scenario-toggle" data-toggle-scenario="${escapeHtml(scenario.id)}">
                   <span class="scenario-toggle-icon">${isExpanded ? '−' : '+'}</span>
                   <span>
-                    <span class="scenario-kicker">Сценарий ${index + 1}</span>
+                    <span class="scenario-kicker">Сценарий ${startIndex + index + 1}</span>
                     <span class="scenario-title">${escapeHtml(scenario.name || 'Без названия')}</span>
                   </span>
                 </button>
@@ -186,6 +212,31 @@ export const renderScenarios = (ctx) => {
     }).join('')
     : '<div class="empty">Сценарии пока не добавлены. Нажмите плюс и создайте первое правило маршрутизации.</div>';
 
+  const paginationMarkup = totalScenarios > pageSize
+    ? `
+      <section class="scenarios-pagination">
+        <button
+          type="button"
+          class="ghost compact-button"
+          data-action="scenarios-page-nav"
+          data-direction="prev"
+          ${currentPage <= 1 ? 'disabled' : ''}
+        >Назад</button>
+        <div class="scenarios-pagination-pages">
+          ${pageButtons.join('')}
+        </div>
+        <button
+          type="button"
+          class="ghost compact-button"
+          data-action="scenarios-page-nav"
+          data-direction="next"
+          ${currentPage >= totalPages ? 'disabled' : ''}
+        >Вперед</button>
+      </section>
+      <div class="scenarios-pagination-meta">Показано ${visibleScenarios.length} из ${totalScenarios} • Страница ${currentPage} из ${totalPages}</div>
+    `
+    : '';
+
   return `
       <section class="hero-card">
         <h1>Scenarios</h1>
@@ -198,6 +249,7 @@ export const renderScenarios = (ctx) => {
         ${ctx._status ? `<div class="status ok">${escapeHtml(ctx._status)}</div>` : ''}
       </section>
       <div class="scenario-list">${scenarioMarkup}</div>
+      ${paginationMarkup}
       <section class="help-card">
         <div><strong>Внешний запрос</strong></div>
         <pre><code>curl -X POST http://localhost:8000/api/dialog/command-check \

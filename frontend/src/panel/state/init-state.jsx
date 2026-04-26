@@ -6,6 +6,8 @@ export const initializePanelState = (ctx, defaultConfig) => {
   ctx._activeTab = 'scenarios';
   ctx._expandedScenarios = new Set();
   ctx._expandedConditions = new Set();
+  ctx._scenariosPage = 1;
+  ctx._scenariosPageSize = 20;
   ctx._loaded = false;
   ctx._loading = false;
   ctx._saving = false;
@@ -27,4 +29,12 @@ export const initializePanelState = (ctx, defaultConfig) => {
   ctx._yandexActiveScenarioKey = '';
   ctx._yandexEditorOpen = false;
   ctx._yandexDraft = {};
+  ctx._yandexSubEditorsOpen = {
+    subVoice: false,
+    subCommands: false,
+  };
+  ctx._yandexSubItemOpen = {
+    subVoice: '',
+    subCommands: '',
+  };
 };

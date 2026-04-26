@@ -1,5 +1,14 @@
 import { newCondition, newScenario } from '../utils.jsx';
 
+const normalizeScenariosPage = (ctx, requestedPage) => {
+  const pageSize = Math.max(1, Number(ctx._scenariosPageSize) || 20);
+  const totalItems = Array.isArray(ctx._config?.scenarios) ? ctx._config.scenarios.length : 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const parsedPage = Number(requestedPage);
+  const safePage = Number.isFinite(parsedPage) ? Math.trunc(parsedPage) : 1;
+  return Math.min(Math.max(1, safePage), totalPages);
+};
+
 export const toggleScenario = (ctx, id) => {
   if (ctx._expandedScenarios.has(id)) {
     ctx._expandedScenarios.delete(id);
@@ -240,6 +249,7 @@ export const addScenario = (ctx) => {
     ...ctx._config,
     scenarios: [scenario, ...ctx._config.scenarios],
   };
+  ctx._scenariosPage = 1;
   ctx._status = '';
   ctx._render();
   window.requestAnimationFrame(() => ctx._scrollScenarioIntoView(scenario.id));
@@ -257,6 +267,16 @@ export const removeScenario = (ctx, id) => {
     ...ctx._config,
     scenarios: ctx._config.scenarios.filter((scenario) => scenario.id !== id),
   };
+  ctx._scenariosPage = normalizeScenariosPage(ctx, ctx._scenariosPage);
   ctx._status = '';
+  ctx._render();
+};
+
+export const setScenariosPage = (ctx, page) => {
+  const nextPage = normalizeScenariosPage(ctx, page);
+  if (nextPage === ctx._scenariosPage) {
+    return;
+  }
+  ctx._scenariosPage = nextPage;
   ctx._render();
 };

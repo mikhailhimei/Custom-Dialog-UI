@@ -30,6 +30,7 @@ import {
   removeScenario,
   removeTimerAlarmDeviceId,
   scrollScenarioIntoView,
+  setScenariosPage,
   toggleCondition,
   toggleDeviceAccordion,
   toggleScenario,
@@ -142,6 +143,7 @@ class DialogCustomUiPanel extends HTMLElement {
       };
       this._applyTheme();
       this._expandedScenarios = new Set();
+      this._scenariosPage = 1;
       this._error = '';
     } catch (err) {
       this._error = err?.message || 'Не удалось загрузить настройки. Сначала добавьте интеграцию Dialog Custom UI.';
@@ -287,12 +289,16 @@ class DialogCustomUiPanel extends HTMLElement {
       this._yandexActiveScenarioKey = '__new__';
       this._yandexDraft = this._newYandexDraft();
       this._yandexEditorOpen = false;
+      this._yandexSubEditorsOpen = { subVoice: false, subCommands: false };
+      this._yandexSubItemOpen = { subVoice: '', subCommands: '' };
       return;
     }
     const active = this._findYandexScenarioByKey(normalizedKey) || scenarios[0];
     this._yandexActiveScenarioKey = this._yandexScenarioKey(active);
     this._yandexDraft = this._cloneYandexDraft(active);
     this._yandexEditorOpen = false;
+    this._yandexSubEditorsOpen = { subVoice: false, subCommands: false };
+    this._yandexSubItemOpen = { subVoice: '', subCommands: '' };
   }
 
   async _loadYandexScenarios() {
@@ -326,6 +332,8 @@ class DialogCustomUiPanel extends HTMLElement {
     this._yandexDraft = this._newYandexDraft();
     this._yandexActiveScenarioKey = '__new__';
     this._yandexEditorOpen = false;
+    this._yandexSubEditorsOpen = { subVoice: false, subCommands: false };
+    this._yandexSubItemOpen = { subVoice: '', subCommands: '' };
     this._yandexStatus = '';
     this._yandexError = '';
     this._render();
@@ -347,8 +355,26 @@ class DialogCustomUiPanel extends HTMLElement {
     this._yandexActiveScenarioKey = normalizedKey;
     this._yandexDraft = this._cloneYandexDraft(scenario);
     this._yandexEditorOpen = false;
+    this._yandexSubEditorsOpen = { subVoice: false, subCommands: false };
+    this._yandexSubItemOpen = { subVoice: '', subCommands: '' };
     this._yandexError = '';
     this._render();
+  }
+
+  _setYandexSubEditorOpen(type, isOpen) {
+    const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
+    this._yandexSubEditorsOpen = {
+      ...(this._yandexSubEditorsOpen || {}),
+      [key]: Boolean(isOpen),
+    };
+  }
+
+  _setYandexSubItemOpen(type, itemId) {
+    const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
+    this._yandexSubItemOpen = {
+      ...(this._yandexSubItemOpen || {}),
+      [key]: String(itemId ?? ''),
+    };
   }
 
   _toggleYandexEditorAccordion() {
@@ -376,8 +402,11 @@ class DialogCustomUiPanel extends HTMLElement {
     if (key === 'subVoice' && list.length >= 3) {
       return;
     }
-    list.push(this._newYandexSubItem());
+    const nextItem = this._newYandexSubItem();
+    list.push(nextItem);
     this._yandexDraft = { ...this._yandexDraft, [key]: list };
+    this._setYandexSubEditorOpen(key, true);
+    this._setYandexSubItemOpen(key, nextItem.id);
     this._yandexError = '';
     this._render();
   }
@@ -390,6 +419,10 @@ class DialogCustomUiPanel extends HTMLElement {
     const list = Array.isArray(this._yandexDraft[key]) ? [...this._yandexDraft[key]] : [];
     const next = list.filter((_, currentIndex) => currentIndex !== index);
     this._yandexDraft = { ...this._yandexDraft, [key]: next };
+    const openedId = String(this._yandexSubItemOpen?.[key] ?? '');
+    if (openedId && !next.some((entry) => String(entry?.id ?? '') === openedId)) {
+      this._setYandexSubItemOpen(key, '');
+    }
     this._yandexError = '';
     this._render();
   }
@@ -725,6 +758,10 @@ class DialogCustomUiPanel extends HTMLElement {
     return removeScenario(this, id);
   }
 
+  _setScenariosPage(page) {
+    return setScenariosPage(this, page);
+  }
+
   _validate() {
     if (!this._config.base_url.trim()) {
       return 'Укажите base URL для опроса.';
@@ -814,6 +851,7 @@ class DialogCustomUiPanel extends HTMLElement {
       };
       this._applyTheme();
       this._expandedScenarios = new Set(this._config.scenarios.map((scenario) => scenario.id));
+      this._scenariosPage = 1;
       this._status = 'JSON загружен в форму.';
       this._error = '';
     } catch (err) {
@@ -860,6 +898,7 @@ class DialogCustomUiPanel extends HTMLElement {
           : [],
       };
       this._applyTheme();
+      this._scenariosPage = 1;
       this._status = 'Настройки сохранены.';
     } catch (err) {
       this._error = err?.message || 'Не удалось сохранить настройки.';

@@ -34,6 +34,19 @@ export const bindPanelActions = (ctx, root, on) => {
       Number(element.dataset.subIndex),
     ));
   });
+  root.querySelectorAll('[data-yandex-sub-accordion]').forEach((element) => {
+    on(element, 'toggle', () => ctx._setYandexSubEditorOpen(
+      element.dataset.yandexSubAccordion,
+      element.open,
+    ));
+  });
+  root.querySelectorAll('[data-yandex-sub-item-accordion]').forEach((element) => {
+    on(element, 'toggle', () => {
+      const key = element.dataset.yandexSubItemAccordion;
+      const itemId = element.dataset.yandexSubItemId;
+      ctx._setYandexSubItemOpen(key, element.open ? itemId : '');
+    });
+  });
 
   on(root.querySelector('[data-action="import-json-input"]'), 'change', (event) => {
     const [file] = event.currentTarget.files || [];
@@ -83,6 +96,15 @@ export const bindPanelActions = (ctx, root, on) => {
       element.dataset.scenarioId,
       element.dataset.removeConditionId,
     ));
+  });
+  root.querySelectorAll('[data-action="scenarios-page"]').forEach((element) => {
+    on(element, 'click', () => ctx._setScenariosPage(element.dataset.page));
+  });
+  root.querySelectorAll('[data-action="scenarios-page-nav"]').forEach((element) => {
+    on(element, 'click', () => {
+      const direction = element.dataset.direction === 'prev' ? -1 : 1;
+      ctx._setScenariosPage((Number(ctx._scenariosPage) || 1) + direction);
+    });
   });
 
   const createScenarioElement = root.querySelector('dialog-custom-ui-create-scenario');

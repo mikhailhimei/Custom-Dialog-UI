@@ -381,12 +381,12 @@ export const CREATE_SCENARIO_STYLES = `
           top:50%;
           left:50%;
           transform:translate(-50%,-50%);
-          width:min(860px,calc(100vw - 32px));
-          max-height:calc(100vh - 40px);
+          width:min(640px,calc(100vw - 32px));
+          max-height:calc(100vh - 56px);
           overflow-y:auto;
           overflow-x:hidden;
-          padding:18px;
-          border-radius:20px;
+          padding:16px;
+          border-radius:16px;
           border:1px solid var(--ui-border);
           background: var(--ui-popup-bg);
           z-index:41;
@@ -553,8 +553,34 @@ export const CREATE_SCENARIO_STYLES = `
             white-space: nowrap;
           }
         }
+        @keyframes sheet-in {
+          from {
+            transform: translateY(16px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
         @media (max-width: 700px) {
-          .modal { inset:0; transform:none; width:100vw; height:100vh; max-height:none; border-radius:0; border:none; padding:16px; }
+          .modal {
+            top: auto;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            transform: none;
+            width: 100%;
+            max-width: none;
+            height: auto;
+            max-height: min(88vh, calc(100vh - 12px));
+            border-radius: 20px 20px 0 0;
+            border-left: none;
+            border-right: none;
+            border-bottom: none;
+            padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+            animation: sheet-in 180ms ease-out both;
+          }
           .array-builder-footer .compact-button {
             width: 100%;
           }

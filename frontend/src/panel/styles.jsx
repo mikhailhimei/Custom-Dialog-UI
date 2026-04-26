@@ -457,8 +457,28 @@ export const PANEL_STYLES = `
         details.condition-card[open] > .yandex-sub-body {
           display: grid;
         }
+        .yandex-item-accordion {
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          background: var(--card-bg-soft);
+          padding: 10px 12px;
+        }
+        .yandex-sub-item-body {
+          display: none;
+          gap: 12px;
+          margin-top: 10px;
+        }
+        details.yandex-item-accordion[open] > .yandex-sub-item-body {
+          display: grid;
+        }
         .yandex-sub-add-row {
           margin-top: 8px;
+        }
+        .yandex-sub-add-button {
+          width: 100%;
+          border-radius: 12px;
+          padding: 12px 14px;
+          text-align: center;
         }
         details.condition-card:not([open]) > .condition-body {
           display: none !important;
@@ -668,6 +688,26 @@ export const PANEL_STYLES = `
           gap: 16px;
           width: 100%;
         }
+        .scenarios-pagination {
+          margin-top: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .scenarios-pagination-pages {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+        .scenarios-pagination-meta {
+          margin-top: 6px;
+          color: var(--muted);
+          font-size: 13px;
+        }
         .scenario-card {
           padding: 18px;
           width: 100%;
@@ -851,6 +891,16 @@ export const PANEL_STYLES = `
           .scenario-header,
           .condition-header {
             align-items: flex-start;
+          }
+          .scenarios-pagination {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+          .scenarios-pagination button {
+            width: 100%;
+          }
+          .scenarios-pagination-pages {
+            order: -1;
           }
           .scenario-header {
             flex-wrap: nowrap;

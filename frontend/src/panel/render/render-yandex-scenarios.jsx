@@ -4,31 +4,42 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
   const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
   const items = Array.isArray(ctx._yandexDraft?.[key]) ? ctx._yandexDraft[key] : [];
   const canAdd = items.length < maxCount;
+  const isOpen = Boolean(ctx._yandexSubEditorsOpen?.[key]);
+  const openedItemId = String(ctx._yandexSubItemOpen?.[key] ?? '');
   return `
-    <details class="condition-card">
+    <details class="condition-card" data-yandex-sub-accordion="${key}" ${isOpen ? 'open' : ''}>
       <summary class="condition-title">${title}</summary>
       <div class="condition-body yandex-sub-body">
-        ${items.length ? items.map((item, index) => `
-          <div class="device-row">
-            <label class="field-grow">
-              <span>text</span>
-              <input
-                data-yandex-sub-field="text"
-                data-yandex-sub-type="${key}"
-                data-yandex-sub-index="${index}"
-                value="${escapeHtml(item.text || '')}"
-                placeholder="Введите текст"
-              />
-            </label>
-            <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${key}" data-sub-index="${index}">Удалить</button>
-          </div>
-        `).join('') : '<div class="condition-preview">Пусто</div>'}
+        ${items.length ? items.map((item, index) => {
+    const itemId = String(item?.id ?? `${key}_${index}`);
+    const itemOpen = openedItemId === itemId;
+    return `
+            <details class="yandex-item-accordion" data-yandex-sub-item-accordion="${key}" data-yandex-sub-item-id="${escapeHtml(itemId)}" ${itemOpen ? 'open' : ''}>
+              <summary class="condition-title">text ${index + 1}</summary>
+              <div class="yandex-sub-item-body">
+                <div class="device-row">
+                  <label class="field-grow">
+                    <span>text</span>
+                    <input
+                      data-yandex-sub-field="text"
+                      data-yandex-sub-type="${key}"
+                      data-yandex-sub-index="${index}"
+                      value="${escapeHtml(item.text || '')}"
+                      placeholder="Введите текст"
+                    />
+                  </label>
+                  <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${key}" data-sub-index="${index}">Удалить</button>
+                </div>
+              </div>
+            </details>
+          `;
+  }).join('') : '<div class="condition-preview">Пусто</div>'}
       </div>
     </details>
     <div class="yandex-sub-add-row">
       <button
         type="button"
-        class="secondary compact-button"
+        class="secondary yandex-sub-add-button"
         data-action="add-yandex-sub"
         data-sub-type="${key}"
         ${canAdd ? '' : 'disabled'}
