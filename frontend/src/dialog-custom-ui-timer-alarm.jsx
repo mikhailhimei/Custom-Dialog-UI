@@ -482,10 +482,10 @@ class TimerAlarmPanel extends HTMLElement {
   _render() {
     const body = this._tab === 'timer' ? this._renderTimers() : this._renderAlarms();
     const quickTimerToolbar = this._tab === 'timer'
-      ? QUICK_MINUTES.map((m) => `<button type="button" class="btn ghost quick-btn" data-action="quick-timer" data-minutes="${m}">+${m}m</button>`).join('')
+      ? `<div class="quick-actions-row">${QUICK_MINUTES.map((m) => `<button type="button" class="btn ghost quick-btn" data-action="quick-timer" data-minutes="${m}">+${m}m</button>`).join('')}</div>`
       : '';
     const alarmToolbar = this._tab === 'alarm'
-      ? '<button type="button" class="btn ghost quick-btn" data-action="add-alarm">+ alarm</button>'
+      ? '<div class="quick-actions-row"><button type="button" class="btn ghost quick-btn" data-action="add-alarm">+ alarm</button></div>'
       : '';
     const html = `
       <style>
@@ -520,6 +520,12 @@ class TimerAlarmPanel extends HTMLElement {
           white-space: nowrap;
         }
         .tabs button.active { background:var(--ta-accent); color:#fff; }
+        .quick-actions-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          flex: 1 1 100%;
+        }
         .card, .hero, .empty { background:var(--ta-bg); border:1px solid var(--ta-border); border-radius:14px; padding:14px; }
         .head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
         .title { font-weight:700; font-size:18px; }
@@ -568,9 +574,13 @@ class TimerAlarmPanel extends HTMLElement {
         .toolbar select { min-width: min(100%, 280px); flex: 1 1 260px; }
         .quick-btn { min-width: 74px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .head > .btn.danger { align-self: flex-start; }
         @media (max-width: 760px) {
           .head {
             flex-direction: column;
+          }
+          .head > .btn.danger {
+            width: 100%;
           }
           .actions {
             width: 100%;
@@ -582,8 +592,14 @@ class TimerAlarmPanel extends HTMLElement {
           .toolbar > select {
             flex: 1 1 100%;
           }
-          .toolbar > .quick-btn {
-            flex: 0 0 auto;
+          .quick-actions-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            width: 100%;
+          }
+          .quick-actions-row .quick-btn {
+            width: 100%;
+            min-width: 0;
           }
           .alarm-grid {
             grid-template-columns: 1fr;

@@ -124,6 +124,40 @@ export const PANEL_STYLES = `
           flex-wrap: wrap;
           gap: 10px;
         }
+        .yandex-tabs-toolbar {
+          display: flex;
+          gap: 10px;
+          align-items: end;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .yandex-scenario-select {
+          display: grid;
+          gap: 6px;
+          flex: 1 1 320px;
+          margin: 0;
+        }
+        .yandex-scenario-select span {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--muted);
+          font-weight: 700;
+        }
+        .yandex-scenario-select select {
+          width: 100%;
+        }
+        .yandex-subtabs-scroll {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 4px;
+        }
+        .yandex-subtabs-scroll .subtab-button {
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
         .subtab-button {
           border: 1px solid var(--border);
           border-radius: 999px;
@@ -789,6 +823,17 @@ export const PANEL_STYLES = `
           }
           .toolbar button {
             width: 100%;
+          }
+          .yandex-tabs-toolbar {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+          .yandex-tabs-toolbar .subtab-button {
+            width: 100%;
+          }
+          .yandex-subtabs-scroll {
+            display: flex;
+            flex-wrap: nowrap;
           }
           .scenario-header,
           .condition-header {

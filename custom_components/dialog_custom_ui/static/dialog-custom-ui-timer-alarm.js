@@ -66,7 +66,7 @@ var g="dialog_custom_ui/get_timer_alarm_config",b="dialog_custom_ui/save_timer_a
           </div>
         </article>
       `).join(""):'<div class="empty">No alarms yet.</div>'}
-    `}_bind(){this.shadowRoot.querySelectorAll("[data-tab]").forEach(t=>{t.onclick=()=>{this._tab=t.dataset.tab,this._render()}}),this.shadowRoot.querySelectorAll('[data-action="quick-timer"]').forEach(t=>{t.onclick=()=>this._addTimer(Number(t.dataset.minutes)||5)}),this.shadowRoot.querySelector('[data-action="add-alarm"]')?.addEventListener("click",()=>this._addAlarm("08:00")),this.shadowRoot.querySelectorAll('[data-action="add-alarm-preset"]').forEach(t=>{t.onclick=()=>this._addAlarm(String(t.dataset.preset||"08:00"))}),this.shadowRoot.querySelector('[data-action="select-global-device"]')?.addEventListener("change",t=>{this._selectedDevice=String(t.currentTarget.value||"")}),this.shadowRoot.querySelector('[data-action="set-global-media"]')?.addEventListener("change",t=>{this._defaultMediaContentId=String(t.currentTarget.value||"").trim(),this._save()}),this.shadowRoot.querySelectorAll('[data-action="remove-item"]').forEach(t=>{t.onclick=()=>this._removeItem(String(t.dataset.itemId||""))}),this.shadowRoot.querySelectorAll('[data-action="pause-timer"]').forEach(t=>{t.onclick=()=>this._pauseTimer(String(t.dataset.itemId||""))}),this.shadowRoot.querySelectorAll('[data-action="resume-timer"]').forEach(t=>{t.onclick=()=>this._resumeTimer(String(t.dataset.itemId||""))}),this.shadowRoot.querySelectorAll('[data-action="set-device"]').forEach(t=>{t.onchange=e=>this._updateItem(String(t.dataset.itemId||""),{deviceId:String(e.currentTarget.value||"")})}),this.shadowRoot.querySelectorAll('[data-action="set-alarm-time"]').forEach(t=>{t.onchange=e=>{let i=String(e.currentTarget.value||"08:00"),r=String(t.dataset.itemId||"");this._items=this._items.map(o=>o.id===r?{...o,time:{...o.time,time:i}}:o),this._save()}}),this.shadowRoot.querySelectorAll('[data-action="set-alarm-enabled"]').forEach(t=>{t.onchange=e=>this._updateItem(String(t.dataset.itemId||""),{status:e.currentTarget.checked?"on":"off"})})}_render(){let t=this._tab==="timer"?this._renderTimers():this._renderAlarms(),e=this._tab==="timer"?f.map(o=>`<button type="button" class="btn ghost quick-btn" data-action="quick-timer" data-minutes="${o}">+${o}m</button>`).join(""):"",i=this._tab==="alarm"?'<button type="button" class="btn ghost quick-btn" data-action="add-alarm">+ alarm</button>':"",r=`
+    `}_bind(){this.shadowRoot.querySelectorAll("[data-tab]").forEach(t=>{t.onclick=()=>{this._tab=t.dataset.tab,this._render()}}),this.shadowRoot.querySelectorAll('[data-action="quick-timer"]').forEach(t=>{t.onclick=()=>this._addTimer(Number(t.dataset.minutes)||5)}),this.shadowRoot.querySelector('[data-action="add-alarm"]')?.addEventListener("click",()=>this._addAlarm("08:00")),this.shadowRoot.querySelectorAll('[data-action="add-alarm-preset"]').forEach(t=>{t.onclick=()=>this._addAlarm(String(t.dataset.preset||"08:00"))}),this.shadowRoot.querySelector('[data-action="select-global-device"]')?.addEventListener("change",t=>{this._selectedDevice=String(t.currentTarget.value||"")}),this.shadowRoot.querySelector('[data-action="set-global-media"]')?.addEventListener("change",t=>{this._defaultMediaContentId=String(t.currentTarget.value||"").trim(),this._save()}),this.shadowRoot.querySelectorAll('[data-action="remove-item"]').forEach(t=>{t.onclick=()=>this._removeItem(String(t.dataset.itemId||""))}),this.shadowRoot.querySelectorAll('[data-action="pause-timer"]').forEach(t=>{t.onclick=()=>this._pauseTimer(String(t.dataset.itemId||""))}),this.shadowRoot.querySelectorAll('[data-action="resume-timer"]').forEach(t=>{t.onclick=()=>this._resumeTimer(String(t.dataset.itemId||""))}),this.shadowRoot.querySelectorAll('[data-action="set-device"]').forEach(t=>{t.onchange=e=>this._updateItem(String(t.dataset.itemId||""),{deviceId:String(e.currentTarget.value||"")})}),this.shadowRoot.querySelectorAll('[data-action="set-alarm-time"]').forEach(t=>{t.onchange=e=>{let i=String(e.currentTarget.value||"08:00"),r=String(t.dataset.itemId||"");this._items=this._items.map(o=>o.id===r?{...o,time:{...o.time,time:i}}:o),this._save()}}),this.shadowRoot.querySelectorAll('[data-action="set-alarm-enabled"]').forEach(t=>{t.onchange=e=>this._updateItem(String(t.dataset.itemId||""),{status:e.currentTarget.checked?"on":"off"})})}_render(){let t=this._tab==="timer"?this._renderTimers():this._renderAlarms(),e=this._tab==="timer"?`<div class="quick-actions-row">${f.map(o=>`<button type="button" class="btn ghost quick-btn" data-action="quick-timer" data-minutes="${o}">+${o}m</button>`).join("")}</div>`:"",i=this._tab==="alarm"?'<div class="quick-actions-row"><button type="button" class="btn ghost quick-btn" data-action="add-alarm">+ alarm</button></div>':"",r=`
       <style>
         :host {
           --ta-bg: var(--card-bg, #ffffff);
@@ -99,6 +99,12 @@ var g="dialog_custom_ui/get_timer_alarm_config",b="dialog_custom_ui/save_timer_a
           white-space: nowrap;
         }
         .tabs button.active { background:var(--ta-accent); color:#fff; }
+        .quick-actions-row {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          flex: 1 1 100%;
+        }
         .card, .hero, .empty { background:var(--ta-bg); border:1px solid var(--ta-border); border-radius:14px; padding:14px; }
         .head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
         .title { font-weight:700; font-size:18px; }
@@ -147,9 +153,13 @@ var g="dialog_custom_ui/get_timer_alarm_config",b="dialog_custom_ui/save_timer_a
         .toolbar select { min-width: min(100%, 280px); flex: 1 1 260px; }
         .quick-btn { min-width: 74px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .head > .btn.danger { align-self: flex-start; }
         @media (max-width: 760px) {
           .head {
             flex-direction: column;
+          }
+          .head > .btn.danger {
+            width: 100%;
           }
           .actions {
             width: 100%;
@@ -161,8 +171,14 @@ var g="dialog_custom_ui/get_timer_alarm_config",b="dialog_custom_ui/save_timer_a
           .toolbar > select {
             flex: 1 1 100%;
           }
-          .toolbar > .quick-btn {
-            flex: 0 0 auto;
+          .quick-actions-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            width: 100%;
+          }
+          .quick-actions-row .quick-btn {
+            width: 100%;
+            min-width: 0;
           }
           .alarm-grid {
             grid-template-columns: 1fr;

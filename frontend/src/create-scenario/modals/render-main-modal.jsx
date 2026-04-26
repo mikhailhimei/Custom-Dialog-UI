@@ -139,16 +139,14 @@ export const renderMainModal = (ctx) => {
                             />
                           </label>
                         ` : ''}
-                        ${(ctx._draft.responseItems?.length || 0) > 1 ? `
-                          <div class="response-item-actions">
-                            <button
-                              type="button"
-                              class="ghost compact-delete-button"
-                              data-action="remove-voice-response-item"
-                              data-response-item-id="${escapeHtml(responseItem.id)}"
-                            >Удалить элемент</button>
-                          </div>
-                        ` : ''}
+                        <div class="response-item-actions">
+                          <button
+                            type="button"
+                            class="ghost compact-delete-button"
+                            data-action="remove-voice-response-item"
+                            data-response-item-id="${escapeHtml(responseItem.id)}"
+                          >Удалить элемент</button>
+                        </div>
                       </div>
                     ` : ''}
                   </section>
@@ -161,7 +159,6 @@ export const renderMainModal = (ctx) => {
         <section class="field-span-2 array-builder">
           <div class="array-builder-header">
             <span>nextAction</span>
-            <button type="button" class="secondary compact-button" data-action="add-next-action-item">+ Добавить элемент</button>
           </div>
           <div class="array-builder-list">
             ${(Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : []).map((item, index) => {
@@ -235,11 +232,13 @@ export const renderMainModal = (ctx) => {
             }).join('')}
             ${(ctx._draft.nextActionItems?.length || 0) === 0 ? '<div class="empty">Элементов пока нет.</div>' : ''}
           </div>
+          <div class="array-builder-footer">
+            <button type="button" class="secondary compact-button" data-action="add-next-action-item">+ Добавить элемент</button>
+          </div>
         </section>
         <section class="field-span-2 array-builder">
           <div class="array-builder-header">
             <span>nextDirectControl</span>
-            <button type="button" class="secondary compact-button" data-action="add-direct-control-item">+ Добавить элемент</button>
           </div>
           <div class="array-builder-list">
             ${(Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : []).map((item, index) => {
@@ -296,6 +295,9 @@ export const renderMainModal = (ctx) => {
               `;
             }).join('')}
             ${(ctx._draft.directControlItems?.length || 0) === 0 ? '<div class="empty">Элементов пока нет.</div>' : ''}
+          </div>
+          <div class="array-builder-footer">
+            <button type="button" class="secondary compact-button" data-action="add-direct-control-item">+ Добавить элемент</button>
           </div>
         </section>
       </div>

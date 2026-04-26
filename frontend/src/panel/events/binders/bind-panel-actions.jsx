@@ -22,6 +22,9 @@ export const bindPanelActions = (ctx, root, on) => {
   root.querySelectorAll('[data-action="select-yandex-tab"]').forEach((element) => {
     on(element, 'click', () => ctx._setYandexActiveScenario(element.dataset.yandexTab));
   });
+  on(root.querySelector('[data-action="select-yandex-tab-dropdown"]'), 'change', (event) => {
+    ctx._setYandexActiveScenario(event.currentTarget.value);
+  });
   root.querySelectorAll('[data-action="add-yandex-sub"]').forEach((element) => {
     on(element, 'click', () => ctx._addYandexDraftSubItem(element.dataset.subType));
   });

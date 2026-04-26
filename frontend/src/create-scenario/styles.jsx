@@ -337,6 +337,15 @@ export const CREATE_SCENARIO_STYLES = `
           gap: 10px;
           flex-wrap: wrap;
         }
+        .array-builder-footer {
+          display: flex;
+          justify-content: flex-start;
+        }
+        .array-builder-footer .compact-button {
+          max-width: 100%;
+          white-space: normal;
+          word-break: break-word;
+        }
         .array-builder-header > span {
           font-size: 13px;
           font-weight: 700;
@@ -374,7 +383,8 @@ export const CREATE_SCENARIO_STYLES = `
           transform:translate(-50%,-50%);
           width:min(860px,calc(100vw - 32px));
           max-height:calc(100vh - 40px);
-          overflow:auto;
+          overflow-y:auto;
+          overflow-x:hidden;
           padding:18px;
           border-radius:20px;
           border:1px solid var(--ui-border);
@@ -399,6 +409,7 @@ export const CREATE_SCENARIO_STYLES = `
           justify-content: flex-end;
         }
         .modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .modal-grid > * { min-width: 0; }
         .field-inline { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
         .field-inline-icon {
           position: relative;
@@ -446,11 +457,14 @@ export const CREATE_SCENARIO_STYLES = `
           border-radius: 8px;
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           z-index: 10;
+          max-width: 100%;
         }
         .dropdown-option {
           padding: 8px 12px;
           cursor: pointer;
           border-bottom: 1px solid var(--ui-border);
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
         .dropdown-option:hover {
           background: var(--ui-hover);
@@ -480,6 +494,26 @@ export const CREATE_SCENARIO_STYLES = `
           background: rgba(35,111,73,.2);
           color: #cbffe4;
           border-color: rgba(122,232,173,.32);
+        }
+        .modal-item-actions {
+          gap: 10px;
+        }
+        .item-actions-body {
+          display: grid;
+          gap: 12px;
+        }
+        .item-actions-status {
+          margin: 0;
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid var(--ui-border);
+          background: var(--ui-card-bg-soft);
+          color: var(--ui-text);
+        }
+        .item-actions-controls {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         @keyframes rise-in {
           from {
@@ -513,6 +547,19 @@ export const CREATE_SCENARIO_STYLES = `
         }
         @media (max-width: 700px) {
           .modal { inset:0; transform:none; width:100vw; height:100vh; max-height:none; border-radius:0; border:none; padding:16px; }
+          .array-builder-footer .compact-button {
+            width: 100%;
+          }
+          .item-actions-controls {
+            grid-template-columns: 1fr;
+          }
+          .modal-item-actions .modal-header {
+            flex-direction: column;
+            align-items: stretch;
+          }
+          .modal-item-actions .modal-header button {
+            width: 100%;
+          }
         }
 </style>
 `;
