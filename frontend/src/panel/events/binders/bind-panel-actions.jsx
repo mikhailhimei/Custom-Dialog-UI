@@ -12,6 +12,9 @@ export const bindPanelActions = (ctx, root, on) => {
   on(root.querySelector('[data-action="create-yandex-tab"]'), 'click', () => ctx._startYandexScenarioCreate());
   on(root.querySelector('[data-action="save-yandex-scenario"]'), 'click', () => ctx._saveYandexScenarioFromModal());
   on(root.querySelector('[data-action="delete-yandex-scenario"]'), 'click', () => ctx._deleteActiveYandexScenario());
+  root.querySelectorAll('[data-action="toggle-secret"]').forEach((element) => {
+    on(element, 'click', () => ctx._toggleSecretField(element.dataset.secretField));
+  });
 
   const addScenarioButton = root.querySelector('[data-action="add-scenario"]');
   if (addScenarioButton) {

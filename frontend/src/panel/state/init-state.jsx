@@ -37,4 +37,8 @@ export const initializePanelState = (ctx, defaultConfig) => {
     subVoice: '',
     subCommands: '',
   };
+  ctx._visibleSecrets = {
+    timer_alarm_token: false,
+    yandex_tts_api_key: false,
+  };
 };

@@ -31,9 +31,21 @@ from .const import (
     CONF_TIMER_ALARM_TOKEN,
     CONF_VOICE_AGENT_IP,
     CONF_VOICE_AGENT_USER_ID,
+    CONF_YANDEX_TTS_API_KEY,
+    CONF_YANDEX_TTS_FOLDER_ID,
+    CONF_YANDEX_TTS_LANG,
+    CONF_YANDEX_TTS_CODEC,
+    CONF_YANDEX_TTS_VOICE,
+    CONF_YANDEX_TTS_EMOTION,
+    CONF_YANDEX_TTS_SPEED,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     DEFAULT_THEME,
+    DEFAULT_YANDEX_TTS_LANG,
+    DEFAULT_YANDEX_TTS_CODEC,
+    DEFAULT_YANDEX_TTS_VOICE,
+    DEFAULT_YANDEX_TTS_EMOTION,
+    DEFAULT_YANDEX_TTS_SPEED,
     DOMAIN,
     WS_GET_CONFIG,
     WS_GET_LOGS,
@@ -51,6 +63,13 @@ def async_register_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_logs)
     websocket_api.async_register_command(hass, _ws_get_yandex_scenarios)
     websocket_api.async_register_command(hass, _ws_save_yandex_scenarios)
+
+
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_CONFIG})
@@ -72,6 +91,16 @@ async def _ws_get_config(
             "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
             "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
             "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
+            "yandex_tts_api_key": entry.options.get(CONF_YANDEX_TTS_API_KEY, ""),
+            "yandex_tts_folder_id": entry.options.get(CONF_YANDEX_TTS_FOLDER_ID, ""),
+            "yandex_tts_lang": entry.options.get(CONF_YANDEX_TTS_LANG, DEFAULT_YANDEX_TTS_LANG),
+            "yandex_tts_codec": entry.options.get(CONF_YANDEX_TTS_CODEC, DEFAULT_YANDEX_TTS_CODEC),
+            "yandex_tts_voice": entry.options.get(CONF_YANDEX_TTS_VOICE, DEFAULT_YANDEX_TTS_VOICE),
+            "yandex_tts_emotion": entry.options.get(CONF_YANDEX_TTS_EMOTION, DEFAULT_YANDEX_TTS_EMOTION),
+            "yandex_tts_speed": _safe_float(
+                entry.options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED),
+                DEFAULT_YANDEX_TTS_SPEED,
+            ),
             "theme": _normalize_theme(entry.options.get(CONF_THEME, DEFAULT_THEME)),
             "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
             "timer_alarm_device_ids": _normalize_device_ids(
@@ -101,6 +130,13 @@ async def _ws_get_logs(
         vol.Optional(CONF_THEME, default=DEFAULT_THEME): str,
         vol.Optional(CONF_VOICE_AGENT_IP, default=""): str,
         vol.Optional(CONF_VOICE_AGENT_USER_ID, default=""): str,
+        vol.Optional(CONF_YANDEX_TTS_API_KEY): str,
+        vol.Optional(CONF_YANDEX_TTS_FOLDER_ID): str,
+        vol.Optional(CONF_YANDEX_TTS_LANG): str,
+        vol.Optional(CONF_YANDEX_TTS_CODEC): str,
+        vol.Optional(CONF_YANDEX_TTS_VOICE): str,
+        vol.Optional(CONF_YANDEX_TTS_EMOTION): str,
+        vol.Optional(CONF_YANDEX_TTS_SPEED): vol.Any(int, float),
         vol.Required(CONF_TIMEOUT): vol.Any(int, float),
         vol.Optional(CONF_TIMER_ALARM_DEVICE_IDS, default=[]): [str],
         vol.Required(CONF_SCENARIOS): [
@@ -136,6 +172,25 @@ async def _ws_save_config(
     previous_options = dict(entry.options)
     voice_agent_ip = msg.get(CONF_VOICE_AGENT_IP, "").strip() or previous_options.get(CONF_VOICE_AGENT_IP, "")
     voice_agent_user_id = msg.get(CONF_VOICE_AGENT_USER_ID, "").strip() or previous_options.get(CONF_VOICE_AGENT_USER_ID, "")
+    yandex_tts_lang = str(
+        msg.get(CONF_YANDEX_TTS_LANG, previous_options.get(CONF_YANDEX_TTS_LANG, DEFAULT_YANDEX_TTS_LANG))
+    ).strip() or DEFAULT_YANDEX_TTS_LANG
+    yandex_tts_codec = str(
+        msg.get(CONF_YANDEX_TTS_CODEC, previous_options.get(CONF_YANDEX_TTS_CODEC, DEFAULT_YANDEX_TTS_CODEC))
+    ).strip() or DEFAULT_YANDEX_TTS_CODEC
+    yandex_tts_voice = str(
+        msg.get(CONF_YANDEX_TTS_VOICE, previous_options.get(CONF_YANDEX_TTS_VOICE, DEFAULT_YANDEX_TTS_VOICE))
+    ).strip() or DEFAULT_YANDEX_TTS_VOICE
+    yandex_tts_emotion = str(
+        msg.get(CONF_YANDEX_TTS_EMOTION, previous_options.get(CONF_YANDEX_TTS_EMOTION, DEFAULT_YANDEX_TTS_EMOTION))
+    ).strip() or DEFAULT_YANDEX_TTS_EMOTION
+    try:
+        yandex_tts_speed = float(
+            msg.get(CONF_YANDEX_TTS_SPEED, previous_options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED))
+        )
+    except (TypeError, ValueError):
+        yandex_tts_speed = DEFAULT_YANDEX_TTS_SPEED
+    yandex_tts_speed = max(0.1, min(3.0, yandex_tts_speed))
     options = {
         CONF_BASE_URL: msg[CONF_BASE_URL].strip(),
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
@@ -143,6 +198,17 @@ async def _ws_save_config(
         CONF_THEME: _normalize_theme(msg.get(CONF_THEME, DEFAULT_THEME)),
         CONF_VOICE_AGENT_IP: voice_agent_ip,
         CONF_VOICE_AGENT_USER_ID: voice_agent_user_id,
+        CONF_YANDEX_TTS_API_KEY: str(
+            msg.get(CONF_YANDEX_TTS_API_KEY, previous_options.get(CONF_YANDEX_TTS_API_KEY, ""))
+        ).strip(),
+        CONF_YANDEX_TTS_FOLDER_ID: str(
+            msg.get(CONF_YANDEX_TTS_FOLDER_ID, previous_options.get(CONF_YANDEX_TTS_FOLDER_ID, ""))
+        ).strip(),
+        CONF_YANDEX_TTS_LANG: yandex_tts_lang,
+        CONF_YANDEX_TTS_CODEC: yandex_tts_codec,
+        CONF_YANDEX_TTS_VOICE: yandex_tts_voice,
+        CONF_YANDEX_TTS_EMOTION: yandex_tts_emotion,
+        CONF_YANDEX_TTS_SPEED: yandex_tts_speed,
         CONF_TIMEOUT: max(1, int(msg[CONF_TIMEOUT])),
         CONF_TIMER_ALARM_DEVICE_IDS: [
             device_id.strip()

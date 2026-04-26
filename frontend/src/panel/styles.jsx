@@ -300,6 +300,39 @@ export const PANEL_STYLES = `
         .field-grow {
           flex: 1 1 auto;
         }
+        .settings-subsection {
+          margin-top: 4px;
+          padding: 14px;
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          background: var(--card-bg-soft);
+          display: grid;
+          gap: 12px;
+        }
+        .secret-field {
+          position: relative;
+        }
+        .secret-field input {
+          padding-right: 50px;
+        }
+        .secret-toggle-button {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          padding: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          font-size: 16px;
+        }
+        .secret-toggle-button:hover {
+          transform: translateY(-50%);
+        }
         .field-placeholder {
           display: grid;
           gap: 8px;

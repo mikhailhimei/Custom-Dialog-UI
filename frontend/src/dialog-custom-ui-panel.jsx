@@ -544,6 +544,18 @@ class DialogCustomUiPanel extends HTMLElement {
     return updateConfigField(this, field, value, rerender);
   }
 
+  _isSecretVisible(field) {
+    return Boolean(this._visibleSecrets?.[field]);
+  }
+
+  _toggleSecretField(field) {
+    this._visibleSecrets = {
+      ...(this._visibleSecrets || {}),
+      [field]: !this._isSecretVisible(field),
+    };
+    this._render();
+  }
+
   _normalizeTimerAlarmDeviceIdsForUi(deviceIds) {
     const source = Array.isArray(deviceIds)
       ? deviceIds
@@ -806,6 +818,13 @@ class DialogCustomUiPanel extends HTMLElement {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
       timer_alarm_token: this._config.timer_alarm_token,
+      yandex_tts_api_key: this._config.yandex_tts_api_key,
+      yandex_tts_folder_id: this._config.yandex_tts_folder_id,
+      yandex_tts_lang: this._config.yandex_tts_lang,
+      yandex_tts_codec: this._config.yandex_tts_codec,
+      yandex_tts_voice: this._config.yandex_tts_voice,
+      yandex_tts_emotion: this._config.yandex_tts_emotion,
+      yandex_tts_speed: Number(this._config.yandex_tts_speed) || 1.1,
       theme: this._config.theme,
       timer_alarm_device_ids: this._timerAlarmDeviceIdsForSave(),
       timeout: Number(this._config.timeout) || 10,
