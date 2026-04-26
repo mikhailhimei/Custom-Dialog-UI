@@ -4,16 +4,19 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
   const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
   const items = Array.isArray(ctx._yandexDraft?.[key]) ? ctx._yandexDraft[key] : [];
   const canAdd = items.length < maxCount;
+  const openedItemId = String(ctx._yandexSubItemOpen?.[key] ?? '');
   return `
     <section class="condition-card">
       <div class="condition-title">${title}</div>
       <div class="condition-body open">
         ${items.length ? items.map((item, index) => {
-    const itemTitle = String(item?.text ?? '').trim() || `Элемент ${index + 1}`;
+    const itemId = String(item?.id ?? `${key}_${index}`);
+    const itemOpen = openedItemId === itemId;
+    const itemTitle = String(item?.text ?? '').trim() || 'text';
     return `
-            <section class="response-item-card open">
-              <div class="response-item-grid">
-                <div class="condition-title">${escapeHtml(itemTitle)}</div>
+            <details class="yandex-item-accordion" data-yandex-sub-item-accordion="${key}" data-yandex-sub-item-id="${escapeHtml(itemId)}" ${itemOpen ? 'open' : ''}>
+              <summary class="condition-title">${escapeHtml(itemTitle)}</summary>
+              <div class="yandex-sub-item-body">
                 <div class="device-row">
                   <label class="field-grow">
                     <span>text</span>
@@ -28,7 +31,7 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
                   <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${key}" data-sub-index="${index}">Удалить</button>
                 </div>
               </div>
-            </section>
+            </details>
           `;
   }).join('') : '<div class="condition-preview">Пусто</div>'}
         <div class="yandex-sub-add-row">

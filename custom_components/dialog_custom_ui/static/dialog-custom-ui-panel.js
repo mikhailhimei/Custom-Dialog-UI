@@ -1646,29 +1646,29 @@ Error generating stack: `+a.message+`
           <h1>Timer / Alarm</h1>
           <div class="status ok">\u041C\u043E\u0434\u0443\u043B\u044C timer/alarm \u0437\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u0442\u0441\u044F...</div>
         </section>
-      `);var df=(e,t,n,r=999)=>{let i=t==="subVoice"?"subVoice":"subCommands",a=Array.isArray(e._yandexDraft?.[i])?e._yandexDraft[i]:[],o=a.length<r;return`
+      `);var df=(e,t,n,r=999)=>{let i=t==="subVoice"?"subVoice":"subCommands",a=Array.isArray(e._yandexDraft?.[i])?e._yandexDraft[i]:[],o=a.length<r,l=String(e._yandexSubItemOpen?.[i]??"");return`
     <section class="condition-card">
       <div class="condition-title">${n}</div>
       <div class="condition-body open">
-        ${a.length?a.map((l,s)=>{let d=String(l?.text??"").trim()||`\u042D\u043B\u0435\u043C\u0435\u043D\u0442 ${s+1}`;return`
-            <section class="response-item-card open">
-              <div class="response-item-grid">
-                <div class="condition-title">${T(d)}</div>
+        ${a.length?a.map((s,d)=>{let m=String(s?.id??`${i}_${d}`),p=l===m,g=String(s?.text??"").trim()||"text";return`
+            <details class="yandex-item-accordion" data-yandex-sub-item-accordion="${i}" data-yandex-sub-item-id="${T(m)}" ${p?"open":""}>
+              <summary class="condition-title">${T(g)}</summary>
+              <div class="yandex-sub-item-body">
                 <div class="device-row">
                   <label class="field-grow">
                     <span>text</span>
                     <input
                       data-yandex-sub-field="text"
                       data-yandex-sub-type="${i}"
-                      data-yandex-sub-index="${s}"
-                      value="${T(l.text||"")}"
+                      data-yandex-sub-index="${d}"
+                      value="${T(s.text||"")}"
                       placeholder="\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043A\u0441\u0442"
                     />
                   </label>
-                  <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${i}" data-sub-index="${s}">\u0423\u0434\u0430\u043B\u0438\u0442\u044C</button>
+                  <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${i}" data-sub-index="${d}">\u0423\u0434\u0430\u043B\u0438\u0442\u044C</button>
                 </div>
               </div>
-            </section>
+            </details>
           `}).join(""):'<div class="condition-preview">\u041F\u0443\u0441\u0442\u043E</div>'}
         <div class="yandex-sub-add-row">
           <button
