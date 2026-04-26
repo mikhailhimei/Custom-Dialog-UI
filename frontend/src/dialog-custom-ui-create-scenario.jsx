@@ -752,6 +752,16 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     event.stopPropagation();
   }
 
+  _hasAnyModalOpen() {
+    return Boolean(
+      this._modalOpen
+      || this._directModalOpen
+      || this._templateModalOpen
+      || this._defaultsModalOpen
+      || this._itemActionsModalOpen
+    );
+  }
+
   _bind() {
     bindEvents(this);
   }

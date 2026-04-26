@@ -63,6 +63,17 @@ export const CREATE_SCENARIO_STYLES = `
           border: 1px solid var(--ui-border);
           box-shadow: var(--ui-elev-1);
         }
+        .create-scenario-shell.modal-context-open {
+          pointer-events: none;
+        }
+        .create-scenario-shell.modal-context-open .subtabs-dock,
+        .create-scenario-shell.modal-context-open .status,
+        .create-scenario-shell.modal-context-open .hero-card,
+        .create-scenario-shell.modal-context-open .help-card,
+        .create-scenario-shell.modal-context-open .command-item-main {
+          animation: none !important;
+          transition: none !important;
+        }
         .subtabs { display:flex; flex-wrap:wrap; gap:10px; width: 100%; }
         .inner-subtabs { margin-top: 14px; display:flex; flex-wrap:wrap; gap:10px; }
         .subtab-button {
