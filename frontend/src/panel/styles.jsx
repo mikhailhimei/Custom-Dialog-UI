@@ -127,7 +127,7 @@ export const PANEL_STYLES = `
         .subtab-button {
           border: 1px solid var(--border);
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.85);
+          background: var(--card-bg-soft);
           color: var(--muted);
           padding: 10px 14px;
           cursor: pointer;
@@ -201,7 +201,7 @@ export const PANEL_STYLES = `
           padding: 18px;
           border-radius: 20px;
           border: 1px solid var(--border);
-          background: rgba(255, 255, 255, 0.99);
+          background: var(--card-bg);
           z-index: 41;
           display: grid;
           gap: 14px;
@@ -231,7 +231,7 @@ export const PANEL_STYLES = `
           padding: 12px 14px;
           font: inherit;
           color: var(--text);
-          background: rgba(255, 255, 255, 0.9);
+          background: var(--card-bg-soft);
           resize: vertical;
           transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
@@ -283,7 +283,7 @@ export const PANEL_STYLES = `
           padding: 16px;
           border: 1px solid var(--border);
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.72);
+          background: var(--card-bg-soft);
           display: grid;
           gap: 14px;
         }
@@ -479,7 +479,7 @@ export const PANEL_STYLES = `
           padding: 12px 14px;
           font: inherit;
           color: var(--text);
-          background: rgba(255, 255, 255, 0.92);
+          background: var(--card-bg-soft);
           transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
         .switch-control {
@@ -687,7 +687,7 @@ export const PANEL_STYLES = `
           border: 1px solid var(--border);
           border-radius: 14px;
           padding: 14px;
-          background: rgba(255, 255, 255, 0.76);
+          background: var(--card-bg-soft);
         }
         @keyframes rise-in {
           from {
@@ -753,6 +753,68 @@ export const PANEL_STYLES = `
           }
           .hero h1 {
             font-size: 28px;
+          }
+        }
+        @media (max-width: 640px) {
+          .page {
+            padding: 10px;
+          }
+          .panel-shell {
+            padding: 8px;
+            border-radius: 16px;
+          }
+          .hero-card,
+          .scenario-card,
+          .help-card {
+            border-radius: 14px;
+          }
+          .hero-card,
+          .scenario-card,
+          .empty,
+          .help-card {
+            padding: 14px;
+          }
+          .tabs {
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            scrollbar-width: thin;
+          }
+          .tab-button {
+            flex: 0 0 auto;
+            white-space: nowrap;
+          }
+          .toolbar {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+          .toolbar button {
+            width: 100%;
+          }
+          .scenario-header,
+          .condition-header {
+            align-items: flex-start;
+          }
+          .condition-actions {
+            width: 100%;
+            justify-content: stretch;
+          }
+          .condition-actions button {
+            flex: 1 1 auto;
+          }
+          .command-modal-header,
+          .command-modal-footer {
+            flex-direction: column;
+            align-items: stretch;
+          }
+        }
+        @media (max-width: 420px) {
+          .hero h1 {
+            font-size: 22px;
+          }
+          button,
+          .tab-button {
+            padding: 10px 12px;
+            font-size: 14px;
           }
         }
 </style>

@@ -4,6 +4,7 @@ import { renderLogs } from './render-logs.jsx';
 import { renderSettings } from './render-settings.jsx';
 import { renderScenarios } from './render-scenarios.jsx';
 import { renderTimerAlarm } from './render-timer-alarm.jsx';
+import { renderYandexScenarios } from './render-yandex-scenarios.jsx';
 
 export const renderActiveTopLevelPage = (ctx) => {
   if (ctx._activeTab === 'logs') {
@@ -20,6 +21,9 @@ export const renderActiveTopLevelPage = (ctx) => {
   }
   if (ctx._activeTab === 'json') {
     return renderJsonTools(ctx);
+  }
+  if (ctx._activeTab === 'yandex-scenarios') {
+    return renderYandexScenarios(ctx);
   }
   return renderSettings(ctx);
 };

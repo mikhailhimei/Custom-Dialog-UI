@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+import uuid
 
 import voluptuous as vol
+import yaml
 
 from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
@@ -23,6 +26,7 @@ from .const import (
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
+    CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
     CONF_TIMER_ALARM_PRESETS,
     CONF_TIMER_ALARM_TOKEN,
     CONF_VOICE_AGENT_IP,
@@ -33,14 +37,20 @@ from .const import (
     DOMAIN,
     WS_GET_CONFIG,
     WS_GET_LOGS,
+    WS_GET_YANDEX_SCENARIOS,
     WS_SAVE_CONFIG,
+    WS_SAVE_YANDEX_SCENARIOS,
 )
+
+_YANDEX_INTENTS_PATH = Path("/homeassistant/yandex_intents.yaml")
 
 
 def async_register_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_config)
     websocket_api.async_register_command(hass, _ws_save_config)
     websocket_api.async_register_command(hass, _ws_get_logs)
+    websocket_api.async_register_command(hass, _ws_get_yandex_scenarios)
+    websocket_api.async_register_command(hass, _ws_save_yandex_scenarios)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_CONFIG})
@@ -142,6 +152,7 @@ async def _ws_save_config(
         # Keep runtime timer/alarm state and learned presets when user saves main settings.
         CONF_TIMER_ALARM_ITEMS: list(previous_options.get(CONF_TIMER_ALARM_ITEMS, [])),
         CONF_TIMER_ALARM_PRESETS: list(previous_options.get(CONF_TIMER_ALARM_PRESETS, [])),
+        CONF_TIMER_ALARM_MEDIA_CONTENT_ID: previous_options.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, ""),
         CONF_SCENARIOS: scenarios,
     }
 
@@ -243,3 +254,176 @@ def _normalize_legacy_conditions(item: dict[str, Any]) -> list[dict[str, str]]:
 def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
     entries = hass.config_entries.async_entries(DOMAIN)
     return entries[0] if entries else None
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_GET_YANDEX_SCENARIOS})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_get_yandex_scenarios(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    scenarios = await hass.async_add_executor_job(_read_yandex_scenarios, hass)
+    connection.send_result(msg["id"], {"scenarios": scenarios})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_SAVE_YANDEX_SCENARIOS,
+        vol.Required("scenarios"): [dict],
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_save_yandex_scenarios(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    scenarios = [item for item in msg.get("scenarios", []) if isinstance(item, dict)]
+    validation_error = _validate_yandex_scenarios(scenarios)
+    if validation_error:
+        connection.send_error(msg["id"], "invalid_format", validation_error)
+        return
+    await hass.async_add_executor_job(_write_yandex_scenarios, hass, scenarios)
+    refreshed = await hass.async_add_executor_job(_read_yandex_scenarios, hass)
+    connection.send_result(msg["id"], {"saved": True, "scenarios": refreshed})
+
+
+def _validate_yandex_scenarios(items: list[dict[str, Any]]) -> str:
+    for index, item in enumerate(items, start=1):
+        main = str(item.get("mainCommand", "")).strip()
+        if not main:
+            return f"mainCommand is required for scenario #{index}"
+    return ""
+
+
+def _read_yandex_scenarios(hass: HomeAssistant) -> list[dict[str, Any]]:
+    path = _resolve_yandex_intents_path(hass)
+    if not path.exists():
+        return []
+
+    loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(loaded, dict):
+        return []
+
+    result: list[dict[str, Any]] = []
+    for main_command, raw in loaded.items():
+        if not isinstance(raw, dict):
+            raw = {}
+        main_text = str(main_command or "").strip()
+        if not main_text:
+            continue
+        sub_voice = _normalize_str_list(raw.get("extra_phrases"))
+        sub_commands = _normalize_str_list(raw.get("execute_command"))
+        accounts = _normalize_accounts(raw.get("accounts"))
+        voice_response = str(
+            raw.get("voice_response")
+            or raw.get("voiceResponse")
+            or raw.get("voice")
+            or raw.get("response")
+            or ""
+        ).strip()
+        result.append(
+            {
+                "id": f"yandex-{uuid.uuid4().hex[:8]}",
+                "mainCommand": main_text,
+                "voiceResponse": voice_response,
+                "accounts": ";".join(accounts),
+                "subVoice": [{"id": f"sv-{uuid.uuid4().hex[:8]}", "text": text} for text in sub_voice],
+                "subCommands": [{"id": f"sc-{uuid.uuid4().hex[:8]}", "text": text} for text in sub_commands],
+            }
+        )
+    return result
+
+
+def _write_yandex_scenarios(hass: HomeAssistant, scenarios: list[dict[str, Any]]) -> None:
+    path = _resolve_yandex_intents_path(hass)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {}
+
+    for raw in scenarios:
+        main_command = str(raw.get("mainCommand", "")).strip()
+        if not main_command:
+            continue
+        voice_response = str(raw.get("voiceResponse", "")).strip()
+        sub_voice = _normalize_sub_items(raw.get("subVoice"))
+        sub_commands = _normalize_sub_items(raw.get("subCommands"))
+        accounts = _normalize_accounts(raw.get("accounts"))
+
+        item_payload: dict[str, Any] = {}
+        if sub_voice:
+            item_payload["extra_phrases"] = sub_voice
+        if sub_commands:
+            item_payload["execute_command"] = sub_commands
+        if voice_response:
+            item_payload["voice_response"] = voice_response
+        if accounts:
+            item_payload["accounts"] = _FlowStyleList(accounts)
+        payload[main_command] = item_payload
+
+    dumped = yaml.safe_dump(
+        payload,
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+    )
+    path.write_text(dumped, encoding="utf-8")
+
+
+def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
+    if _YANDEX_INTENTS_PATH.exists():
+        return _YANDEX_INTENTS_PATH
+    return Path(hass.config.path("yandex_intents.yaml"))
+
+
+def _normalize_sub_items(value: Any) -> list[str]:
+    if isinstance(value, list):
+        entries = value
+    elif value is None:
+        entries = []
+    else:
+        entries = [value]
+    result: list[str] = []
+    for entry in entries:
+        if isinstance(entry, dict):
+            text = str(entry.get("text", "")).strip()
+        else:
+            text = str(entry or "").strip()
+        if text:
+            result.append(text)
+    return result
+
+
+def _normalize_str_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        values = value
+    elif value is None:
+        values = []
+    else:
+        values = [value]
+    return [str(item).strip() for item in values if str(item).strip()]
+
+
+def _normalize_accounts(value: Any) -> list[str]:
+    if isinstance(value, list):
+        values = value
+    elif value is None:
+        values = []
+    else:
+        values = str(value).split(";")
+    normalized: list[str] = []
+    for item in values:
+        for part in str(item).split(";"):
+            account = part.strip()
+            if account:
+                normalized.append(account)
+    return normalized
+
+
+class _FlowStyleList(list):
+    """YAML helper to serialize lists in [] flow style."""
+
+
+def _represent_flow_style_list(dumper: yaml.SafeDumper, value: _FlowStyleList) -> yaml.nodes.SequenceNode:
+    return dumper.represent_sequence("tag:yaml.org,2002:seq", value, flow_style=True)
+
+
+yaml.SafeDumper.add_representer(_FlowStyleList, _represent_flow_style_list)

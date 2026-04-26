@@ -17,6 +17,7 @@ import { renderLogs } from './panel/render/render-logs.jsx';
 import { renderScenarios } from './panel/render/render-scenarios.jsx';
 import { renderSettings } from './panel/render/render-settings.jsx';
 import { renderTimerAlarm } from './panel/render/render-timer-alarm.jsx';
+import { renderYandexScenarios } from './panel/render/render-yandex-scenarios.jsx';
 import {
   addCondition,
   addScenario,
@@ -215,6 +216,186 @@ class DialogCustomUiPanel extends HTMLElement {
       if (tab === 'timer-alarm') {
         this._ensureTimerAlarmModule();
       }
+      if (tab === 'yandex-scenarios') {
+        this._loadYandexScenarios();
+      }
+    }
+  }
+
+  _newYandexSubItem() {
+    return {
+      id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `yandex_sub_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+      text: '',
+    };
+  }
+
+  _newYandexDraft() {
+    return {
+      mainCommand: '',
+      voiceResponse: '',
+      accounts: '',
+      subVoice: [],
+      subCommands: [],
+    };
+  }
+
+  _normalizeYandexScenarioForUi(item) {
+    const toItems = (value) => (
+      Array.isArray(value)
+        ? value.map((entry) => ({
+          id: String(entry?.id ?? (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `yandex_sub_${Date.now()}`)),
+          text: String(entry?.text ?? '').trim(),
+        })).filter((entry) => entry.text)
+        : []
+    );
+    return {
+      id: String(item?.id ?? (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `yandex_${Date.now()}`)),
+      mainCommand: String(item?.mainCommand ?? '').trim(),
+      voiceResponse: String(item?.voiceResponse ?? '').trim(),
+      accounts: String(item?.accounts ?? '').trim(),
+      subVoice: toItems(item?.subVoice),
+      subCommands: toItems(item?.subCommands),
+    };
+  }
+
+  async _loadYandexScenarios() {
+    if (!this._hass || this._yandexLoading) {
+      return;
+    }
+    this._yandexLoading = true;
+    this._yandexError = '';
+    if (!this._yandexLoaded) {
+      this._yandexStatus = '';
+    }
+    this._render();
+    try {
+      const result = await this._hass.callWS({ type: 'dialog_custom_ui/get_yandex_scenarios' });
+      const scenarios = Array.isArray(result?.scenarios) ? result.scenarios : [];
+      this._yandexScenarios = scenarios.map((item) => this._normalizeYandexScenarioForUi(item));
+      this._yandexLoaded = true;
+      this._yandexStatus = 'Сценарии обновлены.';
+      this._yandexError = '';
+    } catch (err) {
+      this._yandexError = err?.message || 'Не удалось прочитать yandex_intents.yaml.';
+      this._yandexStatus = '';
+    } finally {
+      this._yandexLoading = false;
+      this._render();
+    }
+  }
+
+  _openYandexModal() {
+    this._yandexDraft = this._newYandexDraft();
+    this._yandexModalOpen = true;
+    this._yandexError = '';
+    this._render();
+  }
+
+  _closeYandexModal() {
+    this._yandexModalOpen = false;
+    this._yandexDraft = null;
+    this._render();
+  }
+
+  _updateYandexDraftField(field, value, rerender = false) {
+    if (!this._yandexDraft) {
+      this._yandexDraft = this._newYandexDraft();
+    }
+    this._yandexDraft = { ...this._yandexDraft, [field]: value };
+    this._yandexError = '';
+    if (rerender) {
+      this._render();
+    }
+  }
+
+  _addYandexDraftSubItem(type) {
+    if (!this._yandexDraft) {
+      this._yandexDraft = this._newYandexDraft();
+    }
+    const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
+    const list = Array.isArray(this._yandexDraft[key]) ? [...this._yandexDraft[key]] : [];
+    if (key === 'subVoice' && list.length >= 3) {
+      return;
+    }
+    list.push(this._newYandexSubItem());
+    this._yandexDraft = { ...this._yandexDraft, [key]: list };
+    this._yandexError = '';
+    this._render();
+  }
+
+  _removeYandexDraftSubItem(type, index) {
+    if (!this._yandexDraft) {
+      return;
+    }
+    const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
+    const list = Array.isArray(this._yandexDraft[key]) ? [...this._yandexDraft[key]] : [];
+    const next = list.filter((_, currentIndex) => currentIndex !== index);
+    this._yandexDraft = { ...this._yandexDraft, [key]: next };
+    this._yandexError = '';
+    this._render();
+  }
+
+  _updateYandexDraftSubItem(type, index, field, value, rerender = false) {
+    if (!this._yandexDraft) {
+      return;
+    }
+    const key = type === 'subVoice' ? 'subVoice' : 'subCommands';
+    const list = Array.isArray(this._yandexDraft[key]) ? [...this._yandexDraft[key]] : [];
+    this._yandexDraft = {
+      ...this._yandexDraft,
+      [key]: list.map((entry, currentIndex) => (
+        currentIndex === index ? { ...entry, [field]: value } : entry
+      )),
+    };
+    this._yandexError = '';
+    if (rerender) {
+      this._render();
+    }
+  }
+
+  _serializeYandexScenarioDraft() {
+    const draft = this._yandexDraft || this._newYandexDraft();
+    const normalizeItems = (items) => (
+      (Array.isArray(items) ? items : [])
+        .map((item) => ({ text: String(item?.text ?? '').trim() }))
+        .filter((item) => item.text)
+    );
+    return {
+      mainCommand: String(draft.mainCommand ?? '').trim(),
+      voiceResponse: String(draft.voiceResponse ?? '').trim(),
+      accounts: String(draft.accounts ?? '').trim(),
+      subVoice: normalizeItems(draft.subVoice),
+      subCommands: normalizeItems(draft.subCommands),
+    };
+  }
+
+  async _saveYandexScenarioFromModal() {
+    const item = this._serializeYandexScenarioDraft();
+    if (!item.mainCommand) {
+      this._yandexError = 'Поле mainCommand обязательно.';
+      this._render();
+      return;
+    }
+    this._yandexSaving = true;
+    this._yandexError = '';
+    this._render();
+    try {
+      const payload = [...this._yandexScenarios, item];
+      const result = await this._hass.callWS({
+        type: 'dialog_custom_ui/save_yandex_scenarios',
+        scenarios: payload,
+      });
+      const scenarios = Array.isArray(result?.scenarios) ? result.scenarios : [];
+      this._yandexScenarios = scenarios.map((entry) => this._normalizeYandexScenarioForUi(entry));
+      this._yandexStatus = 'Сценарий сохранен и файл обновлен.';
+      this._yandexLoaded = true;
+      this._yandexModalOpen = false;
+      this._yandexDraft = null;
+    } catch (err) {
+      this._yandexError = err?.message || 'Не удалось сохранить yandex_intents.yaml.';
+    } finally {
+      this._yandexSaving = false;
+      this._render();
     }
   }
 
@@ -668,6 +849,10 @@ class DialogCustomUiPanel extends HTMLElement {
     return renderJsonTools(this);
   }
 
+  _renderYandexScenarios() {
+    return renderYandexScenarios(this);
+  }
+
   _renderCreateScenario() {
     return renderCreateScenario();
   }
@@ -688,6 +873,7 @@ class DialogCustomUiPanel extends HTMLElement {
               <button type="button" class="tab-button ${this._activeTab === 'scenarios' ? 'active' : ''}" data-tab="scenarios">Scenarios</button>
               <button type="button" class="tab-button ${this._activeTab === 'create-scenario' ? 'active' : ''}" data-tab="create-scenario">Create Scenario</button>
               <button type="button" class="tab-button ${this._activeTab === 'timer-alarm' ? 'active' : ''}" data-tab="timer-alarm">Timer / Alarm</button>
+              <button type="button" class="tab-button ${this._activeTab === 'yandex-scenarios' ? 'active' : ''}" data-tab="yandex-scenarios">Яндекс сценарии</button>
               <button type="button" class="tab-button ${this._activeTab === 'json' ? 'active' : ''}" data-tab="json">JSON</button>
               <button type="button" class="tab-button ${this._activeTab === 'logs' ? 'active' : ''}" data-tab="logs">Logs</button>
               <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
@@ -709,6 +895,7 @@ class DialogCustomUiPanel extends HTMLElement {
     const timerAlarmElement = this.shadowRoot.querySelector('dialog-custom-ui-timer-alarm');
     if (timerAlarmElement) {
       timerAlarmElement.hass = this._hass;
+      timerAlarmElement.config = { theme: this._config.theme };
     }
   }
 }

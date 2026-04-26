@@ -1,4 +1,4 @@
-const GET_WS = 'dialog_custom_ui/get_timer_alarm_config';
+﻿const GET_WS = 'dialog_custom_ui/get_timer_alarm_config';
 const SAVE_WS = 'dialog_custom_ui/save_timer_alarm_config';
 const TICK_MS = 1000;
 const POLL_MS = 3000;
@@ -77,6 +77,7 @@ class TimerAlarmPanel extends HTMLElement {
     this._presets = [];
     this._deviceLabels = {};
     this._selectedDevice = '';
+    this._defaultMediaContentId = '';
     this._loading = false;
     this._saving = false;
     this._error = '';
@@ -84,6 +85,7 @@ class TimerAlarmPanel extends HTMLElement {
     this._tick = null;
     this._poll = null;
     this._debugWsPayload = null;
+    this._theme = 'light';
   }
 
   set hass(v) {
@@ -93,7 +95,15 @@ class TimerAlarmPanel extends HTMLElement {
     }
   }
 
+  set config(value) {
+    const next = value && typeof value === 'object' ? value : {};
+    this._theme = String(next.theme ?? 'light').toLowerCase() === 'dark' ? 'dark' : 'light';
+    this.setAttribute('data-theme', this._theme);
+    this._render();
+  }
+
   connectedCallback() {
+    this.setAttribute('data-theme', this._theme);
     if (!this.shadowRoot.innerHTML) {
       this._render();
     }
@@ -129,6 +139,7 @@ class TimerAlarmPanel extends HTMLElement {
         .map((x) => (String(x?.type ?? '').toLowerCase() === 'timer' ? normalizeTimer(x) : normalizeAlarm(x)));
       this._presets = Array.isArray(res?.alarm_presets) ? res.alarm_presets.map((x) => String(x)) : [];
       this._deviceLabels = res?.device_labels && typeof res.device_labels === 'object' ? res.device_labels : {};
+      this._defaultMediaContentId = String(res?.default_media_content_id ?? this._defaultMediaContentId ?? '').trim();
       this._status = res?.last_updated ? `Updated: ${res.last_updated}` : '';
       this._error = '';
     } catch (e) {
@@ -152,6 +163,7 @@ class TimerAlarmPanel extends HTMLElement {
       await this._hass.callWS({
         type: SAVE_WS,
         timer_alarm_items: this._items,
+        timer_alarm_media_content_id: this._defaultMediaContentId,
       });
       await this._load();
     } catch (e) {
@@ -333,7 +345,7 @@ class TimerAlarmPanel extends HTMLElement {
             <div>
               <div class="title">Timer</div>
               <div class="meta" data-timer-left-id="${esc(item.id)}">${esc(toDuration(left))} left</div>
-              <div class="meta">Текущее время: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
+              <div class="meta">Current time: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
             </div>
             <div class="actions">
               ${item.status === 'paused'
@@ -366,7 +378,7 @@ class TimerAlarmPanel extends HTMLElement {
             <div>
               <div class="title">Alarm</div>
               <div class="meta">${esc(item.time.time)}</div>
-              <div class="meta">Текущее время: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
+              <div class="meta">Current time: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
             </div>
             <button type="button" class="btn danger" data-action="remove-item" data-item-id="${esc(item.id)}">Delete</button>
           </div>
@@ -412,6 +424,10 @@ class TimerAlarmPanel extends HTMLElement {
     this.shadowRoot.querySelector('[data-action="select-global-device"]')?.addEventListener('change', (e) => {
       this._selectedDevice = String(e.currentTarget.value || '');
     });
+    this.shadowRoot.querySelector('[data-action="set-global-media"]')?.addEventListener('change', (e) => {
+      this._defaultMediaContentId = String(e.currentTarget.value || '').trim();
+      this._save();
+    });
     this.shadowRoot.querySelectorAll('[data-action="remove-item"]').forEach((el) => {
       el.onclick = () => this._removeItem(String(el.dataset.itemId || ''));
     });
@@ -441,32 +457,61 @@ class TimerAlarmPanel extends HTMLElement {
     const body = this._tab === 'timer' ? this._renderTimers() : this._renderAlarms();
     const html = `
       <style>
-        :host { display:block; font-family: "Segoe UI", sans-serif; color:#202533; }
+        :host {
+          --ta-bg: var(--card-bg, #ffffff);
+          --ta-bg-soft: var(--card-bg-soft, rgba(255, 255, 255, 0.85));
+          --ta-border: var(--border, #d9e1ef);
+          --ta-text: var(--text, #202533);
+          --ta-muted: var(--muted, #5d697f);
+          --ta-accent: var(--accent-2, #264b7f);
+          display: block;
+          color: var(--ta-text);
+          font-family: "Manrope", "Segoe UI", sans-serif;
+        }
         .panel { display:grid; gap:14px; }
         .toolbar, .tabs, .grid { display:flex; gap:10px; flex-wrap:wrap; }
-        .tabs button { border:0; border-radius:999px; padding:8px 14px; cursor:pointer; background:#e8edf5; }
-        .tabs button.active { background:#264b7f; color:#fff; }
-        .card, .hero, .empty { background:#fff; border:1px solid #d9e1ef; border-radius:14px; padding:14px; }
+        .tabs button { border:0; border-radius:999px; padding:8px 14px; cursor:pointer; background:var(--ta-bg-soft); color: var(--ta-muted); }
+        .tabs button.active { background:var(--ta-accent); color:#fff; }
+        .card, .hero, .empty { background:var(--ta-bg); border:1px solid var(--ta-border); border-radius:14px; padding:14px; }
         .head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
         .title { font-weight:700; font-size:18px; }
-        .meta { color:#5d697f; margin-top:4px; }
+        .meta { color:var(--ta-muted); margin-top:4px; }
         .btn { border:0; border-radius:999px; padding:8px 12px; cursor:pointer; }
-        .btn.ghost { background:#e8edf5; color:#223a61; }
+        .btn.ghost { background:var(--ta-bg-soft); color:var(--ta-accent); }
         .btn.danger { background:#b64a3a; color:#fff; }
         .status { padding:10px 12px; border-radius:10px; }
-        .ok { background:#e8f5ea; color:#275f3d; }
-        .err { background:#faecea; color:#842f23; }
+        .ok { background:rgba(35, 111, 73, 0.12); color:#275f3d; }
+        .err { background:rgba(180, 43, 43, 0.12); color:#842f23; }
+        :host([data-theme="dark"]) .ok { color:#92f0bd; }
+        :host([data-theme="dark"]) .err { color:#ffb0a9; }
         label { display:grid; gap:6px; margin-top:10px; }
-        label span { font-size:12px; text-transform:uppercase; color:#2f4f7d; font-weight:600; }
-        select, input { border:1px solid #cfd9e9; border-radius:10px; padding:8px 10px; }
+        label span { font-size:12px; text-transform:uppercase; color:var(--ta-accent); font-weight:700; letter-spacing:0.08em; }
+        select, input { border:1px solid var(--ta-border); border-radius:10px; padding:10px 12px; background:var(--ta-bg-soft); color: var(--ta-text); }
         .preset-row { display:flex; gap:8px; flex-wrap:wrap; }
         .switch-control { margin-top:0; display:inline-flex; align-items:center; gap:8px; }
         .switch-control input[type="checkbox"] { position:absolute; opacity:0; pointer-events:none; }
         .switch-slider { width:44px; height:24px; background:#ccd7ea; border-radius:999px; position:relative; transition:background .2s ease; }
         .switch-slider::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; background:#fff; border-radius:50%; transition:transform .2s ease; }
-        .switch-control input[type="checkbox"]:checked + .switch-slider { background:#2c5b9b; }
+        .switch-control input[type="checkbox"]:checked + .switch-slider { background:var(--ta-accent); }
         .switch-control input[type="checkbox"]:checked + .switch-slider::after { transform:translateX(20px); }
-        .switch-label { font-size:13px; text-transform:none; color:#1f3457; font-weight:600; }
+        .switch-label { font-size:13px; text-transform:none; color:var(--ta-muted); font-weight:600; }
+        .media-field { min-width: min(100%, 420px); flex: 1 1 340px; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        @media (max-width: 760px) {
+          .head {
+            flex-direction: column;
+          }
+          .actions {
+            width: 100%;
+            justify-content: stretch;
+          }
+          .actions .btn {
+            flex: 1 1 auto;
+          }
+          .toolbar > * {
+            flex: 1 1 100%;
+          }
+        }
       </style>
       <div class="panel">
         <section class="hero">
@@ -474,7 +519,7 @@ class TimerAlarmPanel extends HTMLElement {
             <button type="button" data-tab="timer" class="${this._tab === 'timer' ? 'active' : ''}">Timer</button>
             <button type="button" data-tab="alarm" class="${this._tab === 'alarm' ? 'active' : ''}">Alarm</button>
           </div>
-          <div class="meta" style="margin-top:8px;">Текущее время: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
+          <div class="meta" style="margin-top:8px;">Current time: <span data-now-clock>${esc(this._nowTimeLabel())}</span></div>
           <div class="toolbar" style="margin-top:10px;">
             <select data-action="select-global-device">
               ${this._renderDeviceOptions(this._selectedDevice, 'Device for quick start')}
@@ -482,16 +527,20 @@ class TimerAlarmPanel extends HTMLElement {
             ${QUICK_MINUTES.map((m) => `<button type="button" class="btn ghost" data-action="quick-timer" data-minutes="${m}">+${m}m</button>`).join('')}
             <button type="button" class="btn ghost" data-action="add-alarm">+ alarm</button>
           </div>
+          <label class="media-field">
+            <span>Global music (default for timer/alarm)</span>
+            <input data-action="set-global-media" value="${esc(this._defaultMediaContentId)}" placeholder="media-source://media_source/local/your-song.mp3" />
+          </label>
           ${this._status ? `<div class="status ok" style="margin-top:10px;">${esc(this._status)}</div>` : ''}
           ${this._error ? `<div class="status err" style="margin-top:10px;">${esc(this._error)}</div>` : ''}
           <details style="margin-top:10px;">
             <summary>Debug WS</summary>
-            <div style="margin-top:8px; font-size:12px; color:#40516f;">
+            <div style="margin-top:8px; font-size:12px; color:var(--ta-muted);">
               items: ${Array.isArray(this._debugWsPayload?.items) ? this._debugWsPayload.items.length : 0},
               active_items: ${Array.isArray(this._debugWsPayload?.active_items) ? this._debugWsPayload.active_items.length : 0},
               alarm_presets: ${Array.isArray(this._debugWsPayload?.alarm_presets) ? this._debugWsPayload.alarm_presets.length : 0}
             </div>
-            <pre style="margin-top:8px; max-height:220px; overflow:auto; background:#f7f9fd; border:1px solid #d9e1ef; border-radius:8px; padding:8px;">${esc(JSON.stringify(this._debugWsPayload ?? {}, null, 2))}</pre>
+            <pre style="margin-top:8px; max-height:220px; overflow:auto; background:var(--ta-bg-soft); border:1px solid var(--ta-border); border-radius:8px; padding:8px;">${esc(JSON.stringify(this._debugWsPayload ?? {}, null, 2))}</pre>
           </details>
         </section>
         ${body}

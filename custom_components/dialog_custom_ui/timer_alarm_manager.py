@@ -22,6 +22,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
+    CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
@@ -141,6 +142,14 @@ class DialogTimerAlarmManager:
         device_id = _extract_device_id(payload)
         if not client_id:
             self._append_log("error", "Timer start skipped: client_id is empty")
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
+                    "variable": {"message": "Не удалось установить таймер: отсутствует client_id"},
+                },
+            )
             return
 
         timer_parts = _extract_timer_parts(payload)
@@ -168,6 +177,15 @@ class DialogTimerAlarmManager:
             },
         )
         self._append_log("success", f"Timer started: {timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}")
+        success_message = f"на {_seconds_to_minute_phrase(total_seconds)}"
+        await self._post_save(
+            options,
+            {
+                "actionType": "success",
+                "variables": {"message": success_message},
+                "variable": {"message": success_message},
+            },
+        )
         _LOGGER.warning(
             "Dialog Custom UI timer created from scenario: client_id=%s device_id=%s duration=%s",
             client_id or "<empty>",
@@ -247,6 +265,14 @@ class DialogTimerAlarmManager:
         client_id = _extract_client_id(payload, options)
         device_id = _extract_device_id(payload)
         if not client_id:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
+                    "variable": {"message": "Не удалось установить будильник: отсутствует client_id"},
+                },
+            )
             return
         alarm_time = _extract_alarm_time(payload)
         for existing in self._alarms.values():
@@ -266,6 +292,14 @@ class DialogTimerAlarmManager:
             self._alarm_presets.add(alarm_time)
             self._ensure_alarm_tick_task()
             self._mark_updated()
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                    "variables": {"message": f"на {alarm_time}"},
+                    "variable": {"message": f"на {alarm_time}"},
+                },
+            )
             return
         alarm_id = f"{_ALARM_PREFIX}{client_id}:{uuid.uuid4().hex[:8]}"
         self._alarms[alarm_id] = {
@@ -279,6 +313,14 @@ class DialogTimerAlarmManager:
         self._alarm_presets.add(alarm_time)
         self._ensure_alarm_tick_task()
         self._mark_updated()
+        await self._post_save(
+            options,
+            {
+                "actionType": "success",
+                "variables": {"message": f"на {alarm_time}"},
+                "variable": {"message": f"на {alarm_time}"},
+            },
+        )
 
     async def async_handle_alarm_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
@@ -620,7 +662,11 @@ class DialogTimerAlarmManager:
             await self.hass.services.async_call(
                 "media_player",
                 "play_media",
-                {"media_content_id": _DEFAULT_TIMER_MEDIA_CONTENT_ID, "media_content_type": "music", "enqueue": "replace"},
+                {
+                    "media_content_id": self._default_media_content_id(),
+                    "media_content_type": "music",
+                    "enqueue": "replace",
+                },
                 target={"entity_id": media_player_entity_id},
                 blocking=False,
             )
@@ -679,12 +725,23 @@ class DialogTimerAlarmManager:
         await self.hass.services.async_call(
             "media_player",
             "play_media",
-            {"media_content_id": _DEFAULT_TIMER_MEDIA_CONTENT_ID, "media_content_type": "music", "enqueue": "replace"},
+            {
+                "media_content_id": self._default_media_content_id(),
+                "media_content_type": "music",
+                "enqueue": "replace",
+            },
             target={"entity_id": media_player_entity_id},
             blocking=False,
         )
         alarm["status"] = "off"
         self._mark_updated()
+
+    def _default_media_content_id(self) -> str:
+        entry = _get_entry(self.hass)
+        if entry is None:
+            return _DEFAULT_TIMER_MEDIA_CONTENT_ID
+        configured = _normalize_value(entry.options.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID))
+        return configured or _DEFAULT_TIMER_MEDIA_CONTENT_ID
 
     def _timers_for_client(self, client_id: str) -> list[dict[str, Any]]:
         normalized_client = _normalize_value(client_id)
@@ -913,6 +970,7 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
             "client_id": options[CONF_CLIENT_ID],
             "interval": options[CONF_TIMEOUT],
             "device_ids": options[CONF_TIMER_ALARM_DEVICE_IDS],
+            "default_media_content_id": options[CONF_TIMER_ALARM_MEDIA_CONTENT_ID],
             "items": items,
             "active_items": active_items,
             "alarm_presets": alarm_presets,
@@ -928,7 +986,13 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
     )
 
 
-@websocket_api.websocket_command({vol.Required("type"): WS_SAVE_TIMER_ALARM_CONFIG, vol.Optional(CONF_TIMER_ALARM_ITEMS, default=[]): [dict]})
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_SAVE_TIMER_ALARM_CONFIG,
+        vol.Optional(CONF_TIMER_ALARM_ITEMS, default=[]): [dict],
+        vol.Optional(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, default=_DEFAULT_TIMER_MEDIA_CONTENT_ID): str,
+    }
+)
 @websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
@@ -973,6 +1037,9 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
 
     options[CONF_TIMER_ALARM_ITEMS] = target_manager.serialize_persisted_items()
     options[CONF_TIMER_ALARM_PRESETS] = target_manager.get_alarm_presets()
+    options[CONF_TIMER_ALARM_MEDIA_CONTENT_ID] = (
+        _normalize_value(msg.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID)) or _DEFAULT_TIMER_MEDIA_CONTENT_ID
+    )
     hass.config_entries.async_update_entry(entry, options=options)
     _append_integration_log(
         hass,
@@ -1053,6 +1120,10 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
         CONF_TIMER_ALARM_DEVICE_IDS: _normalize_device_ids(stored.get(CONF_TIMER_ALARM_DEVICE_IDS, [])),
         CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
         CONF_TIMER_ALARM_PRESETS: _normalize_alarm_presets(stored.get(CONF_TIMER_ALARM_PRESETS, [])),
+        CONF_TIMER_ALARM_MEDIA_CONTENT_ID: _normalize_value(
+            stored.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, _DEFAULT_TIMER_MEDIA_CONTENT_ID)
+        )
+        or _DEFAULT_TIMER_MEDIA_CONTENT_ID,
     }
 
 

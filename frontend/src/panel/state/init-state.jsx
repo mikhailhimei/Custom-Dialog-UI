@@ -18,4 +18,12 @@ export const initializePanelState = (ctx, defaultConfig) => {
   ctx._timerAlarmLoadPromise = null;
   ctx._deviceAccordionOpen = true;
   ctx._addScenarioLockUntil = 0;
+  ctx._yandexLoaded = false;
+  ctx._yandexLoading = false;
+  ctx._yandexSaving = false;
+  ctx._yandexScenarios = [];
+  ctx._yandexStatus = '';
+  ctx._yandexError = '';
+  ctx._yandexModalOpen = false;
+  ctx._yandexDraft = null;
 };
