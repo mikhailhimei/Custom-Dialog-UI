@@ -10,7 +10,6 @@ export const bindPanelActions = (ctx, root, on) => {
   on(root.querySelector('[data-action="reset-commands-cache"]'), 'click', () => ctx._resetCommandsCache());
   on(root.querySelector('[data-action="reload-yandex-scenarios"]'), 'click', () => ctx._loadYandexScenarios());
   on(root.querySelector('[data-action="create-yandex-tab"]'), 'click', () => ctx._startYandexScenarioCreate());
-  on(root.querySelector('[data-action="toggle-yandex-editor"]'), 'click', () => ctx._toggleYandexEditorAccordion());
   on(root.querySelector('[data-action="save-yandex-scenario"]'), 'click', () => ctx._saveYandexScenarioFromModal());
   on(root.querySelector('[data-action="delete-yandex-scenario"]'), 'click', () => ctx._deleteActiveYandexScenario());
 

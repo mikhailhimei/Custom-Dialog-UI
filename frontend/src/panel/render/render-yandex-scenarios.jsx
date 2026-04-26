@@ -13,9 +13,11 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
         ${items.length ? items.map((item, index) => {
     const itemId = String(item?.id ?? `${key}_${index}`);
     const itemOpen = openedItemId === itemId;
+    const itemText = String(item?.text ?? '').trim();
+    const itemTitle = itemText || 'text';
     return `
             <details class="yandex-item-accordion" data-yandex-sub-item-accordion="${key}" data-yandex-sub-item-id="${escapeHtml(itemId)}" ${itemOpen ? 'open' : ''}>
-              <summary class="condition-title">text ${index + 1}</summary>
+              <summary class="condition-title">${escapeHtml(itemTitle)}</summary>
               <div class="yandex-sub-item-body">
                 <div class="device-row">
                   <label class="field-grow">
@@ -34,19 +36,19 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
             </details>
           `;
   }).join('') : '<div class="condition-preview">Пусто</div>'}
+        <div class="yandex-sub-add-row">
+          <button
+            type="button"
+            class="secondary yandex-sub-add-button"
+            data-action="add-yandex-sub"
+            data-sub-type="${key}"
+            ${canAdd ? '' : 'disabled'}
+          >
+            Добавить
+          </button>
+        </div>
       </div>
     </details>
-    <div class="yandex-sub-add-row">
-      <button
-        type="button"
-        class="secondary yandex-sub-add-button"
-        data-action="add-yandex-sub"
-        data-sub-type="${key}"
-        ${canAdd ? '' : 'disabled'}
-      >
-        Добавить
-      </button>
-    </div>
   `;
 };
 
@@ -81,18 +83,16 @@ const renderEditor = (ctx) => {
   const title = isNew
     ? 'Новый сценарий'
     : String(ctx._yandexDraft?.mainCommand ?? '').trim() || 'Сценарий';
-  const isOpen = Boolean(ctx._yandexEditorOpen);
 
   return `
     <section class="scenario-card expanded">
-      <button type="button" class="condition-header" data-action="toggle-yandex-editor">
+      <div class="condition-header">
         <div class="condition-heading">
           <span class="condition-title">${isNew ? 'Создание' : 'Редактирование'}</span>
           <span class="scenario-title">${escapeHtml(title)}</span>
         </div>
-        <span class="condition-accordion-icon">${isOpen ? '−' : '+'}</span>
-      </button>
-      <div class="condition-body ${isOpen ? 'open' : 'hidden'}">
+      </div>
+      <div class="condition-body open">
         <div class="condition-grid">
           <label>
             <span>mainCommand *</span>
@@ -123,7 +123,7 @@ export const renderYandexScenarios = (ctx) => {
   return `
     <section class="hero-card">
       <h1>Яндекс сценарии</h1>
-      <p>Источник: <code>homeassistant/yandex_intents.yaml</code>. Выберите сценарий во вкладке и отредактируйте его в аккордеоне ниже.</p>
+      <p>Источник: <code>homeassistant/yandex_intents.yaml</code>. Выберите сценарий во вкладке и отредактируйте его в форме ниже.</p>
       <div class="toolbar">
         <button type="button" class="ghost" data-action="reload-yandex-scenarios" ${ctx._yandexLoading ? 'disabled' : ''}>${ctx._yandexLoading ? 'Обновление...' : 'Обновить'}</button>
       </div>

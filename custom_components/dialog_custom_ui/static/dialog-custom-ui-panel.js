@@ -1276,13 +1276,22 @@ Error generating stack: `+i.message+`
         }
         @media (max-width: 700px) {
           .modal {
+            inset: 0;
+            transform: none;
+            width: 100vw;
+            height: 100vh;
+            max-height: none;
+            border-radius: 0;
+            border: none;
+            padding: 16px;
+          }
+          .modal.modal-item-actions {
             top: auto;
             left: 0;
             right: 0;
             bottom: 0;
-            transform: none;
+            inset: auto 0 0 0;
             width: 100%;
-            max-width: none;
             height: auto;
             max-height: min(88vh, calc(100vh - 12px));
             border-radius: 20px 20px 0 0;
@@ -1339,7 +1348,7 @@ Error generating stack: `+i.message+`
   "value": {"commands": "\u043C\u043E\u0441\u043A\u0432\u0430"},
   "client_id": "...",
   "device_id": "..."
-}`,rf=2e3,Ml=new URL(import.meta.url).searchParams.get("v")||"",tf=["localhost","127.0.0.1"].includes(globalThis.location?.hostname??""),xl=Ml?tf?`/src/dialog-custom-ui-timer-alarm.jsx?v=${encodeURIComponent(Ml)}`:`/dialog_custom_ui_static/dialog-custom-ui-timer-alarm.js?v=${encodeURIComponent(Ml)}`:tf?"/src/dialog-custom-ui-timer-alarm.jsx":"/dialog_custom_ui_static/dialog-custom-ui-timer-alarm.js";var af=e=>(t,n,r)=>{t&&t.addEventListener(n,r)};var of=(e,t,n)=>{t.querySelectorAll("[data-tab]").forEach(i=>{n(i,"click",()=>e._setActiveTab(i.dataset.tab))}),n(t.querySelector('[data-action="save"]'),"click",()=>e._save()),n(t.querySelector('[data-action="refresh-logs"]'),"click",()=>e._loadLogs()),n(t.querySelector('[data-action="download-json"]'),"click",()=>e._downloadJson()),n(t.querySelector('[data-action="upload-json"]'),"click",()=>e._openJsonFilePicker()),n(t.querySelector('[data-action="reset-commands-cache"]'),"click",()=>e._resetCommandsCache()),n(t.querySelector('[data-action="reload-yandex-scenarios"]'),"click",()=>e._loadYandexScenarios()),n(t.querySelector('[data-action="create-yandex-tab"]'),"click",()=>e._startYandexScenarioCreate()),n(t.querySelector('[data-action="toggle-yandex-editor"]'),"click",()=>e._toggleYandexEditorAccordion()),n(t.querySelector('[data-action="save-yandex-scenario"]'),"click",()=>e._saveYandexScenarioFromModal()),n(t.querySelector('[data-action="delete-yandex-scenario"]'),"click",()=>e._deleteActiveYandexScenario());let r=t.querySelector('[data-action="add-scenario"]');r&&(r.onclick=()=>e._addScenario()),t.querySelectorAll('[data-action="select-yandex-tab"]').forEach(i=>{n(i,"click",()=>e._setYandexActiveScenario(i.dataset.yandexTab))}),n(t.querySelector('[data-action="select-yandex-tab-dropdown"]'),"change",i=>{e._setYandexActiveScenario(i.currentTarget.value)}),t.querySelectorAll('[data-action="add-yandex-sub"]').forEach(i=>{n(i,"click",()=>e._addYandexDraftSubItem(i.dataset.subType))}),t.querySelectorAll('[data-action="remove-yandex-sub"]').forEach(i=>{n(i,"click",()=>e._removeYandexDraftSubItem(i.dataset.subType,Number(i.dataset.subIndex)))}),t.querySelectorAll("[data-yandex-sub-accordion]").forEach(i=>{n(i,"toggle",()=>e._setYandexSubEditorOpen(i.dataset.yandexSubAccordion,i.open))}),t.querySelectorAll("[data-yandex-sub-item-accordion]").forEach(i=>{n(i,"toggle",()=>{let o=i.dataset.yandexSubItemAccordion,l=i.dataset.yandexSubItemId;e._setYandexSubItemOpen(o,i.open?l:"")})}),n(t.querySelector('[data-action="import-json-input"]'),"change",i=>{let[o]=i.currentTarget.files||[];e._importJsonFile(o)}),t.querySelectorAll('[data-action="add-condition"]').forEach(i=>{n(i,"click",()=>e._addCondition(i.dataset.scenarioId))}),t.querySelectorAll('[data-action="enable-condition-children-type"]').forEach(i=>{n(i,"click",()=>e._enableConditionChildrenType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll('[data-action="disable-condition-children-type"]').forEach(i=>{n(i,"click",()=>e._disableConditionChildrenType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll('[data-action="enable-condition-children-direct-type"]').forEach(i=>{n(i,"click",()=>e._enableConditionChildrenDirectType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll('[data-action="disable-condition-children-direct-type"]').forEach(i=>{n(i,"click",()=>e._disableConditionChildrenDirectType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll("[data-toggle-scenario]").forEach(i=>{n(i,"click",()=>e._toggleScenario(i.dataset.toggleScenario))}),t.querySelectorAll("[data-toggle-condition]").forEach(i=>{n(i,"click",()=>e._toggleCondition(i.dataset.toggleCondition))}),t.querySelectorAll("[data-remove-id]").forEach(i=>{n(i,"click",()=>e._removeScenario(i.dataset.removeId))}),t.querySelectorAll("[data-remove-condition-id]").forEach(i=>{n(i,"click",()=>e._removeCondition(i.dataset.scenarioId,i.dataset.removeConditionId))}),t.querySelectorAll('[data-action="scenarios-page"]').forEach(i=>{n(i,"click",()=>e._setScenariosPage(i.dataset.page))}),t.querySelectorAll('[data-action="scenarios-page-nav"]').forEach(i=>{n(i,"click",()=>{let o=i.dataset.direction==="prev"?-1:1;e._setScenariosPage((Number(e._scenariosPage)||1)+o)})});let a=t.querySelector("dialog-custom-ui-create-scenario");a&&(a.hass=e._hass,a.config={base_url:e._config.base_url,timer_alarm_token:e._config.timer_alarm_token,theme:e._config.theme})};var lf=(e,t,n)=>{t.querySelectorAll("input, select, textarea").forEach(r=>{["click","focusin"].forEach(a=>{n(r,a,i=>e._swallowUiEvent(i))})}),t.querySelectorAll("[data-config-field]").forEach(r=>{let a=i=>r.dataset.configField==="theme"?i.currentTarget.checked?"dark":"light":r.dataset.configBool==="true"?i.currentTarget.checked:i.currentTarget.value;n(r,"input",i=>{e._updateConfigField(i.currentTarget.dataset.configField,a(i),!1)}),n(r,"change",i=>{e._updateConfigField(i.currentTarget.dataset.configField,a(i),!0)})}),t.querySelectorAll("[data-scenario-id][data-scenario-field]").forEach(r=>{let a=r.dataset.scenarioField,i=r.dataset.scenarioId;r.tagName==="SELECT"?n(r,"change",o=>{e._updateScenario(i,a,o.currentTarget.value,!0)}):(n(r,"input",o=>{e._updateScenario(i,a,o.currentTarget.value,!1)}),n(r,"change",o=>{e._updateScenario(i,a,o.currentTarget.value,!0)}))}),t.querySelectorAll("[data-scenario-id][data-condition-id][data-condition-field]").forEach(r=>{let a=r.dataset.scenarioId,i=r.dataset.conditionId,o=r.dataset.conditionField;n(r,"input",l=>{e._updateCondition(a,i,o,l.currentTarget.value,!1)}),n(r,"change",l=>{e._updateCondition(a,i,o,l.currentTarget.value,!0)})}),t.querySelectorAll("[data-yandex-field]").forEach(r=>{n(r,"input",a=>{e._updateYandexDraftField(a.currentTarget.dataset.yandexField,a.currentTarget.value,!1)}),n(r,"change",a=>{e._updateYandexDraftField(a.currentTarget.dataset.yandexField,a.currentTarget.value,!0)})}),t.querySelectorAll("[data-yandex-sub-field][data-yandex-sub-type][data-yandex-sub-index]").forEach(r=>{n(r,"input",a=>{e._updateYandexDraftSubItem(a.currentTarget.dataset.yandexSubType,Number(a.currentTarget.dataset.yandexSubIndex),a.currentTarget.dataset.yandexSubField,a.currentTarget.value,!1)}),n(r,"change",a=>{e._updateYandexDraftSubItem(a.currentTarget.dataset.yandexSubType,Number(a.currentTarget.dataset.yandexSubIndex),a.currentTarget.dataset.yandexSubField,a.currentTarget.value,!0)})})};var Ka=()=>`
+}`,rf=2e3,Ml=new URL(import.meta.url).searchParams.get("v")||"",tf=["localhost","127.0.0.1"].includes(globalThis.location?.hostname??""),xl=Ml?tf?`/src/dialog-custom-ui-timer-alarm.jsx?v=${encodeURIComponent(Ml)}`:`/dialog_custom_ui_static/dialog-custom-ui-timer-alarm.js?v=${encodeURIComponent(Ml)}`:tf?"/src/dialog-custom-ui-timer-alarm.jsx":"/dialog_custom_ui_static/dialog-custom-ui-timer-alarm.js";var af=e=>(t,n,r)=>{t&&t.addEventListener(n,r)};var of=(e,t,n)=>{t.querySelectorAll("[data-tab]").forEach(i=>{n(i,"click",()=>e._setActiveTab(i.dataset.tab))}),n(t.querySelector('[data-action="save"]'),"click",()=>e._save()),n(t.querySelector('[data-action="refresh-logs"]'),"click",()=>e._loadLogs()),n(t.querySelector('[data-action="download-json"]'),"click",()=>e._downloadJson()),n(t.querySelector('[data-action="upload-json"]'),"click",()=>e._openJsonFilePicker()),n(t.querySelector('[data-action="reset-commands-cache"]'),"click",()=>e._resetCommandsCache()),n(t.querySelector('[data-action="reload-yandex-scenarios"]'),"click",()=>e._loadYandexScenarios()),n(t.querySelector('[data-action="create-yandex-tab"]'),"click",()=>e._startYandexScenarioCreate()),n(t.querySelector('[data-action="save-yandex-scenario"]'),"click",()=>e._saveYandexScenarioFromModal()),n(t.querySelector('[data-action="delete-yandex-scenario"]'),"click",()=>e._deleteActiveYandexScenario());let r=t.querySelector('[data-action="add-scenario"]');r&&(r.onclick=()=>e._addScenario()),t.querySelectorAll('[data-action="select-yandex-tab"]').forEach(i=>{n(i,"click",()=>e._setYandexActiveScenario(i.dataset.yandexTab))}),n(t.querySelector('[data-action="select-yandex-tab-dropdown"]'),"change",i=>{e._setYandexActiveScenario(i.currentTarget.value)}),t.querySelectorAll('[data-action="add-yandex-sub"]').forEach(i=>{n(i,"click",()=>e._addYandexDraftSubItem(i.dataset.subType))}),t.querySelectorAll('[data-action="remove-yandex-sub"]').forEach(i=>{n(i,"click",()=>e._removeYandexDraftSubItem(i.dataset.subType,Number(i.dataset.subIndex)))}),t.querySelectorAll("[data-yandex-sub-accordion]").forEach(i=>{n(i,"toggle",()=>e._setYandexSubEditorOpen(i.dataset.yandexSubAccordion,i.open))}),t.querySelectorAll("[data-yandex-sub-item-accordion]").forEach(i=>{n(i,"toggle",()=>{let o=i.dataset.yandexSubItemAccordion,l=i.dataset.yandexSubItemId;e._setYandexSubItemOpen(o,i.open?l:"")})}),n(t.querySelector('[data-action="import-json-input"]'),"change",i=>{let[o]=i.currentTarget.files||[];e._importJsonFile(o)}),t.querySelectorAll('[data-action="add-condition"]').forEach(i=>{n(i,"click",()=>e._addCondition(i.dataset.scenarioId))}),t.querySelectorAll('[data-action="enable-condition-children-type"]').forEach(i=>{n(i,"click",()=>e._enableConditionChildrenType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll('[data-action="disable-condition-children-type"]').forEach(i=>{n(i,"click",()=>e._disableConditionChildrenType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll('[data-action="enable-condition-children-direct-type"]').forEach(i=>{n(i,"click",()=>e._enableConditionChildrenDirectType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll('[data-action="disable-condition-children-direct-type"]').forEach(i=>{n(i,"click",()=>e._disableConditionChildrenDirectType(i.dataset.scenarioId,i.dataset.conditionId))}),t.querySelectorAll("[data-toggle-scenario]").forEach(i=>{n(i,"click",()=>e._toggleScenario(i.dataset.toggleScenario))}),t.querySelectorAll("[data-toggle-condition]").forEach(i=>{n(i,"click",()=>e._toggleCondition(i.dataset.toggleCondition))}),t.querySelectorAll("[data-remove-id]").forEach(i=>{n(i,"click",()=>e._removeScenario(i.dataset.removeId))}),t.querySelectorAll("[data-remove-condition-id]").forEach(i=>{n(i,"click",()=>e._removeCondition(i.dataset.scenarioId,i.dataset.removeConditionId))}),t.querySelectorAll('[data-action="scenarios-page"]').forEach(i=>{n(i,"click",()=>e._setScenariosPage(i.dataset.page))}),t.querySelectorAll('[data-action="scenarios-page-nav"]').forEach(i=>{n(i,"click",()=>{let o=i.dataset.direction==="prev"?-1:1;e._setScenariosPage((Number(e._scenariosPage)||1)+o)})});let a=t.querySelector("dialog-custom-ui-create-scenario");a&&(a.hass=e._hass,a.config={base_url:e._config.base_url,timer_alarm_token:e._config.timer_alarm_token,theme:e._config.theme})};var lf=(e,t,n)=>{t.querySelectorAll("input, select, textarea").forEach(r=>{["click","focusin"].forEach(a=>{n(r,a,i=>e._swallowUiEvent(i))})}),t.querySelectorAll("[data-config-field]").forEach(r=>{let a=i=>r.dataset.configField==="theme"?i.currentTarget.checked?"dark":"light":r.dataset.configBool==="true"?i.currentTarget.checked:i.currentTarget.value;n(r,"input",i=>{e._updateConfigField(i.currentTarget.dataset.configField,a(i),!1)}),n(r,"change",i=>{e._updateConfigField(i.currentTarget.dataset.configField,a(i),!0)})}),t.querySelectorAll("[data-scenario-id][data-scenario-field]").forEach(r=>{let a=r.dataset.scenarioField,i=r.dataset.scenarioId;r.tagName==="SELECT"?n(r,"change",o=>{e._updateScenario(i,a,o.currentTarget.value,!0)}):(n(r,"input",o=>{e._updateScenario(i,a,o.currentTarget.value,!1)}),n(r,"change",o=>{e._updateScenario(i,a,o.currentTarget.value,!0)}))}),t.querySelectorAll("[data-scenario-id][data-condition-id][data-condition-field]").forEach(r=>{let a=r.dataset.scenarioId,i=r.dataset.conditionId,o=r.dataset.conditionField;n(r,"input",l=>{e._updateCondition(a,i,o,l.currentTarget.value,!1)}),n(r,"change",l=>{e._updateCondition(a,i,o,l.currentTarget.value,!0)})}),t.querySelectorAll("[data-yandex-field]").forEach(r=>{n(r,"input",a=>{e._updateYandexDraftField(a.currentTarget.dataset.yandexField,a.currentTarget.value,!1)}),n(r,"change",a=>{e._updateYandexDraftField(a.currentTarget.dataset.yandexField,a.currentTarget.value,!0)})}),t.querySelectorAll("[data-yandex-sub-field][data-yandex-sub-type][data-yandex-sub-index]").forEach(r=>{n(r,"input",a=>{e._updateYandexDraftSubItem(a.currentTarget.dataset.yandexSubType,Number(a.currentTarget.dataset.yandexSubIndex),a.currentTarget.dataset.yandexSubField,a.currentTarget.value,!1)}),n(r,"change",a=>{e._updateYandexDraftSubItem(a.currentTarget.dataset.yandexSubType,Number(a.currentTarget.dataset.yandexSubIndex),a.currentTarget.dataset.yandexSubField,a.currentTarget.value,!0)})})};var Ka=()=>`
     <dialog-custom-ui-create-scenario></dialog-custom-ui-create-scenario>
   `;var T=e=>String(e??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"),oh=()=>globalThis.crypto?.randomUUID?globalThis.crypto.randomUUID():`scenario_${Date.now()}_${Math.random().toString(16).slice(2,10)}`,Pl=()=>globalThis.crypto?.randomUUID?globalThis.crypto.randomUUID():`condition_${Date.now()}_${Math.random().toString(16).slice(2,10)}`,yn=()=>({id:Pl(),parent_type:"",children_type:"",children_type_enabled:!1,children_direct_type:"",children_direct_type_enabled:!1}),sf=()=>({id:oh(),name:"",script_entity_id:"",conditions:[yn()]});var Qa=e=>{let t=e._buildConfigPayload();return`
       <section class="hero-card">
@@ -1641,9 +1650,9 @@ Error generating stack: `+i.message+`
     <details class="condition-card" data-yandex-sub-accordion="${a}" ${l?"open":""}>
       <summary class="condition-title">${n}</summary>
       <div class="condition-body yandex-sub-body">
-        ${i.length?i.map((d,m)=>{let p=String(d?.id??`${a}_${m}`),g=s===p;return`
+        ${i.length?i.map((d,m)=>{let p=String(d?.id??`${a}_${m}`),g=s===p,b=String(d?.text??"").trim()||"text";return`
             <details class="yandex-item-accordion" data-yandex-sub-item-accordion="${a}" data-yandex-sub-item-id="${T(p)}" ${g?"open":""}>
-              <summary class="condition-title">text ${m+1}</summary>
+              <summary class="condition-title">${T(b)}</summary>
               <div class="yandex-sub-item-body">
                 <div class="device-row">
                   <label class="field-grow">
@@ -1661,19 +1670,19 @@ Error generating stack: `+i.message+`
               </div>
             </details>
           `}).join(""):'<div class="condition-preview">\u041F\u0443\u0441\u0442\u043E</div>'}
+        <div class="yandex-sub-add-row">
+          <button
+            type="button"
+            class="secondary yandex-sub-add-button"
+            data-action="add-yandex-sub"
+            data-sub-type="${a}"
+            ${o?"":"disabled"}
+          >
+            \u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C
+          </button>
+        </div>
       </div>
     </details>
-    <div class="yandex-sub-add-row">
-      <button
-        type="button"
-        class="secondary yandex-sub-add-button"
-        data-action="add-yandex-sub"
-        data-sub-type="${a}"
-        ${o?"":"disabled"}
-      >
-        \u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C
-      </button>
-    </div>
   `},lh=(e,t)=>{let n=String(e._yandexActiveScenarioKey??"").trim();return`
     <section class="hero-card">
       ${`
@@ -1689,16 +1698,15 @@ Error generating stack: `+i.message+`
     </div>
   `}
     </section>
-  `},sh=e=>{let t=String(e._yandexActiveScenarioKey??"")==="__new__",n=t?"\u041D\u043E\u0432\u044B\u0439 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439":String(e._yandexDraft?.mainCommand??"").trim()||"\u0421\u0446\u0435\u043D\u0430\u0440\u0438\u0439",r=!!e._yandexEditorOpen;return`
+  `},sh=e=>{let t=String(e._yandexActiveScenarioKey??"")==="__new__",n=t?"\u041D\u043E\u0432\u044B\u0439 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439":String(e._yandexDraft?.mainCommand??"").trim()||"\u0421\u0446\u0435\u043D\u0430\u0440\u0438\u0439";return`
     <section class="scenario-card expanded">
-      <button type="button" class="condition-header" data-action="toggle-yandex-editor">
+      <div class="condition-header">
         <div class="condition-heading">
           <span class="condition-title">${t?"\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435":"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435"}</span>
           <span class="scenario-title">${T(n)}</span>
         </div>
-        <span class="condition-accordion-icon">${r?"\u2212":"+"}</span>
-      </button>
-      <div class="condition-body ${r?"open":"hidden"}">
+      </div>
+      <div class="condition-body open">
         <div class="condition-grid">
           <label>
             <span>mainCommand *</span>
@@ -1724,7 +1732,7 @@ Error generating stack: `+i.message+`
   `},ei=e=>{let t=Array.isArray(e._yandexScenarios)?e._yandexScenarios:[];return`
     <section class="hero-card">
       <h1>\u042F\u043D\u0434\u0435\u043A\u0441 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0438</h1>
-      <p>\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A: <code>homeassistant/yandex_intents.yaml</code>. \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u0432\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u0438 \u043E\u0442\u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u0443\u0439\u0442\u0435 \u0435\u0433\u043E \u0432 \u0430\u043A\u043A\u043E\u0440\u0434\u0435\u043E\u043D\u0435 \u043D\u0438\u0436\u0435.</p>
+      <p>\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A: <code>homeassistant/yandex_intents.yaml</code>. \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u0432\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u0438 \u043E\u0442\u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u0443\u0439\u0442\u0435 \u0435\u0433\u043E \u0432 \u0444\u043E\u0440\u043C\u0435 \u043D\u0438\u0436\u0435.</p>
       <div class="toolbar">
         <button type="button" class="ghost" data-action="reload-yandex-scenarios" ${e._yandexLoading?"disabled":""}>${e._yandexLoading?"\u041E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435...":"\u041E\u0431\u043D\u043E\u0432\u0438\u0442\u044C"}</button>
       </div>
@@ -2334,7 +2342,8 @@ Error generating stack: `+i.message+`
           outline: none;
           border-color: rgba(35, 79, 125, 0.52);
           box-shadow: 0 0 0 3px var(--ring);
-          background: #fff;
+          background: var(--card-bg-soft);
+          color: var(--text);
         }
         code, pre, small, .log-message, .scenario-title {
           overflow-wrap: anywhere;

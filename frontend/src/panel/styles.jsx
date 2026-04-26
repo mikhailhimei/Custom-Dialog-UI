@@ -599,7 +599,8 @@ export const PANEL_STYLES = `
           outline: none;
           border-color: rgba(35, 79, 125, 0.52);
           box-shadow: 0 0 0 3px var(--ring);
-          background: #fff;
+          background: var(--card-bg-soft);
+          color: var(--text);
         }
         code, pre, small, .log-message, .scenario-title {
           overflow-wrap: anywhere;

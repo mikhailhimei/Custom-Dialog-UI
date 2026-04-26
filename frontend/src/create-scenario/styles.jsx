@@ -565,13 +565,22 @@ export const CREATE_SCENARIO_STYLES = `
         }
         @media (max-width: 700px) {
           .modal {
+            inset: 0;
+            transform: none;
+            width: 100vw;
+            height: 100vh;
+            max-height: none;
+            border-radius: 0;
+            border: none;
+            padding: 16px;
+          }
+          .modal.modal-item-actions {
             top: auto;
             left: 0;
             right: 0;
             bottom: 0;
-            transform: none;
+            inset: auto 0 0 0;
             width: 100%;
-            max-width: none;
             height: auto;
             max-height: min(88vh, calc(100vh - 12px));
             border-radius: 20px 20px 0 0;
