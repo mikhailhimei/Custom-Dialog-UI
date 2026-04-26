@@ -369,9 +369,13 @@ def _write_yandex_scenarios(hass: HomeAssistant, scenarios: list[dict[str, Any]]
 
 
 def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
+    config_path = Path(hass.config.path("yandex_intents.yaml"))
+    # Prefer the active HA config path to avoid writing to a stale legacy location.
+    if config_path.exists():
+        return config_path
     if _YANDEX_INTENTS_PATH.exists():
         return _YANDEX_INTENTS_PATH
-    return Path(hass.config.path("yandex_intents.yaml"))
+    return config_path
 
 
 def _normalize_sub_items(value: Any) -> list[str]:
