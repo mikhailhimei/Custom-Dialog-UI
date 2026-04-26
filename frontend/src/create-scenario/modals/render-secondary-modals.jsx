@@ -320,16 +320,15 @@ export const renderItemActionsModal = (ctx) => {
     <section class="modal modal-compact modal-item-actions" role="dialog" aria-modal="true" aria-label="Действия сценария">
       <div class="modal-header">
         <h3>${escapeHtml(targetTitle)}</h3>
-        <button type="button" class="ghost compact-button" data-action="close-item-actions" ${ctx._itemActionsSaving ? 'disabled' : ''}>Закрыть</button>
+        <button type="button" class="ghost item-actions-close" aria-label="Закрыть" title="Закрыть" data-action="close-item-actions" ${ctx._itemActionsSaving ? 'disabled' : ''}>×</button>
       </div>
       <div class="item-actions-body">
         <p class="item-actions-status">${statusLabel}</p>
-        <div class="item-actions-controls">
-          <button type="button" class="secondary" data-action="apply-item-status" ${ctx._itemActionsSaving ? 'disabled' : ''}>
-            ${ctx._itemActionsSaving ? 'Сохранение...' : actionLabel}
-          </button>
-          <button type="button" class="ghost" data-action="close-item-actions" ${ctx._itemActionsSaving ? 'disabled' : ''}>Отмена</button>
-        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="secondary" data-action="apply-item-status" ${ctx._itemActionsSaving ? 'disabled' : ''}>
+          ${ctx._itemActionsSaving ? 'Сохранение...' : actionLabel}
+        </button>
       </div>
     </section>
   `;

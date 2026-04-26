@@ -498,22 +498,30 @@ export const CREATE_SCENARIO_STYLES = `
         .modal-item-actions {
           gap: 10px;
         }
+        .item-actions-close {
+          width: 36px;
+          height: 36px;
+          padding: 0;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 22px;
+          line-height: 1;
+          font-weight: 600;
+        }
         .item-actions-body {
           display: grid;
           gap: 12px;
         }
         .item-actions-status {
           margin: 0;
-          padding: 10px 12px;
-          border-radius: 12px;
+          padding: 12px 14px;
+          border-radius: 14px;
           border: 1px solid var(--ui-border);
-          background: var(--ui-card-bg-soft);
+          background: linear-gradient(160deg, var(--ui-card-bg-soft), rgba(79, 134, 216, 0.08));
           color: var(--ui-text);
-        }
-        .item-actions-controls {
-          display: grid;
-          gap: 8px;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          font-weight: 600;
         }
         @keyframes rise-in {
           from {
@@ -550,14 +558,14 @@ export const CREATE_SCENARIO_STYLES = `
           .array-builder-footer .compact-button {
             width: 100%;
           }
-          .item-actions-controls {
-            grid-template-columns: 1fr;
-          }
           .modal-item-actions .modal-header {
-            flex-direction: column;
-            align-items: stretch;
+            flex-direction: row;
+            align-items: center;
           }
           .modal-item-actions .modal-header button {
+            width: auto;
+          }
+          .modal-item-actions .modal-footer button {
             width: 100%;
           }
         }

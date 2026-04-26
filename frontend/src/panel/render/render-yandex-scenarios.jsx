@@ -5,7 +5,7 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
   const items = Array.isArray(ctx._yandexDraft?.[key]) ? ctx._yandexDraft[key] : [];
   const canAdd = items.length < maxCount;
   return `
-    <details class="condition-card" open>
+    <details class="condition-card">
       <summary class="condition-title">${title}</summary>
       <div class="condition-body open">
         ${items.length ? items.map((item, index) => `
@@ -39,22 +39,7 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
 
 const renderScenarioTabs = (ctx, scenarios) => {
   const active = String(ctx._yandexActiveScenarioKey ?? '').trim();
-  const compactMode = scenarios.length > 8;
-  const rows = scenarios.map((scenario, index) => {
-    const key = String(scenario.mainCommand ?? '').trim();
-    return `
-      <button
-        type="button"
-        class="subtab-button ${active === key ? 'active' : ''}"
-        data-action="select-yandex-tab"
-        data-yandex-tab="${escapeHtml(key)}"
-      >
-        ${escapeHtml(scenario.mainCommand || `Сценарий ${index + 1}`)}
-      </button>
-    `;
-  }).join('');
-
-  const dropdown = compactMode ? `
+  const dropdown = `
     <div class="yandex-tabs-toolbar">
       <label class="yandex-scenario-select">
         <span>Сценарий</span>
@@ -64,20 +49,16 @@ const renderScenarioTabs = (ctx, scenarios) => {
     const label = scenario.mainCommand || `Сценарий ${index + 1}`;
     return `<option value="${escapeHtml(key)}" ${active === key ? 'selected' : ''}>${escapeHtml(label)}</option>`;
   }).join('')}
-          <option value="__new__" ${active === '__new__' ? 'selected' : ''}>+ Новый</option>
+          <option value="__new__" ${active === '__new__' ? 'selected' : ''}>Новый сценарий</option>
         </select>
       </label>
       <button type="button" class="subtab-button" data-action="create-yandex-tab" data-yandex-tab="__new__">+ Новый</button>
     </div>
-  ` : '';
+  `;
 
   return `
     <section class="hero-card">
       ${dropdown}
-      <div class="subtabs ${compactMode ? 'yandex-subtabs-scroll' : ''}">
-        ${rows}
-        <button type="button" class="subtab-button ${active === '__new__' ? 'active' : ''}" data-action="create-yandex-tab" data-yandex-tab="__new__">+ Новый</button>
-      </div>
     </section>
   `;
 };

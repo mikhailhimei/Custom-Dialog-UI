@@ -12,10 +12,13 @@ export const escapeHtml = (value) => String(value ?? '')
   .replaceAll("'", '&#39;');
 
 export const createUuid = () => {
+  const now = Date.now();
+  const firstFiveDigits = String(now).slice(-5);
   if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
+    const entropy = globalThis.crypto.randomUUID().replaceAll('-', '').slice(0, 8);
+    return `${firstFiveDigits}_${now}_${entropy}`;
   }
-  return `uuid_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+  return `${firstFiveDigits}_${now}_${Math.random().toString(16).slice(2, 10)}`;
 };
 
 export const createVoiceResponseItem = (item = {}) => {

@@ -286,13 +286,13 @@ class DialogCustomUiPanel extends HTMLElement {
     if (!scenarios.length) {
       this._yandexActiveScenarioKey = '__new__';
       this._yandexDraft = this._newYandexDraft();
-      this._yandexEditorOpen = true;
+      this._yandexEditorOpen = false;
       return;
     }
     const active = this._findYandexScenarioByKey(normalizedKey) || scenarios[0];
     this._yandexActiveScenarioKey = this._yandexScenarioKey(active);
     this._yandexDraft = this._cloneYandexDraft(active);
-    this._yandexEditorOpen = true;
+    this._yandexEditorOpen = false;
   }
 
   async _loadYandexScenarios() {
@@ -325,7 +325,7 @@ class DialogCustomUiPanel extends HTMLElement {
   _startYandexScenarioCreate() {
     this._yandexDraft = this._newYandexDraft();
     this._yandexActiveScenarioKey = '__new__';
-    this._yandexEditorOpen = true;
+    this._yandexEditorOpen = false;
     this._yandexStatus = '';
     this._yandexError = '';
     this._render();
@@ -346,7 +346,7 @@ class DialogCustomUiPanel extends HTMLElement {
     }
     this._yandexActiveScenarioKey = normalizedKey;
     this._yandexDraft = this._cloneYandexDraft(scenario);
-    this._yandexEditorOpen = true;
+    this._yandexEditorOpen = false;
     this._yandexError = '';
     this._render();
   }

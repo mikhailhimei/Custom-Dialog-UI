@@ -25,6 +25,6 @@ export const initializePanelState = (ctx, defaultConfig) => {
   ctx._yandexStatus = '';
   ctx._yandexError = '';
   ctx._yandexActiveScenarioKey = '';
-  ctx._yandexEditorOpen = true;
+  ctx._yandexEditorOpen = false;
   ctx._yandexDraft = {};
 };

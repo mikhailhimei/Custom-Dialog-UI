@@ -839,6 +839,20 @@ export const PANEL_STYLES = `
           .condition-header {
             align-items: flex-start;
           }
+          .scenario-header {
+            flex-wrap: nowrap;
+            gap: 8px;
+          }
+          .scenario-header .scenario-toggle {
+            flex: 1 1 auto;
+            min-width: 0;
+          }
+          .scenario-header [data-remove-id] {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 8px 10px;
+            font-size: 12px;
+          }
           .scenario-toggle > span:last-child {
             min-width: 0;
             display: block;
