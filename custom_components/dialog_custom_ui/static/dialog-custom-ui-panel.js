@@ -2122,6 +2122,9 @@ Error generating stack: `+a.message+`
           display: grid;
           gap: 12px;
         }
+        details.condition-card:not([open]) > .condition-body {
+          display: none !important;
+        }
         .condition-title,
         .section-label {
           font-size: 13px;

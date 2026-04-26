@@ -499,8 +499,9 @@ class TimerAlarmPanel extends HTMLElement {
           display: block;
           color: var(--ta-text);
           font-family: "Manrope", "Segoe UI", sans-serif;
+          overflow-x: hidden;
         }
-        .panel { display:grid; gap:14px; }
+        .panel { display:grid; gap:14px; max-width: 100%; overflow-x: hidden; }
         .toolbar, .tabs { display:flex; gap:10px; flex-wrap:wrap; }
         .tabs {
           overflow-x: auto;
@@ -528,8 +529,9 @@ class TimerAlarmPanel extends HTMLElement {
         }
         .card, .hero, .empty { background:var(--ta-bg); border:1px solid var(--ta-border); border-radius:14px; padding:14px; }
         .head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+        .head > * { min-width: 0; }
         .title { font-weight:700; font-size:18px; }
-        .meta { color:var(--ta-muted); margin-top:4px; }
+        .meta { color:var(--ta-muted); margin-top:4px; overflow-wrap: anywhere; word-break: break-word; }
         .btn { border:0; border-radius:999px; padding:8px 12px; cursor:pointer; }
         .btn.ghost { background:var(--ta-bg-soft); color:var(--ta-accent); }
         .btn.danger { background:#b64a3a; color:#fff; }
@@ -575,7 +577,17 @@ class TimerAlarmPanel extends HTMLElement {
         .quick-btn { min-width: 74px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
         .head > .btn.danger { align-self: flex-start; }
+        .toolbar > * { min-width: 0; }
         @media (max-width: 760px) {
+          .hero,
+          .card,
+          .empty,
+          .toolbar,
+          .quick-actions-row,
+          .media-field {
+            width: 100%;
+            max-width: 100%;
+          }
           .head {
             flex-direction: column;
           }
@@ -594,7 +606,7 @@ class TimerAlarmPanel extends HTMLElement {
           }
           .quick-actions-row {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: 1fr;
             width: 100%;
           }
           .quick-actions-row .quick-btn {
