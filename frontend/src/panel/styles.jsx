@@ -450,6 +450,13 @@ export const PANEL_STYLES = `
           display: grid;
           gap: 12px;
         }
+        .yandex-sub-body {
+          display: none;
+          gap: 12px;
+        }
+        details.condition-card[open] > .yandex-sub-body {
+          display: grid;
+        }
         details.condition-card:not([open]) > .condition-body {
           display: none !important;
         }

@@ -501,6 +501,10 @@ class TimerAlarmPanel extends HTMLElement {
           font-family: "Manrope", "Segoe UI", sans-serif;
           overflow-x: hidden;
         }
+        * {
+          box-sizing: border-box;
+          min-width: 0;
+        }
         .panel { display:grid; gap:14px; max-width: 100%; overflow-x: hidden; }
         .toolbar, .tabs { display:flex; gap:10px; flex-wrap:wrap; }
         .tabs {
@@ -532,7 +536,16 @@ class TimerAlarmPanel extends HTMLElement {
         .head > * { min-width: 0; }
         .title { font-weight:700; font-size:18px; }
         .meta { color:var(--ta-muted); margin-top:4px; overflow-wrap: anywhere; word-break: break-word; }
-        .btn { border:0; border-radius:999px; padding:8px 12px; cursor:pointer; }
+        .btn {
+          border:0;
+          border-radius:999px;
+          padding:8px 12px;
+          cursor:pointer;
+          max-width: 100%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
         .btn.ghost { background:var(--ta-bg-soft); color:var(--ta-accent); }
         .btn.danger { background:#b64a3a; color:#fff; }
         .status { padding:10px 12px; border-radius:10px; }
@@ -542,7 +555,14 @@ class TimerAlarmPanel extends HTMLElement {
         :host([data-theme="dark"]) .err { color:#ffb0a9; }
         label { display:grid; gap:6px; margin-top:10px; }
         label span { font-size:12px; text-transform:uppercase; color:var(--ta-accent); font-weight:700; letter-spacing:0.08em; }
-        select, input { border:1px solid var(--ta-border); border-radius:10px; padding:10px 12px; background:var(--ta-bg-soft); color: var(--ta-text); }
+        select, input {
+          border:1px solid var(--ta-border);
+          border-radius:10px;
+          padding:10px 12px;
+          background:var(--ta-bg-soft);
+          color: var(--ta-text);
+          max-width: 100%;
+        }
         .preset-row {
           display:flex;
           gap:8px;

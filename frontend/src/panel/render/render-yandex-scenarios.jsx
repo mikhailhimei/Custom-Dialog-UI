@@ -7,7 +7,7 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
   return `
     <details class="condition-card">
       <summary class="condition-title">${title}</summary>
-      <div class="condition-body open">
+      <div class="condition-body yandex-sub-body">
         ${items.length ? items.map((item, index) => `
           <div class="device-row">
             <label class="field-grow">
