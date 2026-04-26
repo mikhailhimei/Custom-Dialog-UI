@@ -56,7 +56,7 @@ export const bindPanelFields = (ctx, root, on) => {
       ctx._updateYandexDraftField(event.currentTarget.dataset.yandexField, event.currentTarget.value, false);
     });
     on(element, 'change', (event) => {
-      ctx._updateYandexDraftField(event.currentTarget.dataset.yandexField, event.currentTarget.value, true);
+      ctx._updateYandexDraftField(event.currentTarget.dataset.yandexField, event.currentTarget.value, false);
     });
   });
   root.querySelectorAll('[data-yandex-sub-field][data-yandex-sub-type][data-yandex-sub-index]').forEach((element) => {
@@ -75,7 +75,7 @@ export const bindPanelFields = (ctx, root, on) => {
         Number(event.currentTarget.dataset.yandexSubIndex),
         event.currentTarget.dataset.yandexSubField,
         event.currentTarget.value,
-        true,
+        false,
       );
     });
   });

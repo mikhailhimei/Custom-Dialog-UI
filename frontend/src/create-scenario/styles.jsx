@@ -353,6 +353,7 @@ export const CREATE_SCENARIO_STYLES = `
           justify-content: flex-start;
         }
         .array-builder-footer .compact-button {
+          width: 100%;
           max-width: 100%;
           white-space: normal;
           word-break: break-word;
