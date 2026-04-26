@@ -457,6 +457,9 @@ export const PANEL_STYLES = `
         details.condition-card[open] > .yandex-sub-body {
           display: grid;
         }
+        .yandex-sub-add-row {
+          margin-top: 8px;
+        }
         details.condition-card:not([open]) > .condition-body {
           display: none !important;
         }

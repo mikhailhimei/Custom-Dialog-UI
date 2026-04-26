@@ -23,17 +23,19 @@ const renderSubItemsEditor = (ctx, type, title, maxCount = 999) => {
             <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${key}" data-sub-index="${index}">Удалить</button>
           </div>
         `).join('') : '<div class="condition-preview">Пусто</div>'}
-        <button
-          type="button"
-          class="secondary compact-button"
-          data-action="add-yandex-sub"
-          data-sub-type="${key}"
-          ${canAdd ? '' : 'disabled'}
-        >
-          Добавить
-        </button>
       </div>
     </details>
+    <div class="yandex-sub-add-row">
+      <button
+        type="button"
+        class="secondary compact-button"
+        data-action="add-yandex-sub"
+        data-sub-type="${key}"
+        ${canAdd ? '' : 'disabled'}
+      >
+        Добавить
+      </button>
+    </div>
   `;
 };
 

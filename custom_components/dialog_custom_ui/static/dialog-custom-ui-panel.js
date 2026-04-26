@@ -1600,17 +1600,19 @@ Error generating stack: `+a.message+`
             <button type="button" class="ghost device-remove-button" data-action="remove-yandex-sub" data-sub-type="${i}" data-sub-index="${s}">\u0423\u0434\u0430\u043B\u0438\u0442\u044C</button>
           </div>
         `).join(""):'<div class="condition-preview">\u041F\u0443\u0441\u0442\u043E</div>'}
-        <button
-          type="button"
-          class="secondary compact-button"
-          data-action="add-yandex-sub"
-          data-sub-type="${i}"
-          ${o?"":"disabled"}
-        >
-          \u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C
-        </button>
       </div>
     </details>
+    <div class="yandex-sub-add-row">
+      <button
+        type="button"
+        class="secondary compact-button"
+        data-action="add-yandex-sub"
+        data-sub-type="${i}"
+        ${o?"":"disabled"}
+      >
+        \u0414\u043E\u0431\u0430\u0432\u0438\u0442\u044C
+      </button>
+    </div>
   `},ag=(e,t)=>{let n=String(e._yandexActiveScenarioKey??"").trim();return`
     <section class="hero-card">
       ${`
@@ -2128,6 +2130,9 @@ Error generating stack: `+a.message+`
         }
         details.condition-card[open] > .yandex-sub-body {
           display: grid;
+        }
+        .yandex-sub-add-row {
+          margin-top: 8px;
         }
         details.condition-card:not([open]) > .condition-body {
           display: none !important;
