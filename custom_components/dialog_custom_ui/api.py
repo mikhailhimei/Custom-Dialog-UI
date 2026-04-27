@@ -118,15 +118,10 @@ async def _ws_get_config(
         )
         return
 
-    if not is_admin:
-        result["timer_alarm_token"] = ""
-        result["yandex_tts_api_key"] = ""
-
     connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_LOGS})
-@websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_get_logs(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -339,7 +334,6 @@ def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_YANDEX_SCENARIOS})
-@websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_get_yandex_scenarios(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -354,7 +348,6 @@ async def _ws_get_yandex_scenarios(
         vol.Required("scenarios"): [dict],
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_save_yandex_scenarios(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]

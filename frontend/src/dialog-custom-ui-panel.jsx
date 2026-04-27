@@ -218,11 +218,11 @@ class DialogCustomUiPanel extends HTMLElement {
     if (this._isCurrentUserAdmin()) {
       return true;
     }
-    return tab === 'create-scenario';
+    return tab !== 'settings';
   }
 
   _resolveAllowedTab(tab) {
-    return this._isTabAllowed(tab) ? tab : 'create-scenario';
+    return this._isTabAllowed(tab) ? tab : 'scenarios';
   }
 
   _setActiveTab(tab) {
@@ -1048,7 +1048,12 @@ class DialogCustomUiPanel extends HTMLElement {
         { id: 'settings', label: 'Settings' },
       ]
       : [
+        { id: 'scenarios', label: 'Scenarios' },
         { id: 'create-scenario', label: 'Create Scenario' },
+        { id: 'timer-alarm', label: 'Timer / Alarm' },
+        { id: 'yandex-scenarios', label: 'Яндекс сценарии' },
+        { id: 'json', label: 'JSON' },
+        { id: 'logs', label: 'Logs' },
       ];
     const tabsMarkup = tabs
       .map((tab) => `<button type="button" class="tab-button ${this._activeTab === tab.id ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>`)

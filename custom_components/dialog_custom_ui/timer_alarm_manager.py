@@ -881,7 +881,6 @@ def async_register_timer_alarm_websockets(hass: HomeAssistant) -> None:
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_TIMER_ALARM_CONFIG})
-@websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     entry = _get_entry(hass)
@@ -993,7 +992,6 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
         vol.Optional(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, default=_DEFAULT_TIMER_MEDIA_CONTENT_ID): str,
     }
 )
-@websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
     entry = _get_entry(hass)
