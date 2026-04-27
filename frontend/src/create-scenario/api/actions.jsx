@@ -10,11 +10,16 @@ const resolveResultMappingType = (result) => String(
 ).trim();
 
 export const performUuidSearch = async (ctx, searchText, searchType, itemId = null) => {
+  const canUseDropdownOnlyRender = searchType === 'directControl' || searchType === 'nextAction';
   if (!searchText || searchText.length === 0) {
     ctx._searchResults = [];
     ctx._searchActiveItemId = null;
     ctx._searchActiveType = null;
-    ctx._render();
+    if (canUseDropdownOnlyRender && typeof ctx._clearSearchDropdown === 'function') {
+      ctx._clearSearchDropdown();
+    } else {
+      ctx._render();
+    }
     return;
   }
 
@@ -61,7 +66,11 @@ export const performUuidSearch = async (ctx, searchText, searchType, itemId = nu
     ctx._searchResults = [];
   } finally {
     ctx._searchLoading = false;
-    ctx._render();
+    if (canUseDropdownOnlyRender && typeof ctx._renderSearchDropdown === 'function') {
+      ctx._renderSearchDropdown();
+    } else {
+      ctx._render();
+    }
   }
 };
 

@@ -191,6 +191,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _mountReact(markup) {
+    const activeInputState = this._captureActiveInputState();
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
     }
@@ -205,7 +206,138 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     if (newModal) {
       newModal.scrollTop = this._modalScrollTop;
     }
+    this._restoreActiveInputState(activeInputState);
   }
+
+  _captureActiveInputState() {
+    const active = this.shadowRoot?.activeElement;
+    if (!active || !(active instanceof HTMLElement)) {
+      return null;
+    }
+    const tagName = String(active.tagName || '').toLowerCase();
+    const isTextInput = tagName === 'textarea' || (
+      tagName === 'input'
+      && !['checkbox', 'radio', 'button', 'submit', 'reset', 'file'].includes(String(active.getAttribute('type') || '').toLowerCase())
+    );
+    return {
+      tagName,
+      directControlItemId: active.getAttribute('data-direct-control-item-id') || '',
+      nextActionItemId: active.getAttribute('data-next-action-item-id') || '',
+      nextActionItemField: active.getAttribute('data-next-action-item-field') || '',
+      field: active.getAttribute('data-field') || '',
+      isTextInput,
+      selectionStart: isTextInput && typeof active.selectionStart === 'number' ? active.selectionStart : null,
+      selectionEnd: isTextInput && typeof active.selectionEnd === 'number' ? active.selectionEnd : null,
+    };
+  }
+
+  _restoreActiveInputState(state) {
+    if (!state || !this.shadowRoot) {
+      return;
+    }
+    let selector = '';
+    if (state.directControlItemId) {
+      selector = `input[data-direct-control-item-id="${state.directControlItemId}"],textarea[data-direct-control-item-id="${state.directControlItemId}"]`;
+    } else if (state.nextActionItemId && state.nextActionItemField) {
+      selector = `[data-next-action-item-id="${state.nextActionItemId}"][data-next-action-item-field="${state.nextActionItemField}"]`;
+    } else if (state.field) {
+      selector = `[data-field="${state.field}"]`;
+    }
+    if (!selector) {
+      return;
+    }
+    const element = this.shadowRoot.querySelector(selector);
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    element.focus({ preventScroll: true });
+    if (
+      state.isTextInput
+      && typeof state.selectionStart === 'number'
+      && typeof state.selectionEnd === 'number'
+      && typeof element.setSelectionRange === 'function'
+    ) {
+      const valueLength = String(element.value ?? '').length;
+      const start = Math.min(state.selectionStart, valueLength);
+      const end = Math.min(state.selectionEnd, valueLength);
+      element.setSelectionRange(start, end);
+    }
+  }
+
+  _resolveSearchInputElement(searchType, itemId) {
+    if (!this.shadowRoot) {
+      return null;
+    }
+    const normalizedId = String(itemId ?? '').trim();
+    if (!normalizedId) {
+      return null;
+    }
+    if (searchType === 'directControl') {
+      return this.shadowRoot.querySelector(`input[data-direct-control-item-id="${normalizedId}"]`);
+    }
+    if (searchType === 'nextAction') {
+      return this.shadowRoot.querySelector(
+        `input[data-next-action-item-id="${normalizedId}"][data-next-action-item-field="uuid"]`
+      );
+    }
+    return null;
+  }
+
+  _clearSearchDropdown() {
+    if (!this.shadowRoot) {
+      return;
+    }
+    this.shadowRoot.querySelectorAll('.dropdown-container > .dropdown-options').forEach((element) => {
+      element.remove();
+    });
+  }
+
+  _renderSearchDropdown() {
+    if (!this.shadowRoot) {
+      return;
+    }
+    this._clearSearchDropdown();
+    const searchType = String(this._searchActiveType ?? '').trim();
+    const itemId = String(this._searchActiveItemId ?? '').trim();
+    const results = Array.isArray(this._searchResults) ? this._searchResults : [];
+    if (!itemId || !results.length || (searchType !== 'directControl' && searchType !== 'nextAction')) {
+      return;
+    }
+    const input = this._resolveSearchInputElement(searchType, itemId);
+    const container = input?.closest?.('.dropdown-container');
+    if (!(container instanceof HTMLElement)) {
+      return;
+    }
+    const options = document.createElement('div');
+    options.className = 'dropdown-options';
+    results.forEach((result) => {
+      const option = document.createElement('div');
+      option.className = 'dropdown-option';
+      const title = String(result?.title ?? result?.name ?? '').trim();
+      const uuid = String(result?.uuid ?? '').trim();
+      option.textContent = title ? `${title} (${uuid})` : uuid;
+      option.addEventListener('mousedown', (event) => event.preventDefault());
+      option.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this._selectSearchResult(itemId, {
+          uuid,
+          title,
+          mappingType: String(
+            result?.mappingType
+            ?? result?.mapping_type
+            ?? result?.actionType
+            ?? result?.action_type
+            ?? result?.type
+            ?? ''
+          ).trim(),
+        });
+      });
+      options.appendChild(option);
+    });
+    container.appendChild(options);
+  }
+
   _addModalBackdrop() {
     this._modalCount++;
     if (this._modalCount === 1 && typeof document !== 'undefined' && document.body) {
