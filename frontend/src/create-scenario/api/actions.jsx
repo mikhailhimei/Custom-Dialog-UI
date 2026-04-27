@@ -149,13 +149,18 @@ export const hydrateDirectControlTitles = async (ctx) => {
   if (!items.length) {
     return;
   }
-  const updatedItems = await Promise.all(
+  const patches = await Promise.all(
     items.map(async (item) => {
       const uuid = String(item.uuid ?? '').trim();
       const displayValue = String(item.displayValue ?? '').trim();
       const mappingType = String(item.mappingType ?? '').trim();
       if (!uuid || (displayValue && mappingType)) {
-        return item;
+        return {
+          id: String(item.id ?? ''),
+          uuid,
+          displayValue,
+          mappingType,
+        };
       }
       const results = await ctx._searchUuid(uuid, ['sub-direct-controls']);
       const exactMatch = results.find((entry) => String(entry?.uuid ?? '').trim() === uuid) || results[0] || null;
@@ -169,15 +174,33 @@ export const hydrateDirectControlTitles = async (ctx) => {
         ?? ''
       ).trim();
       return {
-        ...item,
+        id: String(item.id ?? ''),
+        uuid,
         displayValue: displayValue || title,
         mappingType: mappingType || resolvedMappingType,
       };
     })
   );
+  const patchById = new Map(patches.map((patch) => [String(patch.id ?? ''), patch]));
   ctx._draft = {
     ...ctx._draft,
-    directControlItems: updatedItems,
+    directControlItems: (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
+      .map((item) => {
+        const id = String(item.id ?? '');
+        const patch = patchById.get(id);
+        if (!patch) {
+          return item;
+        }
+        // Do not overwrite fields if user changed uuid while async hydration was running.
+        if (String(item.uuid ?? '').trim() !== patch.uuid) {
+          return item;
+        }
+        return {
+          ...item,
+          displayValue: String(item.displayValue ?? '').trim() || patch.displayValue,
+          mappingType: String(item.mappingType ?? '').trim() || patch.mappingType,
+        };
+      }),
   };
   ctx._render();
 };
@@ -187,23 +210,44 @@ export const hydrateNextActionTitles = async (ctx) => {
   if (!items.length) {
     return;
   }
-  const updatedItems = await Promise.all(
+  const patches = await Promise.all(
     items.map(async (item) => {
       const uuid = String(item.uuid ?? '').trim();
       const displayValue = String(item.displayValue ?? '').trim();
       if (!uuid || displayValue) {
-        return item;
+        return {
+          id: String(item.id ?? ''),
+          uuid,
+          displayValue,
+        };
       }
       const title = await ctx._resolveTitleByUuid(uuid, ['sub-commands', 'commands']);
       return {
-        ...item,
+        id: String(item.id ?? ''),
+        uuid,
         displayValue: title,
       };
     })
   );
+  const patchById = new Map(patches.map((patch) => [String(patch.id ?? ''), patch]));
   ctx._draft = {
     ...ctx._draft,
-    nextActionItems: updatedItems,
+    nextActionItems: (Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : [])
+      .map((item) => {
+        const id = String(item.id ?? '');
+        const patch = patchById.get(id);
+        if (!patch) {
+          return item;
+        }
+        // Do not overwrite fields if user changed uuid while async hydration was running.
+        if (String(item.uuid ?? '').trim() !== patch.uuid) {
+          return item;
+        }
+        return {
+          ...item,
+          displayValue: String(item.displayValue ?? '').trim() || patch.displayValue,
+        };
+      }),
   };
   ctx._render();
 };

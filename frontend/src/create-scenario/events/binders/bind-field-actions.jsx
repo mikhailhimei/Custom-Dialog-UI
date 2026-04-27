@@ -85,7 +85,7 @@ export const bindFieldActions = (ctx, root, on) => {
     }
   });
 
-  root.querySelectorAll('[data-direct-control-item-id]').forEach((element) => {
+  root.querySelectorAll('input[data-direct-control-item-id], textarea[data-direct-control-item-id], select[data-direct-control-item-id]').forEach((element) => {
     const itemId = element.dataset.directControlItemId;
     const isTextField = element.tagName === 'INPUT' || element.tagName === 'TEXTAREA';
     if (isTextField) {
