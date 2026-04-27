@@ -127,11 +127,14 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
   set hass(hass) {
     const firstAttach = !this._hass;
+    const prevIsAdmin = this._isCurrentUserAdmin();
     this._hass = hass;
+    const nextIsAdmin = this._isCurrentUserAdmin();
+    const adminChanged = prevIsAdmin !== nextIsAdmin;
     if (this._tab === TABS.defaults && !this._isCurrentUserAdmin()) {
       this._tab = TABS.primary;
     }
-    if (firstAttach || !this.shadowRoot?.innerHTML) {
+    if (firstAttach || !this.shadowRoot?.innerHTML || adminChanged) {
       this._render();
     }
   }
@@ -396,7 +399,18 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _isCurrentUserAdmin() {
-    return Boolean(this._hass?.user?.is_admin);
+    const raw = this._hass?.user?.is_admin ?? this._hass?.user?.isAdmin;
+    if (typeof raw === 'boolean') {
+      return raw;
+    }
+    if (typeof raw === 'number') {
+      return raw === 1;
+    }
+    if (typeof raw === 'string') {
+      const normalized = raw.trim().toLowerCase();
+      return normalized === 'true' || normalized === '1' || normalized === 'yes';
+    }
+    return false;
   }
 
   _resolveXUserHeader() {
