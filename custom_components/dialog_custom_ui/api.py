@@ -86,7 +86,7 @@ async def _ws_get_config(
     is_admin = bool(getattr(connection.user, "is_admin", False))
     result = {
         "base_url": entry.options.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-        "allow_non_admin_panel": bool(entry.options.get(CONF_ALLOW_NON_ADMIN_PANEL, False)),
+        "allow_non_admin_panel": bool(entry.options.get(CONF_ALLOW_NON_ADMIN_PANEL, True)),
         "client_id": entry.options.get(CONF_CLIENT_ID, ""),
         "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
         "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
@@ -109,7 +109,7 @@ async def _ws_get_config(
         "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
     }
 
-    allow_non_admin_panel = bool(result.get("allow_non_admin_panel", False))
+    allow_non_admin_panel = bool(result.get("allow_non_admin_panel", True))
     if not is_admin and not allow_non_admin_panel:
         connection.send_error(
             msg["id"],
@@ -135,7 +135,7 @@ async def _ws_get_logs(
         vol.Required("type"): WS_SAVE_CONFIG,
         vol.Required(CONF_BASE_URL): str,
         vol.Required(CONF_CLIENT_ID): str,
-        vol.Optional(CONF_ALLOW_NON_ADMIN_PANEL, default=False): bool,
+        vol.Optional(CONF_ALLOW_NON_ADMIN_PANEL, default=True): bool,
         vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
         vol.Optional(CONF_THEME, default=DEFAULT_THEME): str,
         vol.Optional(CONF_VOICE_AGENT_IP, default=""): str,

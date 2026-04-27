@@ -1,6 +1,6 @@
 export const DEFAULT_CONFIG = {
   base_url: 'http://127.0.0.1:8000',
-  allow_non_admin_panel: false,
+  allow_non_admin_panel: true,
   client_id: '',
   timer_alarm_token: '',
   yandex_tts_api_key: '',

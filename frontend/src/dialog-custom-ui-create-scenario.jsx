@@ -251,6 +251,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     }
     if (this._config.timer_alarm_token) {
       headers.Authorization = this._config.timer_alarm_token;
+      headers.authorization = this._config.timer_alarm_token;
     }
     headers['x-user'] = this._resolveXUserHeader();
     return headers;
