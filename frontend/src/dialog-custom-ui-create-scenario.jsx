@@ -128,6 +128,9 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   set hass(hass) {
     const firstAttach = !this._hass;
     this._hass = hass;
+    if (this._tab === TABS.defaults && !this._isCurrentUserAdmin()) {
+      this._tab = TABS.primary;
+    }
     if (firstAttach || !this.shadowRoot?.innerHTML) {
       this._render();
     }
@@ -490,6 +493,16 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _setTab(tab) {
+    if (tab === TABS.defaults && !this._isCurrentUserAdmin()) {
+      this._tab = TABS.primary;
+      this._error = '';
+      this._status = '';
+      this._render();
+      if (!this._loading || this._lastLoadedTab !== TABS.primary) {
+        this._loadPage(this._pageByTab[TABS.primary] || 1);
+      }
+      return;
+    }
     this._tab = tab;
     this._error = '';
     this._status = '';

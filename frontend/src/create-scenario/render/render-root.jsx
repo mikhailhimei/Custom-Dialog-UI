@@ -4,6 +4,7 @@ import { escapeHtml } from '../utils.jsx';
 
 export const renderRoot = (ctx) => {
   const hasModal = ctx._hasAnyModalOpen?.() ?? false;
+  const canAccessDefaultsTab = ctx._isCurrentUserAdmin?.() ?? false;
   const body = ctx._renderActiveTabBody();
   const markup = `
     ${CREATE_SCENARIO_STYLES}
@@ -13,7 +14,9 @@ export const renderRoot = (ctx) => {
           <button type="button" class="subtab-button ${ctx._tab === TABS.primary ? 'active' : ''}" data-tab="${TABS.primary}">Основные команды</button>
           <button type="button" class="subtab-button ${ctx._tab === TABS.secondary ? 'active' : ''}" data-tab="${TABS.secondary}">Второстепенные команды</button>
           <button type="button" class="subtab-button ${ctx._tab === TABS.direct ? 'active' : ''}" data-tab="${TABS.direct}">Команды прямого выполнения</button>
-          <button type="button" class="subtab-button ${ctx._tab === TABS.defaults ? 'active' : ''}" data-tab="${TABS.defaults}">Дефолтные команды</button>
+          ${canAccessDefaultsTab
+            ? `<button type="button" class="subtab-button ${ctx._tab === TABS.defaults ? 'active' : ''}" data-tab="${TABS.defaults}">Дефолтные команды</button>`
+            : ''}
         </div>
       </section>
       ${ctx._error ? `<div class="status error">${escapeHtml(ctx._error)}</div>` : ''}
