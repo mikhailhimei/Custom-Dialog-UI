@@ -20,6 +20,7 @@ from .const import (
     ATTR_SCENARIO_ID,
     ATTR_SCRIPT_ENTITY_ID,
     CONF_BASE_URL,
+    CONF_ALLOW_NON_ADMIN_PANEL,
     CONF_CLIENT_ID,
     CONF_SCENARIOS,
     CONF_THEME,
@@ -73,7 +74,6 @@ def _safe_float(value: Any, default: float) -> float:
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_CONFIG})
-@websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_get_config(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -83,32 +83,46 @@ async def _ws_get_config(
         connection.send_error(msg["id"], "not_configured", "Integration entry not found")
         return
 
-    connection.send_result(
-        msg["id"],
-        {
-            "base_url": entry.options.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-            "client_id": entry.options.get(CONF_CLIENT_ID, ""),
-            "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
-            "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
-            "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
-            "yandex_tts_api_key": entry.options.get(CONF_YANDEX_TTS_API_KEY, ""),
-            "yandex_tts_folder_id": entry.options.get(CONF_YANDEX_TTS_FOLDER_ID, ""),
-            "yandex_tts_lang": entry.options.get(CONF_YANDEX_TTS_LANG, DEFAULT_YANDEX_TTS_LANG),
-            "yandex_tts_codec": entry.options.get(CONF_YANDEX_TTS_CODEC, DEFAULT_YANDEX_TTS_CODEC),
-            "yandex_tts_voice": entry.options.get(CONF_YANDEX_TTS_VOICE, DEFAULT_YANDEX_TTS_VOICE),
-            "yandex_tts_emotion": entry.options.get(CONF_YANDEX_TTS_EMOTION, DEFAULT_YANDEX_TTS_EMOTION),
-            "yandex_tts_speed": _safe_float(
-                entry.options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED),
-                DEFAULT_YANDEX_TTS_SPEED,
-            ),
-            "theme": _normalize_theme(entry.options.get(CONF_THEME, DEFAULT_THEME)),
-            "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
-            "timer_alarm_device_ids": _normalize_device_ids(
-                entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
-            ),
-            "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
-        },
-    )
+    is_admin = bool(getattr(connection.user, "is_admin", False))
+    result = {
+        "base_url": entry.options.get(CONF_BASE_URL, DEFAULT_BASE_URL),
+        "allow_non_admin_panel": bool(entry.options.get(CONF_ALLOW_NON_ADMIN_PANEL, False)),
+        "client_id": entry.options.get(CONF_CLIENT_ID, ""),
+        "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
+        "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
+        "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
+        "yandex_tts_api_key": entry.options.get(CONF_YANDEX_TTS_API_KEY, ""),
+        "yandex_tts_folder_id": entry.options.get(CONF_YANDEX_TTS_FOLDER_ID, ""),
+        "yandex_tts_lang": entry.options.get(CONF_YANDEX_TTS_LANG, DEFAULT_YANDEX_TTS_LANG),
+        "yandex_tts_codec": entry.options.get(CONF_YANDEX_TTS_CODEC, DEFAULT_YANDEX_TTS_CODEC),
+        "yandex_tts_voice": entry.options.get(CONF_YANDEX_TTS_VOICE, DEFAULT_YANDEX_TTS_VOICE),
+        "yandex_tts_emotion": entry.options.get(CONF_YANDEX_TTS_EMOTION, DEFAULT_YANDEX_TTS_EMOTION),
+        "yandex_tts_speed": _safe_float(
+            entry.options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED),
+            DEFAULT_YANDEX_TTS_SPEED,
+        ),
+        "theme": _normalize_theme(entry.options.get(CONF_THEME, DEFAULT_THEME)),
+        "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
+        "timer_alarm_device_ids": _normalize_device_ids(
+            entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
+        ),
+        "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
+    }
+
+    allow_non_admin_panel = bool(result.get("allow_non_admin_panel", False))
+    if not is_admin and not allow_non_admin_panel:
+        connection.send_error(
+            msg["id"],
+            "unauthorized",
+            "Access denied. Ask administrator to enable non-admin panel access in Settings.",
+        )
+        return
+
+    if not is_admin:
+        result["timer_alarm_token"] = ""
+        result["yandex_tts_api_key"] = ""
+
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_LOGS})
@@ -126,6 +140,7 @@ async def _ws_get_logs(
         vol.Required("type"): WS_SAVE_CONFIG,
         vol.Required(CONF_BASE_URL): str,
         vol.Required(CONF_CLIENT_ID): str,
+        vol.Optional(CONF_ALLOW_NON_ADMIN_PANEL, default=False): bool,
         vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
         vol.Optional(CONF_THEME, default=DEFAULT_THEME): str,
         vol.Optional(CONF_VOICE_AGENT_IP, default=""): str,
@@ -194,6 +209,7 @@ async def _ws_save_config(
     options = {
         CONF_BASE_URL: msg[CONF_BASE_URL].strip(),
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
+        CONF_ALLOW_NON_ADMIN_PANEL: bool(msg.get(CONF_ALLOW_NON_ADMIN_PANEL, False)),
         CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
         CONF_THEME: _normalize_theme(msg.get(CONF_THEME, DEFAULT_THEME)),
         CONF_VOICE_AGENT_IP: voice_agent_ip,

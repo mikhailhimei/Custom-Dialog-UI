@@ -7,6 +7,14 @@ import { renderTimerAlarm } from './render-timer-alarm.jsx';
 import { renderYandexScenarios } from './render-yandex-scenarios.jsx';
 
 export const renderActiveTopLevelPage = (ctx) => {
+  if (ctx._accessDenied) {
+    return `
+      <section class="hero-card">
+        <h1>Доступ ограничен</h1>
+        <p>Попросите администратора включить опцию "Доступ не-админам" во вкладке Settings.</p>
+      </section>
+    `;
+  }
   if (ctx._activeTab === 'logs') {
     return renderLogs(ctx);
   }

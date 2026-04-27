@@ -14,6 +14,7 @@ export const initializePanelState = (ctx, defaultConfig) => {
   ctx._loadingLogs = false;
   ctx._error = '';
   ctx._status = '';
+  ctx._accessDenied = false;
   ctx._logsTimer = null;
   ctx._timerAlarmLoaded = false;
   ctx._timerAlarmLoading = false;

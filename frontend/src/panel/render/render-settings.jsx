@@ -1,4 +1,4 @@
-import { escapeHtml } from '../utils.jsx';
+﻿import { escapeHtml } from '../utils.jsx';
 
 const renderSecretField = (ctx, field, title, value, placeholder = '') => {
   const visible = ctx._isSecretVisible(field);
@@ -21,7 +21,7 @@ const renderSecretField = (ctx, field, title, value, placeholder = '') => {
           data-secret-field="${field}"
           title="${visible ? 'Скрыть' : 'Показать'}"
           aria-label="${visible ? 'Скрыть' : 'Показать'}"
-        >${visible ? '🙈' : '👁'}</button>
+        >${visible ? 'Hide' : 'Show'}</button>
       </div>
     </label>
   `;
@@ -59,6 +59,19 @@ export const renderSettings = (ctx) => {
               />
               <span class="switch-slider" aria-hidden="true"></span>
               <span class="switch-label">${ctx._config.theme === 'dark' ? 'Dark' : 'Light'}</span>
+            </div>
+          </label>
+          <label class="field-narrow">
+            <span>Доступ не-админам</span>
+            <div class="switch-control">
+              <input
+                type="checkbox"
+                data-config-field="allow_non_admin_panel"
+                data-config-bool="true"
+                ${ctx._config.allow_non_admin_panel ? 'checked' : ''}
+              />
+              <span class="switch-slider" aria-hidden="true"></span>
+              <span class="switch-label">${ctx._config.allow_non_admin_panel ? 'Включен' : 'Выключен'}</span>
             </div>
           </label>
           <div class="field-span-2 settings-subsection">

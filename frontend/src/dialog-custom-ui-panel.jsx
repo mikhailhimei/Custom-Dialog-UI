@@ -144,8 +144,12 @@ class DialogCustomUiPanel extends HTMLElement {
       this._applyTheme();
       this._expandedScenarios = new Set();
       this._scenariosPage = 1;
+      this._accessDenied = false;
       this._error = '';
     } catch (err) {
+      const errorCode = String(err?.code ?? '').trim().toLowerCase();
+      const errorMessage = String(err?.message ?? '').toLowerCase();
+      this._accessDenied = errorCode === 'unauthorized' || errorMessage.includes('access denied');
       this._error = err?.message || 'Не удалось загрузить настройки. Сначала добавьте интеграцию Dialog Custom UI.';
     } finally {
       this._loaded = true;
@@ -206,19 +210,38 @@ class DialogCustomUiPanel extends HTMLElement {
       });
   }
 
+  _isCurrentUserAdmin() {
+    return Boolean(this._hass?.user?.is_admin);
+  }
+
+  _isTabAllowed(tab) {
+    if (this._isCurrentUserAdmin()) {
+      return true;
+    }
+    return tab === 'create-scenario';
+  }
+
+  _resolveAllowedTab(tab) {
+    return this._isTabAllowed(tab) ? tab : 'create-scenario';
+  }
+
   _setActiveTab(tab) {
-    this._activeTab = tab;
+    if (this._accessDenied) {
+      return;
+    }
+    const nextTab = this._resolveAllowedTab(tab);
+    this._activeTab = nextTab;
     this._status = '';
     this._error = '';
     this._render();
-    if (tab === 'logs') {
+    if (nextTab === 'logs') {
       this._startLogsPolling();
     } else {
       this._stopLogsPolling();
-      if (tab === 'timer-alarm') {
+      if (nextTab === 'timer-alarm') {
         this._ensureTimerAlarmModule();
       }
-      if (tab === 'yandex-scenarios') {
+      if (nextTab === 'yandex-scenarios') {
         this._loadYandexScenarios();
       }
     }
@@ -817,6 +840,7 @@ class DialogCustomUiPanel extends HTMLElement {
     return {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
+      allow_non_admin_panel: Boolean(this._config.allow_non_admin_panel),
       timer_alarm_token: this._config.timer_alarm_token,
       yandex_tts_api_key: this._config.yandex_tts_api_key,
       yandex_tts_folder_id: this._config.yandex_tts_folder_id,
@@ -1010,7 +1034,25 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _render() {
+    this._activeTab = this._resolveAllowedTab(this._activeTab);
     const content = this._renderActiveTopLevelPage();
+    const isAdmin = this._isCurrentUserAdmin();
+    const tabs = isAdmin
+      ? [
+        { id: 'scenarios', label: 'Scenarios' },
+        { id: 'create-scenario', label: 'Create Scenario' },
+        { id: 'timer-alarm', label: 'Timer / Alarm' },
+        { id: 'yandex-scenarios', label: 'Яндекс сценарии' },
+        { id: 'json', label: 'JSON' },
+        { id: 'logs', label: 'Logs' },
+        { id: 'settings', label: 'Settings' },
+      ]
+      : [
+        { id: 'create-scenario', label: 'Create Scenario' },
+      ];
+    const tabsMarkup = tabs
+      .map((tab) => `<button type="button" class="tab-button ${this._activeTab === tab.id ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>`)
+      .join('');
 
     const markup = `
       ${PANEL_STYLES}
@@ -1018,13 +1060,7 @@ class DialogCustomUiPanel extends HTMLElement {
         <div class="hero">
           <section class="panel-shell">
             <div class="tabs">
-              <button type="button" class="tab-button ${this._activeTab === 'scenarios' ? 'active' : ''}" data-tab="scenarios">Scenarios</button>
-              <button type="button" class="tab-button ${this._activeTab === 'create-scenario' ? 'active' : ''}" data-tab="create-scenario">Create Scenario</button>
-              <button type="button" class="tab-button ${this._activeTab === 'timer-alarm' ? 'active' : ''}" data-tab="timer-alarm">Timer / Alarm</button>
-              <button type="button" class="tab-button ${this._activeTab === 'yandex-scenarios' ? 'active' : ''}" data-tab="yandex-scenarios">Яндекс сценарии</button>
-              <button type="button" class="tab-button ${this._activeTab === 'json' ? 'active' : ''}" data-tab="json">JSON</button>
-              <button type="button" class="tab-button ${this._activeTab === 'logs' ? 'active' : ''}" data-tab="logs">Logs</button>
-              <button type="button" class="tab-button ${this._activeTab === 'settings' ? 'active' : ''}" data-tab="settings">Settings</button>
+              ${tabsMarkup}
             </div>
             ${content}
           </section>
