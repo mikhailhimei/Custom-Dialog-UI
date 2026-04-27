@@ -69,6 +69,9 @@ export const saveModal = async (ctx) => {
   }
 
   const isEdit = ctx._modalMode === 'edit' && ctx._editingId;
+  if (!isEdit && !ctx._isCurrentUserAdmin()) {
+    payload.account = ctx._getCurrentUserId();
+  }
   const collection = ctx._tab === TABS.secondary ? 'sub-commands' : 'commands';
   const url = isEdit
     ? ctx._apiUrl(`/api/cms/${collection}/${encodeURIComponent(ctx._editingId)}`)
