@@ -7,6 +7,8 @@ export const bindPanelActions = (ctx, root, on) => {
   on(root.querySelector('[data-action="refresh-logs"]'), 'click', () => ctx._loadLogs());
   on(root.querySelector('[data-action="download-json"]'), 'click', () => ctx._downloadJson());
   on(root.querySelector('[data-action="upload-json"]'), 'click', () => ctx._openJsonFilePicker());
+  on(root.querySelector('[data-action="download-yandex-tts-files"]'), 'click', () => ctx._downloadYandexTtsFiles());
+  on(root.querySelector('[data-action="upload-yandex-tts-files"]'), 'click', () => ctx._openYandexTtsFilePicker());
   on(root.querySelector('[data-action="reset-commands-cache"]'), 'click', () => ctx._resetCommandsCache());
   on(root.querySelector('[data-action="reload-yandex-scenarios"]'), 'click', () => ctx._loadYandexScenarios());
   on(root.querySelector('[data-action="create-yandex-tab"]'), 'click', () => ctx._startYandexScenarioCreate());
@@ -53,6 +55,10 @@ export const bindPanelActions = (ctx, root, on) => {
   on(root.querySelector('[data-action="import-json-input"]'), 'change', (event) => {
     const [file] = event.currentTarget.files || [];
     ctx._importJsonFile(file);
+  });
+  on(root.querySelector('[data-action="import-yandex-tts-input"]'), 'change', (event) => {
+    const [file] = event.currentTarget.files || [];
+    ctx._importYandexTtsArchive(file);
   });
 
   root.querySelectorAll('[data-action="add-condition"]').forEach((element) => {

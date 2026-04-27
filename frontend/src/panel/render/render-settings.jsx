@@ -114,6 +114,11 @@ export const renderSettings = (ctx) => {
                     .map((emotion) => `<option value="${emotion}" ${String(ctx._config.yandex_tts_emotion ?? '') === emotion ? 'selected' : ''}>${emotion}</option>`).join('')}
                 </select>
               </label>
+              <div class="field-span-2 toolbar">
+                <button type="button" class="ghost" data-action="download-yandex-tts-files">Скачать файлы /homeassistant/tts</button>
+                <button type="button" class="ghost" data-action="upload-yandex-tts-files">Загрузить файлы в /homeassistant/tts</button>
+                <input type="file" accept=".zip,application/zip" data-action="import-yandex-tts-input" style="display:none" />
+              </div>
             </div>
           </div>
         </div>

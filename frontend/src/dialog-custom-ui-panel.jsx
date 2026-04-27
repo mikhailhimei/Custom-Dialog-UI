@@ -874,6 +874,88 @@ class DialogCustomUiPanel extends HTMLElement {
     this.shadowRoot.querySelector('[data-action="import-json-input"]')?.click();
   }
 
+  _openYandexTtsFilePicker() {
+    this.shadowRoot.querySelector('[data-action="import-yandex-tts-input"]')?.click();
+  }
+
+  _arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      const chunk = bytes.subarray(offset, offset + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+  }
+
+  _base64ToUint8Array(base64) {
+    const binary = atob(String(base64 ?? ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  async _downloadYandexTtsFiles() {
+    if (!this._hass) {
+      return;
+    }
+
+    this._error = '';
+    this._status = '';
+    this._render();
+    try {
+      const result = await this._hass.callWS({ type: 'dialog_custom_ui/export_yandex_tts_files' });
+      const filename = String(result?.filename ?? 'yandex-tts-files.zip').trim() || 'yandex-tts-files.zip';
+      const bytes = this._base64ToUint8Array(result?.zip_base64 ?? '');
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      this._status = 'Архив TTS скачан.';
+    } catch (err) {
+      this._error = err?.message || 'Не удалось скачать архив TTS.';
+      this._status = '';
+    } finally {
+      this._render();
+    }
+  }
+
+  async _importYandexTtsArchive(file) {
+    if (!file) {
+      return;
+    }
+
+    this._error = '';
+    this._status = '';
+    this._render();
+    try {
+      const buffer = await file.arrayBuffer();
+      const zipBase64 = this._arrayBufferToBase64(buffer);
+      const result = await this._hass.callWS({
+        type: 'dialog_custom_ui/import_yandex_tts_files',
+        zip_base64: zipBase64,
+      });
+      const importedCount = Number(result?.imported_count) || 0;
+      const skippedCount = Number(result?.skipped_count) || 0;
+      this._status = `Импорт завершен: добавлено ${importedCount}, пропущено дублей ${skippedCount}.`;
+    } catch (err) {
+      this._error = err?.message || 'Не удалось загрузить архив TTS.';
+      this._status = '';
+    }
+
+    const input = this.shadowRoot.querySelector('[data-action="import-yandex-tts-input"]');
+    if (input) {
+      input.value = '';
+    }
+    this._render();
+  }
+
   async _importJsonFile(file) {
     if (!file) {
       return;

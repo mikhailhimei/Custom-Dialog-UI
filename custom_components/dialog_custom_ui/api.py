@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import base64
+import io
 from pathlib import Path
 from typing import Any
 import uuid
+import zipfile
 
 import voluptuous as vol
 import yaml
@@ -48,14 +51,17 @@ from .const import (
     DEFAULT_YANDEX_TTS_EMOTION,
     DEFAULT_YANDEX_TTS_SPEED,
     DOMAIN,
+    WS_EXPORT_YANDEX_TTS_FILES,
     WS_GET_CONFIG,
     WS_GET_LOGS,
     WS_GET_YANDEX_SCENARIOS,
+    WS_IMPORT_YANDEX_TTS_FILES,
     WS_SAVE_CONFIG,
     WS_SAVE_YANDEX_SCENARIOS,
 )
 
 _YANDEX_INTENTS_PATH = Path("/homeassistant/yandex_intents.yaml")
+_TTS_CACHE_PATH = Path("/homeassistant/tts")
 
 
 def async_register_websockets(hass: HomeAssistant) -> None:
@@ -64,6 +70,8 @@ def async_register_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_logs)
     websocket_api.async_register_command(hass, _ws_get_yandex_scenarios)
     websocket_api.async_register_command(hass, _ws_save_yandex_scenarios)
+    websocket_api.async_register_command(hass, _ws_export_yandex_tts_files)
+    websocket_api.async_register_command(hass, _ws_import_yandex_tts_files)
 
 
 def _safe_float(value: Any, default: float) -> float:
@@ -333,6 +341,54 @@ def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
     return entries[0] if entries else None
 
 
+@websocket_api.websocket_command({vol.Required("type"): WS_EXPORT_YANDEX_TTS_FILES})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_export_yandex_tts_files(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    archive = await hass.async_add_executor_job(_build_tts_archive, hass)
+    archive_b64 = base64.b64encode(archive).decode("ascii")
+    connection.send_result(
+        msg["id"],
+        {
+            "filename": "yandex-tts-files.zip",
+            "zip_base64": archive_b64,
+        },
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_IMPORT_YANDEX_TTS_FILES,
+        vol.Required("zip_base64"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_import_yandex_tts_files(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    zip_base64 = str(msg.get("zip_base64", "")).strip()
+    if not zip_base64:
+        connection.send_error(msg["id"], "invalid_format", "zip_base64 is required")
+        return
+
+    try:
+        archive = base64.b64decode(zip_base64, validate=True)
+    except Exception:
+        connection.send_error(msg["id"], "invalid_format", "Invalid base64 ZIP payload")
+        return
+
+    try:
+        result = await hass.async_add_executor_job(_import_tts_archive, hass, archive)
+    except zipfile.BadZipFile:
+        connection.send_error(msg["id"], "invalid_format", "Invalid ZIP archive")
+        return
+
+    connection.send_result(msg["id"], result)
+
+
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_YANDEX_SCENARIOS})
 @websocket_api.async_response
 async def _ws_get_yandex_scenarios(
@@ -451,6 +507,70 @@ def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
     if _YANDEX_INTENTS_PATH.exists():
         return _YANDEX_INTENTS_PATH
     return config_path
+
+
+def _resolve_tts_path(hass: HomeAssistant) -> Path:
+    if _TTS_CACHE_PATH.exists():
+        return _TTS_CACHE_PATH
+    config_tts_path = Path(hass.config.path("tts"))
+    if config_tts_path.exists():
+        return config_tts_path
+    return _TTS_CACHE_PATH
+
+
+def _build_tts_archive(hass: HomeAssistant) -> bytes:
+    tts_path = _resolve_tts_path(hass)
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        if tts_path.exists():
+            for file_path in sorted(tts_path.rglob("*")):
+                if not file_path.is_file():
+                    continue
+                try:
+                    relative_name = file_path.relative_to(tts_path).as_posix()
+                except ValueError:
+                    relative_name = file_path.name
+                archive.write(file_path, arcname=relative_name)
+    return buffer.getvalue()
+
+
+def _import_tts_archive(hass: HomeAssistant, archive_bytes: bytes) -> dict[str, Any]:
+    tts_path = _resolve_tts_path(hass)
+    tts_path.mkdir(parents=True, exist_ok=True)
+
+    existing_lower_names = {
+        path.name.lower()
+        for path in tts_path.iterdir()
+        if path.is_file()
+    }
+    processed_lower_names: set[str] = set()
+    imported: list[str] = []
+    skipped: list[str] = []
+
+    with zipfile.ZipFile(io.BytesIO(archive_bytes), mode="r") as archive:
+        for member in archive.infolist():
+            if member.is_dir():
+                continue
+            file_name = Path(member.filename).name.strip()
+            if not file_name:
+                continue
+            lower_name = file_name.lower()
+            if lower_name in existing_lower_names or lower_name in processed_lower_names:
+                skipped.append(file_name)
+                continue
+            content = archive.read(member)
+            (tts_path / file_name).write_bytes(content)
+            imported.append(file_name)
+            processed_lower_names.add(lower_name)
+            existing_lower_names.add(lower_name)
+
+    return {
+        "saved": True,
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "imported_files": imported,
+        "skipped_files": skipped,
+    }
 
 
 def _normalize_sub_items(value: Any) -> list[str]:
