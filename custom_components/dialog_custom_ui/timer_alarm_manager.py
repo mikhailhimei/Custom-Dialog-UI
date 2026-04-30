@@ -191,7 +191,7 @@ class DialogTimerAlarmManager:
 
         target_count = _extract_count(payload)
         if target_count is None and len(timers) > 1:
-            _, text_timer = self._timer_count_message(timers)
+            count_text, text_timer = self._timer_count_message(timers)
             await self._post_save(
                 options,
                 {
@@ -211,6 +211,13 @@ class DialogTimerAlarmManager:
             return
         self._cancel_timer_task(timer_entry)
         self._mark_updated()
+        
+        await self._post_save(
+                options,
+                {
+                    "actionType": "success"
+                },
+            )
 
     async def async_handle_timer_pause(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
