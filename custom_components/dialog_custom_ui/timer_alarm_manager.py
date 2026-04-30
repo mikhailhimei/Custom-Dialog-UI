@@ -108,9 +108,6 @@ class DialogTimerAlarmManager:
             if parent_type == "timer_stop":
                 await self.async_handle_timer_stop(payload, options)
                 return True
-            if parent_type == "timer_count":
-                await self.async_handle_timer_count(payload, options)
-                return True
             if parent_type == "timer_info":
                 await self.async_handle_timer_info(payload, options)
                 return True
@@ -129,9 +126,6 @@ class DialogTimerAlarmManager:
         if parent_type == "alarm_stop":
             await self.async_handle_alarm_stop(payload, options)
             return True
-        if parent_type == "alarm_count":
-            await self.async_handle_alarm_count(payload, options)
-            return True
         if parent_type == "alarm_info":
             await self.async_handle_alarm_info(payload, options)
             return True
@@ -141,13 +135,11 @@ class DialogTimerAlarmManager:
         client_id = _extract_client_id(payload, options)
         device_id = _extract_device_id(payload)
         if not client_id:
-            self._append_log("error", "Timer start skipped: client_id is empty")
             await self._post_save(
                 options,
                 {
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
-                    "variable": {"message": "Не удалось установить таймер: отсутствует client_id"},
                 },
             )
             return
@@ -165,41 +157,36 @@ class DialogTimerAlarmManager:
             commands_text=commands_text,
             paused=False,
         )
-        await self._post_save(
-            options,
-            {
-                "children_type": "",
-                "parent_type": "timer_start",
-                "data": {"commands": commands_text},
-                "client_id": client_id,
-                "device_id": device_id,
-                "children_direct_type": [{"mapping_type": "timer", "value": {"timer": timer_parts}}],
-            },
-        )
-        self._append_log("success", f"Timer started: {timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}")
+
         success_message = f"на {_seconds_to_minute_phrase(total_seconds)}"
         await self._post_save(
             options,
             {
                 "actionType": "success",
                 "variables": {"message": success_message},
-                "variable": {"message": success_message},
             },
-        )
-        _LOGGER.warning(
-            "Dialog Custom UI timer created from scenario: client_id=%s device_id=%s duration=%s",
-            client_id or "<empty>",
-            device_id or "<empty>",
-            f"{timer_parts['hour']:02d}:{timer_parts['minut']:02d}:{timer_parts['second']:02d}",
         )
 
     async def async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
         if not client_id:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
+                },
+            )
             return
 
         timers = self._timers_for_client(client_id)
         if not timers:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "not",
+                },
+            )
             return
 
         target_count = _extract_count(payload)
@@ -207,13 +194,14 @@ class DialogTimerAlarmManager:
             await self._post_save(
                 options,
                 {
-                    "actionType": "timer_count",
-                    "variable": {
+                    "actionType": "several",
+                    "variables": {
                         "message": self._timer_count_message(timers),
                     },
                 },
             )
             return
+        
         selected_index = len(timers) - 1 if target_count is None else max(0, target_count - 1)
         selected_index = min(selected_index, len(timers) - 1)
         timer_id = _normalize_value(timers[selected_index].get("id"))
@@ -223,27 +211,26 @@ class DialogTimerAlarmManager:
         self._cancel_timer_task(timer_entry)
         self._mark_updated()
 
-    async def async_handle_timer_count(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
-        timers = self._timers_for_client(client_id)
-        await self._post_save(
-            options,
-            {
-                "actionType": "timer_count",
-                "variable": {
-                    "message": self._timer_count_message(timers),
-                },
-            },
-        )
-
     async def async_handle_timer_pause(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
         timers = self._timers_for_client(client_id)
         if not timers:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "not_timers",
+                },
+            )
             return
         target_count = _extract_count(payload)
         index = len(timers) - 1 if target_count is None else min(max(target_count - 1, 0), len(timers) - 1)
         await self._pause_timer(_normalize_value(timers[index].get("id")))
+        await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                },
+            )
 
     async def async_handle_timer_resume(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
@@ -259,7 +246,17 @@ class DialogTimerAlarmManager:
         if not client_id:
             return
         timers = self._timers_for_client(client_id)
-        await self._post_save(options, {"actionType": "timer_info", "data": {"count": self._timer_count_message(timers)}})
+        count_timer, text_timer = self._timer_count_message(timers)
+        
+        await self._post_save(
+                options,
+                {
+                    "actionType": "one" if count_timer else "several",
+                    "variables": {
+                        "message": text_timer
+                    }
+                },
+            )
 
     async def async_handle_alarm_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
@@ -270,38 +267,41 @@ class DialogTimerAlarmManager:
                 {
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
-                    "variable": {"message": "Не удалось установить будильник: отсутствует client_id"},
                 },
             )
             return
+        
         alarm_time = _extract_alarm_time(payload)
+
         for existing in self._alarms.values():
-            if _normalize_value(existing.get("client_id")) != client_id:
-                continue
             existing_device_id = _normalize_value(existing.get("device_id"))
             if device_id and existing_device_id and existing_device_id != device_id:
                 continue
-            if _normalize_alarm_clock(_normalize_value(existing.get("time") or "08:00")) != alarm_time:
+            if _normalize_alarm_clock(_normalize_value(existing.get("time"))) != alarm_time:
                 continue
             if _normalize_value(existing.get("status")).lower() != "off":
                 continue
+
             existing["status"] = "on"
             existing["time"] = alarm_time
-            if device_id:
-                existing["device_id"] = device_id
+            existing["device_id"] = device_id
+
             self._alarm_presets.add(alarm_time)
             self._ensure_alarm_tick_task()
             self._mark_updated()
+            
             await self._post_save(
                 options,
                 {
                     "actionType": "success",
-                    "variables": {"message": f"на {alarm_time}"},
-                    "variable": {"message": f"на {alarm_time}"},
+                    "variables": {"message": f"{alarm_time}"},
                 },
             )
+
             return
+        
         alarm_id = f"{_ALARM_PREFIX}{client_id}:{uuid.uuid4().hex[:8]}"
+
         self._alarms[alarm_id] = {
             "id": alarm_id,
             "client_id": client_id,
@@ -310,24 +310,51 @@ class DialogTimerAlarmManager:
             "time": alarm_time,
             "created_at": datetime.now().timestamp(),
         }
+
         self._alarm_presets.add(alarm_time)
         self._ensure_alarm_tick_task()
         self._mark_updated()
+
         await self._post_save(
             options,
             {
                 "actionType": "success",
-                "variables": {"message": f"на {alarm_time}"},
-                "variable": {"message": f"на {alarm_time}"},
+                "variables": {"message": f"{alarm_time}"},
             },
         )
 
     async def async_handle_alarm_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
+        if not client_id:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
+                },
+            )
+            return
+        
         alarms = self._alarms_for_client(client_id)
         if not alarms:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "not"
+                },
+            )
             return
+        
         target_count = _extract_count(payload)
+        if not target_count:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "default_next_step"
+                }
+            )
+            return
+
         index = len(alarms) - 1 if target_count is None else min(max(target_count - 1, 0), len(alarms) - 1)
         alarm_id = _normalize_value(alarms[index].get("id"))
         self._alarms.pop(alarm_id, None)
@@ -336,34 +363,23 @@ class DialogTimerAlarmManager:
     async def async_handle_alarm_info(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
         alarms = self._alarms_for_client(client_id)
-        await self._post_save(
-            options,
-            {
-                "clientId": client_id,
-                "data": {
-                    "alarm": [
-                        {
-                            "id": _normalize_value(item.get("id")),
-                            "device_id": _normalize_value(item.get("device_id")),
-                            "alarm": {"time": _normalize_value(item.get("time") or "08:00")},
-                        }
-                        for item in alarms
-                    ]
-                },
-            },
-        )
+        if len(alarms) == 1:
+            count = "one"
+            text_alarms = f"{_normalize_value(alarms[0].get('time'))}"
+        else:
+            count = 'several'
+            text_alarms = "\n".join(
+                f"{i+1}. на {_normalize_value(item.get('time'))}"
+                for i, item in enumerate(alarms)
+            )
 
-    async def async_handle_alarm_count(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
-        alarms = self._alarms_for_client(client_id)
         await self._post_save(
             options,
             {
-                "actionType": "alarm_count",
-                "variable": {
-                    "message": self._alarm_count_message(alarms),
-                },
-            },
+            "clientId": client_id,
+            "actionType": count,
+            "variables": {"message": text_alarms}
+            }
         )
 
     def get_ha_timer_ids(self) -> set[str]:
@@ -822,7 +838,7 @@ class DialogTimerAlarmManager:
             lines.append(
                 f"{number if count else ''} {_seconds_to_minute_phrase(max(1, remaining))}"
             )
-        return "\n".join(lines)
+        return count, "\n".join(lines)
 
     def _alarm_count_message(self, alarms: list[dict[str, Any]]) -> str:
         active_alarms = [alarm for alarm in alarms if _normalize_value(alarm.get("status")).lower() != "off"]
@@ -1012,15 +1028,7 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
     requested_items = [item for item in msg.get(CONF_TIMER_ALARM_ITEMS, []) if isinstance(item, dict)]
     requested_timers = sum(1 for item in requested_items if _normalize_value(item.get("type")).lower() == "timer")
     requested_alarms = sum(1 for item in requested_items if _normalize_value(item.get("type")).lower() == "alarm")
-    _append_integration_log(
-        hass,
-        "request",
-        (
-            "Timer/alarm update requested from UI: "
-            f"items={len(requested_items)} timers={requested_timers} alarms={requested_alarms} "
-            f"client_id={shared_client_id or '<empty>'}"
-        ),
-    )
+
     manager_targets = managers or ([manager] if manager is not None else [])
     target_manager = _select_manager(manager_targets, requested_items, shared_client_id) or manager
     if not manager_targets or target_manager is None:
@@ -1042,11 +1050,7 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
         _normalize_value(msg.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID)) or _DEFAULT_TIMER_MEDIA_CONTENT_ID
     )
     hass.config_entries.async_update_entry(entry, options=options)
-    _append_integration_log(
-        hass,
-        "success",
-        f"Timer/alarm update from UI applied (runtime_managers_updated={applied}/{len(manager_targets)})",
-    )
+
     connection.send_result(msg["id"], {"saved": True})
 
 
@@ -1324,15 +1328,11 @@ def _extract_count(payload: dict[str, Any]) -> int | None:
             if not isinstance(item, dict):
                 continue
             mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
-            if mapping_type not in {"count", "timer_count", "alarm_count"}:
+            if mapping_type not in {"count"}:
                 continue
-            value = item.get("value") if isinstance(item.get("value"), dict) else {}
-            count = _safe_int(value.get("count"))
-            if count > 0:
-                return count
-    guess = _extract_first_int(_extract_commands_text(payload))
-    if guess and guess > 0:
-        return guess
+            value = item.get("value")
+            if value > 0:
+                return value
     return None
 
 
@@ -1516,22 +1516,6 @@ def _collect_device_labels(hass: HomeAssistant, items: list[dict[str, Any]], con
         if label:
             result[ref] = label
     return result
-
-
-def _append_integration_log(hass: HomeAssistant, level: str, message: str) -> None:
-    logs = hass.data.setdefault(DOMAIN, {}).setdefault("logs", [])
-    logs.appendleft(
-        {
-            "ts": datetime.now().strftime("%H:%M:%S"),
-            "level": level,
-            "message": message,
-        }
-    )
-    if level == "error":
-        _LOGGER.error(message)
-    else:
-        _LOGGER.warning(message)
-
 
 def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
     timer_map = getattr(holder, "_timers", None)
