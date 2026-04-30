@@ -810,14 +810,17 @@ class DialogTimerAlarmManager:
             return "Активных таймеров нет."
         lines: list[str] = []
         now_ts = datetime.now().timestamp()
+        count = True if len(timers) == 1 else False
         for index, item in enumerate(timers, start=1):
             total_seconds = max(1, _safe_int(item.get("total_seconds")))
             remaining = max(0, _safe_int(item.get("remaining_seconds")))
             if not bool(item.get("paused")):
                 ends_at = float(item.get("ends_at") or now_ts)
                 remaining = max(0, int(ends_at - now_ts))
+
+            number = f"{index}. на {_seconds_to_minute_phrase(total_seconds)} осталось"
             lines.append(
-                f"{index}. на {_seconds_to_minute_phrase(total_seconds)} осталось {_seconds_to_minute_phrase(max(1, remaining))}"
+                f"{number if count else ''} {_seconds_to_minute_phrase(max(1, remaining))}"
             )
         return "\n".join(lines)
 
