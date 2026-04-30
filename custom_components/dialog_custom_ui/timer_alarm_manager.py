@@ -259,7 +259,7 @@ class DialogTimerAlarmManager:
         if not client_id:
             return
         timers = self._timers_for_client(client_id)
-        await self._post_save(options, {"clientId": client_id, "actionType": "timer_info", "data": {"count": [self._timer_info_for_response(item) for item in timers]}})
+        await self._post_save(options, {"actionType": "timer_info", "data": {"count": self._timer_count_message(timers)}})
 
     async def async_handle_alarm_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
