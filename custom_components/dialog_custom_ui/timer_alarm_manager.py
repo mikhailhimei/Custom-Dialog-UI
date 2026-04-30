@@ -191,12 +191,13 @@ class DialogTimerAlarmManager:
 
         target_count = _extract_count(payload)
         if target_count is None and len(timers) > 1:
+            _, text_timer = self._timer_count_message(timers)
             await self._post_save(
                 options,
                 {
                     "actionType": "several",
                     "variables": {
-                        "message": self._timer_count_message(timers),
+                        "message": text_timer,
                     },
                 },
             )
@@ -251,7 +252,7 @@ class DialogTimerAlarmManager:
         await self._post_save(
                 options,
                 {
-                    "actionType": "one" if count_timer else "several",
+                    "actionType": "several" if count_timer else "one",
                     "variables": {
                         "message": text_timer
                     }
@@ -350,7 +351,11 @@ class DialogTimerAlarmManager:
             await self._post_save(
                 options,
                 {
-                    "actionType": "default_next_step"
+                    "actionType": "several",
+                    "variables": {"message": "\n".join(
+                        f"{i+1}. на {_normalize_value(item.get('time'))}"
+                        for i, item in enumerate(alarms)
+                    )}
                 }
             )
             return
