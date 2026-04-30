@@ -810,7 +810,7 @@ class DialogTimerAlarmManager:
             return "Активных таймеров нет."
         lines: list[str] = []
         now_ts = datetime.now().timestamp()
-        count = True if len(timers) == 1 else False
+        count = False if len(timers) == 1 else True
         for index, item in enumerate(timers, start=1):
             total_seconds = max(1, _safe_int(item.get("total_seconds")))
             remaining = max(0, _safe_int(item.get("remaining_seconds")))
