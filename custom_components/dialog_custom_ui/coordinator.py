@@ -119,35 +119,36 @@ class DialogCommandCoordinator:
             return
 
         try:
-            raw_payload = await response.json(content_type=None)
+            raw_payloads = await response.json(content_type=None)
         except (aiohttp.ContentTypeError, ValueError) as err:
             body = await response.text()
             self._append_log("error", "Endpoint returned invalid JSON")
             _LOGGER.warning("Dialog endpoint returned invalid JSON: %s; body=%s", err, body[:300])
             return
 
-        payload = _extract_payload(raw_payload)
-        if not isinstance(payload, dict) or not payload:
-            self._append_log("idle", "Endpoint returned empty payload")
-            return
+        for raw_payload in raw_payloads:
+            payload = _extract_payload(raw_payload)
+            if not isinstance(payload, dict) or not payload:
+                self._append_log("idle", "Endpoint returned empty payload")
+                return
 
-        scenario = _match_scenario(payload, options[CONF_SCENARIOS])
-        if not scenario:
-            self._append_log(
-                "idle",
-                (
-                    "No match for "
-                    f"children_type={_describe_payload_type(payload.get('children_type') or payload.get('actionType'))} "
-                    f"children_direct_type={_describe_payload_type(payload.get(ATTR_CHILDREN_DIRECT_TYPE))} "
-                    f"parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}"
-                ),
-            )
-            return
+            scenario = _match_scenario(payload, options[CONF_SCENARIOS])
+            if not scenario:
+                self._append_log(
+                    "idle",
+                    (
+                        "No match for "
+                        f"children_type={_describe_payload_type(payload.get('children_type') or payload.get('actionType'))} "
+                        f"children_direct_type={_describe_payload_type(payload.get(ATTR_CHILDREN_DIRECT_TYPE))} "
+                        f"parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}"
+                    ),
+                )
+                return
 
-        self._append_log("match", f"Matched -> {scenario[ATTR_SCRIPT_ENTITY_ID]}")
-        if await self.timer_alarm_manager.async_handle_builtin(scenario, payload, options):
-            return
-        await self._async_run_script(scenario[ATTR_SCRIPT_ENTITY_ID], payload)
+            self._append_log("match", f"Matched -> {scenario[ATTR_SCRIPT_ENTITY_ID]}")
+            if await self.timer_alarm_manager.async_handle_builtin(scenario, payload, options):
+                return
+            await self._async_run_script(scenario[ATTR_SCRIPT_ENTITY_ID], payload)
 
     async def _async_run_script(self, script_entity_id: str, payload: dict[str, Any]) -> None:
         if not self.hass.states.get(script_entity_id):
