@@ -119,15 +119,15 @@ class DialogCommandCoordinator:
             return
 
         try:
-            raw_payloads = await response.json(content_type=None)
+            raw_payload = await response.json(content_type=None)
         except (aiohttp.ContentTypeError, ValueError) as err:
             body = await response.text()
             self._append_log("error", "Endpoint returned invalid JSON")
             _LOGGER.warning("Dialog endpoint returned invalid JSON: %s; body=%s", err, body[:300])
             return
 
-        for raw_payload in raw_payloads:
-            payload = _extract_payload(raw_payload)
+        payloads = _extract_payload(raw_payload)
+        for payload in payloads:
             if not isinstance(payload, dict) or not payload:
                 self._append_log("idle", "Endpoint returned empty payload")
                 return
