@@ -150,8 +150,7 @@ class DialogCommandCoordinator:
                 return
 
             self._append_log("match", f"Matched -> {scenario[ATTR_SCRIPT_ENTITY_ID]}")
-            if await self.timer_alarm_manager.async_handle_builtin(scenario, payload, options):
-                return
+            await self.timer_alarm_manager.async_handle_builtin(scenario, payload, options)
             await self._async_run_script(scenario[ATTR_SCRIPT_ENTITY_ID], payload)
 
     async def _async_run_script(self, script_entity_id: str, payload: dict[str, Any]) -> None:

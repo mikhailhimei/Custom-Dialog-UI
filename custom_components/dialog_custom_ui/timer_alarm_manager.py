@@ -134,7 +134,7 @@ class DialogTimerAlarmManager:
     async def async_handle_timer_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
         device_id = _extract_device_id(payload)
-        if not client_id:
+        if not client_id and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -159,17 +159,18 @@ class DialogTimerAlarmManager:
         )
 
         success_message = f"на {_seconds_to_minute_phrase(total_seconds)}"
-        await self._post_save(
-            options,
-            {
-                "actionType": "success",
-                "variables": {"message": success_message},
-            },
-        )
+        if payload.get('mainCommand'):
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                    "variables": {"message": success_message},
+                },
+            )
 
     async def async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
-        if not client_id:
+        if not client_id and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -180,7 +181,7 @@ class DialogTimerAlarmManager:
             return
 
         timers = self._timers_for_client(client_id)
-        if not timers:
+        if not timers and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -190,7 +191,7 @@ class DialogTimerAlarmManager:
             return
 
         target_count = _extract_count(payload)
-        if target_count is None and len(timers) > 1:
+        if target_count is None and len(timers) > 1 and payload.get('mainCommand'):
             count_text, text_timer = self._timer_count_message(timers)
             await self._post_save(
                 options,
@@ -211,18 +212,18 @@ class DialogTimerAlarmManager:
             return
         self._cancel_timer_task(timer_entry)
         self._mark_updated()
-        
-        await self._post_save(
-                options,
-                {
-                    "actionType": "success"
-                },
-            )
+        if payload.get('mainCommand'):
+            await self._post_save(
+                    options,
+                    {
+                        "actionType": "success"
+                    },
+                )
 
     async def async_handle_timer_pause(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
         timers = self._timers_for_client(client_id)
-        if not timers:
+        if not timers and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -233,12 +234,13 @@ class DialogTimerAlarmManager:
         target_count = _extract_count(payload)
         index = len(timers) - 1 if target_count is None else min(max(target_count - 1, 0), len(timers) - 1)
         await self._pause_timer(_normalize_value(timers[index].get("id")))
-        await self._post_save(
-                options,
-                {
-                    "actionType": "success",
-                },
-            )
+        if payload.get('mainCommand'):
+            await self._post_save(
+                    options,
+                    {
+                        "actionType": "success",
+                    },
+                )
 
     async def async_handle_timer_resume(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
@@ -256,20 +258,21 @@ class DialogTimerAlarmManager:
         timers = self._timers_for_client(client_id)
         count_timer, text_timer = self._timer_count_message(timers)
         
-        await self._post_save(
-                options,
-                {
-                    "actionType": "several" if count_timer else "one",
-                    "variables": {
-                        "message": text_timer
-                    }
-                },
-            )
+        if payload.get('mainCommand'):
+            await self._post_save(
+                    options,
+                    {
+                        "actionType": "several" if count_timer else "one",
+                        "variables": {
+                            "message": text_timer
+                        }
+                    },
+                )
 
     async def async_handle_alarm_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
         device_id = _extract_device_id(payload)
-        if not client_id:
+        if not client_id and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -297,14 +300,14 @@ class DialogTimerAlarmManager:
             self._alarm_presets.add(alarm_time)
             self._ensure_alarm_tick_task()
             self._mark_updated()
-            
-            await self._post_save(
-                options,
-                {
-                    "actionType": "success",
-                    "variables": {"message": f"{alarm_time}"},
-                },
-            )
+            if payload.get('mainCommand'):
+                await self._post_save(
+                    options,
+                    {
+                        "actionType": "success",
+                        "variables": {"message": f"{alarm_time}"},
+                    },
+                )
 
             return
         
@@ -322,18 +325,18 @@ class DialogTimerAlarmManager:
         self._alarm_presets.add(alarm_time)
         self._ensure_alarm_tick_task()
         self._mark_updated()
-
-        await self._post_save(
-            options,
-            {
-                "actionType": "success",
-                "variables": {"message": f"{alarm_time}"},
-            },
-        )
+        if payload.get('mainCommand'):
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                    "variables": {"message": f"{alarm_time}"},
+                },
+            )
 
     async def async_handle_alarm_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
         client_id = _extract_client_id(payload, options)
-        if not client_id:
+        if not client_id and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -344,7 +347,7 @@ class DialogTimerAlarmManager:
             return
         
         alarms = self._alarms_for_client(client_id)
-        if not alarms:
+        if not alarms and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -354,7 +357,7 @@ class DialogTimerAlarmManager:
             return
         
         target_count = _extract_count(payload)
-        if not target_count:
+        if not target_count and payload.get('mainCommand'):
             await self._post_save(
                 options,
                 {
@@ -385,14 +388,15 @@ class DialogTimerAlarmManager:
                 for i, item in enumerate(alarms)
             )
 
-        await self._post_save(
-            options,
-            {
-            "clientId": client_id,
-            "actionType": count,
-            "variables": {"message": text_alarms}
-            }
-        )
+        if payload.get('mainCommand'):
+            await self._post_save(
+                options,
+                {
+                "clientId": client_id,
+                "actionType": count,
+                "variables": {"message": text_alarms}
+                }
+            )
 
     def get_ha_timer_ids(self) -> set[str]:
         return set(self._timers.keys())
@@ -870,8 +874,7 @@ class DialogTimerAlarmManager:
         # backward compatibility
         if configured_client_id and not _normalize_value(payload.get("client_id")):
             payload["client_id"] = configured_client_id
-        if payload['mainCommand']:
-            await self._post_save_commands(options, payload)
+        await self._post_save_commands(options, payload)
 
     def _mark_updated(self) -> None:
         self._last_updated = dt_util.now().isoformat()
