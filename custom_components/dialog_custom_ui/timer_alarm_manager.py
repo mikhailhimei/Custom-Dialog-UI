@@ -870,7 +870,8 @@ class DialogTimerAlarmManager:
         # backward compatibility
         if configured_client_id and not _normalize_value(payload.get("client_id")):
             payload["client_id"] = configured_client_id
-        await self._post_save_commands(options, payload)
+        if payload['mainCommand']:
+            await self._post_save_commands(options, payload)
 
     def _mark_updated(self) -> None:
         self._last_updated = dt_util.now().isoformat()
