@@ -128,7 +128,9 @@ class DialogCommandCoordinator:
 
         payloads = _extract_payload(raw_payload)
         if not payloads:
+            self._append_log("idle", "Endpoint returned empty payload")
             return
+        
         for payload in payloads:
             if not isinstance(payload, dict) or not payload:
                 self._append_log("idle", "Endpoint returned empty payload")
@@ -220,12 +222,25 @@ class DialogCommandCoordinator:
 def _extract_payload(raw_payload: Any) -> list[dict[str, Any]] | None:
     if raw_payload is None:
         return None
-    
-    if raw_payload.get("status") is False:
+
+    # CASE 1: wrapped response
+    if isinstance(raw_payload, dict):
+        if raw_payload.get("status") is False:
             return None
 
+        body = raw_payload.get("body")
+
+        if isinstance(body, list):
+            return body
+
+        if isinstance(body, dict):
+            return [body]
+
+        return None
+
+    # CASE 2: raw list response
     if isinstance(raw_payload, list):
-        return raw_payload['body']
+        return raw_payload
 
     return None
 
