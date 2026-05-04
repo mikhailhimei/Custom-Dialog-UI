@@ -215,14 +215,17 @@ class DialogCommandCoordinator:
         logs.appendleft({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
 
 
-def _extract_payload(raw_payload: Any) -> dict[str, Any] | None:
-    if not isinstance(raw_payload, dict):
+def _extract_payload(raw_payload: Any) -> list[dict[str, Any]] | None:
+    if raw_payload is None:
         return None
-    if isinstance(raw_payload.get("body"), dict):
-        if raw_payload.get("status") is False:
+    
+    if raw_payload.get("status") is False:
             return None
-        return raw_payload["body"]
-    return raw_payload
+
+    if isinstance(raw_payload, list):
+        return raw_payload['body']
+
+    return None
 
 
 def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
