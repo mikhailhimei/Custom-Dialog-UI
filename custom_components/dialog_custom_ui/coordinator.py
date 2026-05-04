@@ -127,6 +127,8 @@ class DialogCommandCoordinator:
             return
 
         payloads = _extract_payload(raw_payload)
+        if not payloads:
+            return
         for payload in payloads:
             if not isinstance(payload, dict) or not payload:
                 self._append_log("idle", "Endpoint returned empty payload")
