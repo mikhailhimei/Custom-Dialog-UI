@@ -507,11 +507,15 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _setTab(tab) {
+    const viewportScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     if (tab === TABS.defaults && !this._isCurrentUserAdmin()) {
       this._tab = TABS.primary;
       this._error = '';
       this._status = '';
       this._render();
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, viewportScrollY);
+      }
       if (!this._loading || this._lastLoadedTab !== TABS.primary) {
         this._loadPage(this._pageByTab[TABS.primary] || 1);
       }
@@ -521,6 +525,9 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._error = '';
     this._status = '';
     this._render();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, viewportScrollY);
+    }
     if (tab === TABS.primary || tab === TABS.secondary) {
       const page = this._pageByTab[tab] || 1;
       if (!this._loading || this._lastLoadedTab !== tab) {
