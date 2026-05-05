@@ -87,12 +87,18 @@ export const selectSearchResult = (ctx, itemId, result) => {
   const normalizedItemId = String(itemId ?? '').trim();
   const activeType = ctx._searchActiveType;
   if (activeType === 'directControl') {
+    const resolvedUuid = String(result.uuid ?? '').trim();
+    ctx._lastSelectedDirectControlUuid = {
+      itemId: normalizedItemId,
+      uuid: resolvedUuid,
+      at: Date.now(),
+    };
     const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
       .map((item) => (
         item.id === normalizedItemId
           ? {
             ...item,
-            uuid: String(result.uuid ?? ''),
+            uuid: resolvedUuid,
             displayValue: resolveResultTitle(result),
             mappingType: resolveResultMappingType(result),
           }

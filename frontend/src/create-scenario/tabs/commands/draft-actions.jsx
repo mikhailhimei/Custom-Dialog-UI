@@ -91,6 +91,15 @@ export const updateDirectControlItem = (ctx, itemId, value, triggerSearch = true
       if (item.id !== normalizedItemId) {
         return item;
       }
+      const selectedMeta = ctx._lastSelectedDirectControlUuid;
+      if (
+        selectedMeta
+        && selectedMeta.itemId === normalizedItemId
+        && Date.now() - Number(selectedMeta.at ?? 0) < 1000
+        && String(value ?? '').trim() !== String(selectedMeta.uuid ?? '').trim()
+      ) {
+        return item;
+      }
       const nextUuid = String(value ?? '');
       const nextTrimmedUuid = nextUuid.trim();
       const currentTrimmedUuid = String(item.uuid ?? '').trim();
@@ -107,6 +116,9 @@ export const updateDirectControlItem = (ctx, itemId, value, triggerSearch = true
   };
   if (triggerSearch && value.length > 0) {
     ctx._debouncedPerformUuidSearch(value, 'directControl', normalizedItemId);
+  }
+  if (ctx._lastSelectedDirectControlUuid?.itemId === normalizedItemId) {
+    ctx._lastSelectedDirectControlUuid = null;
   }
 };
 

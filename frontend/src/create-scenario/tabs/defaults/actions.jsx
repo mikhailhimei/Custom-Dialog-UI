@@ -34,14 +34,6 @@ export const reloadDefaultsCommands = async (ctx) => {
         return directType;
       }
 
-      const byTitle = DEFAULT_COMMAND_CONFIGS.find((config) => (
-        String(config.title).trim() === String(item?.title ?? '').trim()
-        && !usedTypes.has(config.type)
-      ));
-      if (byTitle?.type && nextState[byTitle.type]) {
-        return byTitle.type;
-      }
-
       const byIndex = fallbackOrder[index];
       if (byIndex && nextState[byIndex] && !usedTypes.has(byIndex)) {
         return byIndex;
