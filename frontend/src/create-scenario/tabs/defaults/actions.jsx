@@ -1,8 +1,7 @@
 import { DEFAULT_COMMAND_CONFIGS } from '../../constants.jsx';
 
 export const reloadDefaultsCommands = async (ctx) => {
-  const actionTypes = DEFAULT_COMMAND_CONFIGS.map((config) => config.type).join(',');
-  const url = ctx._apiUrl(`/api/cms/search?actionType=${encodeURIComponent(actionTypes)}&collections=settings-dialog`);
+  const url = ctx._apiUrl('/api/cms/settings-dialog');
   if (!url) {
     ctx._defaultsError = 'Заполните Base URL во вкладке Settings.';
     ctx._render();
@@ -21,7 +20,7 @@ export const reloadDefaultsCommands = async (ctx) => {
     }
     const result = await response.json();
     const items = Array.isArray(result?.data) ? result.data : Array.isArray(result) ? result : [];
-    const nextState = ctx._newDefaultsState();
+    const nextState = { ...ctx._defaultsByType };
     const usedTypes = new Set();
     const fallbackOrder = DEFAULT_COMMAND_CONFIGS.map((config) => config.type);
 
@@ -59,7 +58,10 @@ export const reloadDefaultsCommands = async (ctx) => {
       usedTypes.add(type);
       nextState[type] = ctx._newDefaultsDraft(type, item);
     });
-    ctx._defaultsByType = nextState;
+    ctx._defaultsByType = {
+      ...ctx._newDefaultsState(),
+      ...nextState,
+    };
     ctx._status = 'Дефолтные команды загружены.';
   } catch (error) {
     ctx._defaultsError = error?.message || 'Не удалось загрузить дефолтные команды.';

@@ -151,6 +151,15 @@ export const updateNextActionItem = (ctx, itemId, field, value, rerender = true,
         return item;
       }
       if (field === 'uuid') {
+        const selectedMeta = ctx._lastSelectedNextActionUuid;
+        if (
+          selectedMeta
+          && selectedMeta.itemId === normalizedItemId
+          && Date.now() - Number(selectedMeta.at ?? 0) < 1000
+          && String(value ?? '').trim() !== String(selectedMeta.uuid ?? '').trim()
+        ) {
+          return item;
+        }
         const nextUuid = String(value ?? '');
         const nextTrimmedUuid = nextUuid.trim();
         const currentTrimmedUuid = String(item.uuid ?? '').trim();
@@ -184,6 +193,9 @@ export const updateNextActionItem = (ctx, itemId, field, value, rerender = true,
   }
   if (triggerSearch && field === 'uuid' && value.length > 0) {
     ctx._debouncedPerformUuidSearch(value, 'nextAction', normalizedItemId);
+  }
+  if (field === 'uuid' && ctx._lastSelectedNextActionUuid?.itemId === normalizedItemId) {
+    ctx._lastSelectedNextActionUuid = null;
   }
 };
 
