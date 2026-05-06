@@ -16,7 +16,9 @@ const shared = {
   format: 'esm',
   target: ['es2022'],
   platform: 'browser',
-  minify: production,
+  minifyWhitespace: production,
+  minifySyntax: production,
+  minifyIdentifiers: false,
   sourcemap: production ? false : 'inline',
   legalComments: 'none',
   define: {
