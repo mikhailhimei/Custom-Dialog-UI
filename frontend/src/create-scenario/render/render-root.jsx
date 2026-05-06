@@ -31,5 +31,4 @@ export const renderRoot = (ctx) => {
   `;
 
   ctx._mountReact(markup);
-  ctx._bind();
 };
