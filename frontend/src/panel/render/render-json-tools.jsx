@@ -1,23 +1,25 @@
-import { escapeHtml } from '../utils.jsx';
+import React from 'react';
 
 export const renderJsonTools = (ctx) => {
   const payload = ctx._buildConfigPayload();
 
-  return `
-      <section class="hero-card">
+  return (
+    <>
+      <section className="hero-card">
         <h1>JSON</h1>
         <p>Можно скачать текущую конфигурацию в файл или загрузить свой JSON обратно в форму.</p>
-        <div class="toolbar">
-          <button type="button" class="secondary" data-action="download-json">Скачать JSON</button>
-          <button type="button" class="primary" data-action="upload-json">Загрузить JSON</button>
-          <input type="file" accept=".json,application/json" data-action="import-json-input" hidden />
+        <div className="toolbar">
+          <button type="button" className="secondary" onClick={() => ctx._downloadJson()}>Скачать JSON</button>
+          <button type="button" className="primary" onClick={() => ctx._openJsonFilePicker()}>Загрузить JSON</button>
+          <input type="file" accept=".json,application/json" onChange={(e) => ctx._importJsonFile(e.target.files[0])} hidden />
         </div>
-        ${ctx._error ? `<div class="status error">${escapeHtml(ctx._error)}</div>` : ''}
-        ${ctx._status ? `<div class="status ok">${escapeHtml(ctx._status)}</div>` : ''}
+        {ctx._error && <div className="status error">{ctx._error}</div>}
+        {ctx._status && <div className="status ok">{ctx._status}</div>}
       </section>
-      <section class="help-card">
+      <section className="help-card">
         <div><strong>Предпросмотр текущего JSON</strong></div>
-        <pre><code>${escapeHtml(JSON.stringify(payload, null, 2))}</code></pre>
+        <pre><code>{JSON.stringify(payload, null, 2)}</code></pre>
       </section>
-    `;
+    </>
+  );
 };

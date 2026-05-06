@@ -1130,6 +1130,10 @@ class DialogCustomUiPanel extends HTMLElement {
     this._render();
   }
 
+  _styles() {
+    return PANEL_STYLES;
+  }
+
   _syncEmbeddedTimerAlarmHass() {
     if (!this._hass || !this.shadowRoot) {
       return;
