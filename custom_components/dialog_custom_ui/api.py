@@ -27,7 +27,9 @@ from .const import (
     CONF_CLIENT_ID,
     CONF_COMMAND_RECEIVE_MODE,
     CONF_REDIS_CHANNEL,
+    CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
+    CONF_REDIS_USERNAME,
     CONF_SCENARIOS,
     CONF_THEME,
     CONF_TIMEOUT,
@@ -105,6 +107,8 @@ async def _ws_get_config(
         "command_receive_mode": entry.options.get(CONF_COMMAND_RECEIVE_MODE, DEFAULT_COMMAND_RECEIVE_MODE),
         "redis_url": entry.options.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
         "redis_channel": entry.options.get(CONF_REDIS_CHANNEL, DEFAULT_REDIS_CHANNEL),
+        "redis_username": entry.options.get(CONF_REDIS_USERNAME, ""),
+        "redis_password": entry.options.get(CONF_REDIS_PASSWORD, ""),
         "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
         "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
         "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
@@ -155,6 +159,8 @@ async def _ws_get_logs(
         vol.Optional(CONF_COMMAND_RECEIVE_MODE, default=DEFAULT_COMMAND_RECEIVE_MODE): str,
         vol.Optional(CONF_REDIS_URL, default=DEFAULT_REDIS_URL): str,
         vol.Optional(CONF_REDIS_CHANNEL, default=DEFAULT_REDIS_CHANNEL): str,
+        vol.Optional(CONF_REDIS_USERNAME, default=""): vol.Any(str, None),
+        vol.Optional(CONF_REDIS_PASSWORD, default=""): vol.Any(str, None),
         vol.Optional(CONF_ALLOW_NON_ADMIN_PANEL, default=True): bool,
         vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
         vol.Optional(CONF_THEME, default=DEFAULT_THEME): str,
@@ -227,6 +233,8 @@ async def _ws_save_config(
         CONF_COMMAND_RECEIVE_MODE: _normalize_command_receive_mode(msg.get(CONF_COMMAND_RECEIVE_MODE, DEFAULT_COMMAND_RECEIVE_MODE)),
         CONF_REDIS_URL: str(msg.get(CONF_REDIS_URL, DEFAULT_REDIS_URL)).strip() or DEFAULT_REDIS_URL,
         CONF_REDIS_CHANNEL: str(msg.get(CONF_REDIS_CHANNEL, DEFAULT_REDIS_CHANNEL)).strip() or DEFAULT_REDIS_CHANNEL,
+        CONF_REDIS_USERNAME: _normalize_optional_str(msg.get(CONF_REDIS_USERNAME, "")),
+        CONF_REDIS_PASSWORD: _normalize_optional_str(msg.get(CONF_REDIS_PASSWORD, "")),
         CONF_ALLOW_NON_ADMIN_PANEL: bool(msg.get(CONF_ALLOW_NON_ADMIN_PANEL, False)),
         CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
         CONF_THEME: _normalize_theme(msg.get(CONF_THEME, DEFAULT_THEME)),
@@ -260,6 +268,12 @@ async def _ws_save_config(
     coordinator = hass.data[DOMAIN][entry.entry_id]
     await coordinator.async_reload()
     connection.send_result(msg["id"], {"saved": True})
+
+
+def _normalize_optional_str(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _normalize_command_receive_mode(value: Any) -> str:

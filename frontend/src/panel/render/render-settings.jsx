@@ -43,6 +43,7 @@ export const renderSettings = (ctx) => {
             <input data-config-field="client_id" value="${escapeHtml(ctx._config.client_id)}" placeholder="user-123" />
             <small>Поле уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
           </label>
+          ${renderSecretField(ctx, 'timer_alarm_token', 'Authorization token', ctx._config.timer_alarm_token, 'Bearer xxx')}
           <label>
             <span>Получение команд</span>
             <select data-config-field="command_receive_mode">
@@ -59,9 +60,14 @@ export const renderSettings = (ctx) => {
           <label>
             <span>Redis channel</span>
             <input data-config-field="redis_channel" value="${escapeHtml(ctx._config.redis_channel)}" placeholder="dialog_commands" />
-            <small>Канал, куда публикуются JSON-команды для сценариев.</small>
+            <small>Фолбэк-канал, если не задан client_id.</small>
           </label>
-          ${renderSecretField(ctx, 'timer_alarm_token', 'Authorization token', ctx._config.timer_alarm_token, 'Bearer xxx')}
+          <label>
+            <span>Redis username</span>
+            <input data-config-field="redis_username" value="${escapeHtml(ctx._config.redis_username)}" placeholder="default" />
+            <small>Опционально: логин для Redis ACL.</small>
+          </label>
+          ${renderSecretField(ctx, 'redis_password', 'Redis password', ctx._config.redis_password, '••••••')}
           <label class="field-narrow">
             <span>Timeout, секунд</span>
             <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(ctx._config.timeout)}" />
