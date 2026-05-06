@@ -1,4 +1,4 @@
-﻿"""Constants for Dialog Custom UI."""
+"""Constants for Dialog Custom UI."""
 
 DOMAIN = "dialog_custom_ui"
 PANEL_URL_PATH = "dialog-custom-ui"
@@ -13,6 +13,9 @@ MAX_LOG_ENTRIES = 10
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMEOUT = 10
 DEFAULT_THEME = "light"
+DEFAULT_COMMAND_RECEIVE_MODE = "http"
+DEFAULT_REDIS_URL = "redis://127.0.0.1:6379/0"
+DEFAULT_REDIS_CHANNEL = "dialog_commands"
 DEFAULT_TIMER_ALARM_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMER_ALARM_CLIENT_ID = ""
 DEFAULT_TIMER_ALARM_INTERVAL_SECONDS = 1
@@ -20,6 +23,9 @@ DEFAULT_TIMER_ALARM_INTERVAL_SECONDS = 1
 CONF_BASE_URL = "base_url"
 CONF_CLIENT_ID = "client_id"
 CONF_TIMEOUT = "timeout"
+CONF_COMMAND_RECEIVE_MODE = "command_receive_mode"
+CONF_REDIS_URL = "redis_url"
+CONF_REDIS_CHANNEL = "redis_channel"
 CONF_SCENARIOS = "scenarios"
 CONF_THEME = "theme"
 CONF_ALLOW_NON_ADMIN_PANEL = "allow_non_admin_panel"

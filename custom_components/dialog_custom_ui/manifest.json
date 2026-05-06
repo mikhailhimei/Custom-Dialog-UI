@@ -2,11 +2,15 @@
   "domain": "dialog_custom_ui",
   "name": "Dialog Custom UI",
   "codeowners": [],
-  "dependencies": ["conversation"],
+  "dependencies": [
+    "conversation"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/mikhailhimei/Custom-Dialog-UI",
   "integration_type": "service",
   "iot_class": "local_polling",
-  "requirements": [],
+  "requirements": [
+    "redis==5.0.8"
+  ],
   "version": "0.3.3"
 }

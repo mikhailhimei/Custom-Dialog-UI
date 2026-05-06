@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime
 from typing import Any
 
 import aiohttp
 import async_timeout
+import redis.asyncio as redis
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -21,12 +23,18 @@ from .const import (
     ATTR_SCRIPT_ENTITY_ID,
     CONF_BASE_URL,
     CONF_CLIENT_ID,
+    CONF_COMMAND_RECEIVE_MODE,
+    CONF_REDIS_CHANNEL,
+    CONF_REDIS_URL,
     CONF_SCENARIOS,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_PRESETS,
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
+    DEFAULT_COMMAND_RECEIVE_MODE,
+    DEFAULT_REDIS_CHANNEL,
+    DEFAULT_REDIS_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
     UPDATE_INTERVAL_SECONDS,
@@ -76,12 +84,16 @@ class DialogCommandCoordinator:
     async def _run(self) -> None:
         while True:
             try:
-                await self._async_poll_once()
+                options = _get_options(self.entry)
+                if options[CONF_COMMAND_RECEIVE_MODE] == "redis_subscribe":
+                    await self._async_subscribe_redis(options)
+                else:
+                    await self._async_poll_once()
             except asyncio.CancelledError:
                 raise
             except Exception as err:
-                self._append_log("error", f"Polling error: {err}")
-                _LOGGER.exception("Unexpected error while polling dialog command")
+                self._append_log("error", f"Command receiver error: {err}")
+                _LOGGER.exception("Unexpected error while receiving dialog command")
             await asyncio.sleep(UPDATE_INTERVAL_SECONDS)
 
     async def _async_poll_once(self) -> None:
@@ -126,14 +138,75 @@ class DialogCommandCoordinator:
             _LOGGER.warning("Dialog endpoint returned invalid JSON: %s; body=%s", err, body[:300])
             return
 
+        await self._async_handle_raw_payload(raw_payload, options, "Endpoint")
+
+    async def _async_subscribe_redis(self, options: dict[str, Any]) -> None:
+        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
+        channel = _normalize_value(options.get(CONF_REDIS_CHANNEL)) or DEFAULT_REDIS_CHANNEL
+        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
+        client = redis.Redis.from_url(redis_url, decode_responses=True)
+        pubsub = client.pubsub()
+        self._append_log("request", f"SUBSCRIBE {channel}")
+        try:
+            async with async_timeout.timeout(timeout):
+                await pubsub.subscribe(channel)
+            while True:
+                current_options = _get_options(self.entry)
+                if (
+                    current_options[CONF_COMMAND_RECEIVE_MODE] != "redis_subscribe"
+                    or _normalize_value(current_options.get(CONF_REDIS_URL)) != redis_url
+                    or _normalize_value(current_options.get(CONF_REDIS_CHANNEL)) != channel
+                ):
+                    return
+
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=UPDATE_INTERVAL_SECONDS)
+                if not message:
+                    continue
+
+                raw_data = message.get("data")
+                if raw_data in (None, ""):
+                    continue
+                try:
+                    raw_payload = json.loads(raw_data) if isinstance(raw_data, str) else raw_data
+                except (TypeError, json.JSONDecodeError) as err:
+                    self._append_log("error", "Redis message contained invalid JSON")
+                    _LOGGER.warning("Redis message contained invalid JSON: %s; data=%r", err, raw_data)
+                    continue
+
+                await self._async_handle_raw_payload(raw_payload, current_options, "Redis")
+        except (redis.RedisError, TimeoutError) as err:
+            self._append_log("error", f"Redis subscribe failed: {err}")
+            _LOGGER.warning("Redis subscribe failed: %s", err)
+        finally:
+            try:
+                await pubsub.unsubscribe(channel)
+            except redis.RedisError:
+                pass
+            close_pubsub = getattr(pubsub, "aclose", None) or getattr(pubsub, "close", None)
+            if close_pubsub:
+                result = close_pubsub()
+                if hasattr(result, "__await__"):
+                    await result
+            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
+            if close_client:
+                result = close_client()
+                if hasattr(result, "__await__"):
+                    await result
+
+    async def _async_handle_raw_payload(
+        self,
+        raw_payload: Any,
+        options: dict[str, Any],
+        source_label: str,
+    ) -> None:
         payloads = _extract_payload(raw_payload)
         if not payloads:
-            self._append_log("idle", "Endpoint returned empty payload")
+            self._append_log("idle", f"{source_label} returned empty payload")
             return
-        
+
         for payload in payloads:
             if not isinstance(payload, dict) or not payload:
-                self._append_log("idle", "Endpoint returned empty payload")
+                self._append_log("idle", f"{source_label} returned empty payload")
                 return
 
             scenario = _match_scenario(payload, options[CONF_SCENARIOS])
@@ -235,7 +308,9 @@ def _extract_payload(raw_payload: Any) -> list[dict[str, Any]] | None:
         if isinstance(body, dict):
             return [body]
 
-        return None
+        # Redis SUBSCRIBE commonly publishes the command payload directly.
+        # Accept raw dict payloads too, while still honoring status=false wrappers.
+        return [raw_payload]
 
     # CASE 2: raw list response
     if isinstance(raw_payload, list):
@@ -414,11 +489,21 @@ def _matches_condition(
     return True
 
 
+def _normalize_command_receive_mode(value: Any) -> str:
+    normalized = str(value or DEFAULT_COMMAND_RECEIVE_MODE).strip().lower()
+    return "redis_subscribe" if normalized == "redis_subscribe" else DEFAULT_COMMAND_RECEIVE_MODE
+
+
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     stored = dict(entry.options)
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
+        CONF_COMMAND_RECEIVE_MODE: _normalize_command_receive_mode(
+            stored.get(CONF_COMMAND_RECEIVE_MODE, DEFAULT_COMMAND_RECEIVE_MODE)
+        ),
+        CONF_REDIS_URL: stored.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
+        CONF_REDIS_CHANNEL: stored.get(CONF_REDIS_CHANNEL, DEFAULT_REDIS_CHANNEL),
         CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_SCENARIOS: list(stored.get(CONF_SCENARIOS, [])),

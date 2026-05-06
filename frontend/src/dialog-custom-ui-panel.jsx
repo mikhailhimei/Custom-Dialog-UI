@@ -841,6 +841,9 @@ class DialogCustomUiPanel extends HTMLElement {
     return {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
+      command_receive_mode: this._config.command_receive_mode === 'redis_subscribe' ? 'redis_subscribe' : 'http',
+      redis_url: this._config.redis_url,
+      redis_channel: this._config.redis_channel,
       allow_non_admin_panel: Boolean(this._config.allow_non_admin_panel),
       timer_alarm_token: this._config.timer_alarm_token,
       yandex_tts_api_key: this._config.yandex_tts_api_key,
