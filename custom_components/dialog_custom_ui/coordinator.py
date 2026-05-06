@@ -25,7 +25,9 @@ from .const import (
     CONF_CLIENT_ID,
     CONF_COMMAND_RECEIVE_MODE,
     CONF_REDIS_CHANNEL,
+    CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
+    CONF_REDIS_USERNAME,
     CONF_SCENARIOS,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_ITEMS,
@@ -142,9 +144,18 @@ class DialogCommandCoordinator:
 
     async def _async_subscribe_redis(self, options: dict[str, Any]) -> None:
         redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
-        channel = _normalize_value(options.get(CONF_REDIS_CHANNEL)) or DEFAULT_REDIS_CHANNEL
+        fallback_channel = _normalize_value(options.get(CONF_REDIS_CHANNEL)) or DEFAULT_REDIS_CHANNEL
+        client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        channel = f"ACTIVE_COMMAND:{client_id}" if client_id else fallback_channel
         timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
-        client = redis.Redis.from_url(redis_url, decode_responses=True)
+        redis_username = _normalize_value(options.get(CONF_REDIS_USERNAME))
+        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+        client = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            username=redis_username or None,
+            password=redis_password or None,
+        )
         pubsub = client.pubsub()
         self._append_log("request", f"SUBSCRIBE {channel}")
         try:
@@ -155,7 +166,10 @@ class DialogCommandCoordinator:
                 if (
                     current_options[CONF_COMMAND_RECEIVE_MODE] != "redis_subscribe"
                     or _normalize_value(current_options.get(CONF_REDIS_URL)) != redis_url
-                    or _normalize_value(current_options.get(CONF_REDIS_CHANNEL)) != channel
+                    or _normalize_value(current_options.get(CONF_CLIENT_ID)) != client_id
+                    or _normalize_value(current_options.get(CONF_REDIS_CHANNEL)) != fallback_channel
+                    or _normalize_value(current_options.get(CONF_REDIS_USERNAME)) != redis_username
+                    or _normalize_value(current_options.get(CONF_REDIS_PASSWORD)) != redis_password
                 ):
                     return
 
