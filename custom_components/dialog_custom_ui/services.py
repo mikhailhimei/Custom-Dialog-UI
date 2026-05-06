@@ -10,6 +10,7 @@ from typing import Any
 import aiohttp
 import async_timeout
 import voluptuous as vol
+import redis.asyncio as redis
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -20,6 +21,9 @@ from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_COMMAND_RECEIVE_MODE,
+    CONF_REDIS_PASSWORD,
+    CONF_REDIS_URL,
+    CONF_REDIS_USERNAME,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
@@ -90,19 +94,35 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
 
 
     if _normalize_value(options.get(CONF_COMMAND_RECEIVE_MODE)).lower() == "redis_subscribe":
-        requested_event_type = f"DIALOG_MESSAGE:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}"
-        event_type = requested_event_type if len(requested_event_type) <= 64 else "DIALOG_MESSAGE"
-        event_payload = {
-            ATTR_CLIENT_ID: payload[ATTR_CLIENT_ID],
-            ATTR_DEVICE_ID: payload[ATTR_DEVICE_ID],
+        channel = f"DIALOG_MESSAGE:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}"
+        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or "redis://127.0.0.1:6379/0"
+        redis_username = _normalize_value(options.get(CONF_REDIS_USERNAME))
+        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+        redis_payload = {
             ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
             ATTR_VARIABLES: payload[ATTR_VARIABLES],
         }
-        hass.bus.async_fire(event_type, event_payload)
-        if event_type != requested_event_type:
-            _append_log(hass, "warning", f"EVENT type too long ({len(requested_event_type)}), fallback to {event_type}")
-        _append_log(hass, "request", f"EVENT {event_type}")
-        return
+        client = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            username=redis_username or None,
+            password=redis_password or None,
+        )
+        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
+        try:
+            async with async_timeout.timeout(timeout):
+                await client.publish(channel, json.dumps(redis_payload, ensure_ascii=False))
+            _append_log(hass, "request", f"PUBLISH {channel}")
+            return
+        except (redis.RedisError, TimeoutError) as err:
+            _append_log(hass, "error", f"send_command redis publish failed: {err}")
+            raise HomeAssistantError(f"Failed to publish dialog command to Redis: {err}") from err
+        finally:
+            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
+            if close_client:
+                result = close_client()
+                if hasattr(result, "__await__"):
+                    await result
 
     url = f"{base_url}{_SAVE_COMMANDS_PATH}"
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -154,6 +174,9 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
         CONF_COMMAND_RECEIVE_MODE: stored.get(CONF_COMMAND_RECEIVE_MODE, "http"),
+        CONF_REDIS_URL: stored.get(CONF_REDIS_URL, "redis://127.0.0.1:6379/0"),
+        CONF_REDIS_USERNAME: stored.get(CONF_REDIS_USERNAME, ""),
+        CONF_REDIS_PASSWORD: stored.get(CONF_REDIS_PASSWORD, ""),
         CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
     }
