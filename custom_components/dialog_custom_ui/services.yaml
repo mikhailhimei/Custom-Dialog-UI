@@ -1,0 +1,33 @@
+send_command:
+  name: Send dialog command
+  description: Send a custom command payload to the configured Dialog API /api/dialog/save-commands endpoint.
+  fields:
+    clientId:
+      name: Client ID
+      description: Client identifier sent as a string in the request body.
+      required: true
+      example: "client-1"
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Device identifier sent as a string in the request body.
+      required: true
+      example: "media_player.kitchen"
+      selector:
+        text:
+    actionType:
+      name: Action type
+      description: Action type sent as a string in the request body.
+      required: true
+      example: "turn_on_light"
+      selector:
+        text:
+    variables:
+      name: Variables JSON
+      description: JSON object inserted into the variables field of the request body.
+      required: false
+      example: '{"brightness": 80, "color": "warm"}'
+      selector:
+        text:
+          multiline: true

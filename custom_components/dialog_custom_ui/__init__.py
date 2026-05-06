@@ -20,6 +20,7 @@ from .const import (
 from .coordinator import DialogCommandCoordinator
 from .timer_alarm_manager import async_register_timer_alarm_websockets
 from .panel import async_register_panel
+from .services import async_register_services, async_unregister_services
 from .voice_agent import DialogCustomUiVoiceAgent
 from .yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
@@ -30,6 +31,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
     async_register_websockets(hass)
     async_register_timer_alarm_websockets(hass)
+    async_register_services(hass)
     await async_register_tts_service(hass)
     return True
 
@@ -38,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Dialog Custom UI from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
+    async_register_services(hass)
     await async_register_tts_service(hass)
     await _async_migrate_legacy_voice_agent_options(hass, entry)
     await async_register_panel(hass)
@@ -68,6 +71,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_stop()
     if hass.services.has_service(DOMAIN, SERVICE_SPEAK):
         hass.services.async_remove(DOMAIN, SERVICE_SPEAK)
+    if not hass.config_entries.async_entries(DOMAIN):
+        async_unregister_services(hass)
     return True
 
 
