@@ -47,11 +47,17 @@ export const closeModal = (ctx) => {
   ctx._openResponseItemIds = new Set();
   ctx._openDirectControlItemIds = new Set();
   ctx._openNextActionItemIds = new Set();
-  ctx._draft = ctx._newDraft();
+  if (ctx._modalMode !== 'create' || ctx._editingId || ctx._draft?.title || ctx._draft?.message) {
+    ctx._draft = ctx._newDraft();
+  }
   ctx._render();
 };
 
 export const saveModal = async (ctx) => {
+  const activeElement = ctx.shadowRoot?.activeElement;
+  if (activeElement instanceof HTMLElement && typeof activeElement.blur === 'function') {
+    activeElement.blur();
+  }
   const base = ctx._apiUrl('');
   if (!base) {
     ctx._error = 'Заполните Base URL во вкладке Settings.';
