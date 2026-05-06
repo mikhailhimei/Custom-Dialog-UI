@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './dialog-custom-ui-create-scenario.jsx';
 import {
@@ -42,9 +42,13 @@ import { initializePanelState } from './panel/state/init-state.jsx';
 import { PANEL_STYLES } from './panel/styles.jsx';
 import { generateConditionId, newCondition } from './panel/utils.jsx';
 
-const ShadowMarkup = ({ html }) => (
-  <div dangerouslySetInnerHTML={{ __html: html }} />
-);
+const ShadowMarkup = ({ html, onRendered }) => {
+  useLayoutEffect(() => {
+    onRendered?.();
+  }, [html, onRendered]);
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+};
 class DialogCustomUiPanel extends HTMLElement {
   constructor() {
     super();
@@ -86,7 +90,7 @@ class DialogCustomUiPanel extends HTMLElement {
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
     }
-    this._reactRoot.render(<ShadowMarkup html={markup} />);
+    this._reactRoot.render(<ShadowMarkup html={markup} onRendered={() => this._afterReactRender()} />);
   }
 
   _unmountReact() {
@@ -1152,6 +1156,9 @@ class DialogCustomUiPanel extends HTMLElement {
       </div>
     `;
     this._mountReact(markup);
+  }
+
+  _afterReactRender() {
     this._bindEvents();
     this._syncEmbeddedTimerAlarmHass();
   }
