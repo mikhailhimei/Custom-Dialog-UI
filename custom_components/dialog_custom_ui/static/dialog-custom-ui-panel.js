@@ -60,7 +60,7 @@ Error generating stack: `+a.message+`
   <section class="help-card command-list">
     ${t}
   </section>
-`,Yi=(e,t)=>`
+`,qi=(e,t)=>`
   <section class="hero-card">
     <h3>\u0428\u0430\u0431\u043B\u043E\u043D\u044B</h3>
     <p>\u0423\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0448\u0430\u0431\u043B\u043E\u043D\u0430\u043C\u0438 subDirectControl.</p>
@@ -73,7 +73,7 @@ Error generating stack: `+a.message+`
   <section class="help-card command-list">
     ${t}
   </section>
-`,qi=e=>{let t=e._directLoading?'<div class="empty">\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 direct-\u043A\u043E\u043C\u0430\u043D\u0434...</div>':e._directCommands.length?e._directCommands.map(r=>`
+`,Wi=e=>{let t=e._directLoading?'<div class="empty">\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 direct-\u043A\u043E\u043C\u0430\u043D\u0434...</div>':e._directCommands.length?e._directCommands.map(r=>`
           <div class="command-item">
             <button type="button" class="command-item-main" data-action="edit-direct" data-direct-id="${g(r._id)}">
               <span class="command-item-title">${g(r.title||"\u0411\u0435\u0437 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u044F")}</span>
@@ -271,7 +271,7 @@ Error generating stack: `+a.message+`
         <button type="button" class="primary" data-action="save-direct" ${e._directModalSaving?"disabled":""}>${e._directModalSaving?"\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435...":"\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"}</button>
       </div>
     </section>
-  `},Yp=e=>{if(!e._templateModalOpen)return"";let t=e._templateModalMode==="edit"?"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0448\u0430\u0431\u043B\u043E\u043D":"\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0448\u0430\u0431\u043B\u043E\u043D",n=e._templateModalMode==="edit",r=!n&&!String(e._templateDraft.uuid??"").trim(),i=Array.isArray(e._templateDraft.subDirectControlItems)?e._templateDraft.subDirectControlItems:[];return`
+  `},qp=e=>{if(!e._templateModalOpen)return"";let t=e._templateModalMode==="edit"?"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0448\u0430\u0431\u043B\u043E\u043D":"\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0448\u0430\u0431\u043B\u043E\u043D",n=e._templateModalMode==="edit",r=!n&&!String(e._templateDraft.uuid??"").trim(),i=Array.isArray(e._templateDraft.subDirectControlItems)?e._templateDraft.subDirectControlItems:[];return`
     <div class="modal-backdrop" data-action="close-template"></div>
     <section class="modal" role="dialog" aria-modal="true" aria-label="${g(t)}">
       <div class="modal-header">
@@ -355,7 +355,7 @@ Error generating stack: `+a.message+`
         <button type="button" class="primary" data-action="save-template" ${e._templateModalSaving?"disabled":""}>${e._templateModalSaving?"\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435...":"\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"}</button>
       </div>
     </section>
-  `},qp=e=>{if(!e._defaultsModalOpen)return"";let t=e._defaultsActiveType,n=e._defaultConfig(t),r=e._defaultsByType[t]??e._newDefaultsDraft(t);return`
+  `},Wp=e=>{if(!e._defaultsModalOpen)return"";let t=e._defaultsActiveType,n=e._defaultConfig(t),r=e._defaultsByType[t]??e._newDefaultsDraft(t);return`
     <div class="modal-backdrop" data-action="close-defaults"></div>
     <section class="modal" role="dialog" aria-modal="true" aria-label="${g(n.title)}">
       <div class="modal-header">
@@ -404,7 +404,7 @@ Error generating stack: `+a.message+`
         <button type="button" class="primary" data-action="save-defaults" ${e._defaultsModalSaving?"disabled":""}>${e._defaultsModalSaving?"\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435...":"\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"}</button>
       </div>
     </section>
-  `},Wp=e=>{if(!e._itemActionsModalOpen)return"";let t=e._itemActionsStatus?"\u0421\u043A\u0440\u044B\u0442\u044C":"\u041E\u043F\u0443\u0431\u043B\u0438\u043A\u043E\u0432\u0430\u0442\u044C",n=e._itemActionsStatus?"\u0421\u0435\u0439\u0447\u0430\u0441: \u043E\u043F\u0443\u0431\u043B\u0438\u043A\u043E\u0432\u0430\u043D":"\u0421\u0435\u0439\u0447\u0430\u0441: \u0441\u043A\u0440\u044B\u0442",r=e._itemActionsTitle||"\u0421\u0446\u0435\u043D\u0430\u0440\u0438\u0439";return`
+  `},Kp=e=>{if(!e._itemActionsModalOpen)return"";let t=e._itemActionsStatus?"\u0421\u043A\u0440\u044B\u0442\u044C":"\u041E\u043F\u0443\u0431\u043B\u0438\u043A\u043E\u0432\u0430\u0442\u044C",n=e._itemActionsStatus?"\u0421\u0435\u0439\u0447\u0430\u0441: \u043E\u043F\u0443\u0431\u043B\u0438\u043A\u043E\u0432\u0430\u043D":"\u0421\u0435\u0439\u0447\u0430\u0441: \u0441\u043A\u0440\u044B\u0442",r=e._itemActionsTitle||"\u0421\u0446\u0435\u043D\u0430\u0440\u0438\u0439";return`
     <div class="modal-backdrop" data-action="close-item-actions"></div>
     <section class="modal modal-compact modal-item-actions" role="dialog" aria-modal="true" aria-label="\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u044F \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u044F">
       <div class="modal-header">
@@ -420,7 +420,7 @@ Error generating stack: `+a.message+`
         </button>
       </div>
     </section>
-  `};var Kp=e=>{if(!e._modalOpen)return"";let t=e._modalMode==="edit"?"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439":"\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439",n=e._modalMode==="edit",r=!n&&!String(e._draft.uuid??"").trim();return`
+  `};var Qp=e=>{if(!e._modalOpen)return"";let t=e._modalMode==="edit"?"\u0420\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u0442\u044C \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439":"\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439",n=e._modalMode==="edit",r=!n&&!String(e._draft.uuid??"").trim();return`
     <div class="modal-backdrop" data-action="close"></div>
     <section class="modal" role="dialog" aria-modal="true" aria-label="${g(t)}">
       <div class="modal-header">
@@ -587,7 +587,7 @@ Error generating stack: `+a.message+`
                         <label>
                           <span>actionTypeComponent</span>
                           <select data-next-action-item-id="${g(i.id)}" data-next-action-item-field="actionTypeComponent">
-                            ${Oi.map(s=>`
+                            ${Ui.map(s=>`
                               <option value="${s}" ${i.actionTypeComponent===s?"selected":""}>${s}</option>
                             `).join("")}
                           </select>
@@ -709,7 +709,7 @@ Error generating stack: `+a.message+`
         <button type="button" class="primary" data-action="save" ${e._modalSaving?"disabled":""}>${e._modalSaving?"\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435...":"\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C"}</button>
       </div>
     </section>
-  `};var Qp=`
+  `};var Gp=`
 <style>
 :host {
           --ui-border: rgba(34, 45, 67, 0.16);
@@ -1328,8 +1328,8 @@ Error generating stack: `+a.message+`
           }
         }
 </style>
-`;var Gp=e=>{let t=e._hasAnyModalOpen?.()??!1,n=e._isCurrentUserAdmin?.()??!1,r=e._renderActiveTabBody(),i=`
-    ${Qp}
+`;var Xp=e=>{let t=e._hasAnyModalOpen?.()??!1,n=e._isCurrentUserAdmin?.()??!1,r=e._renderActiveTabBody(),i=`
+    ${Gp}
     <div class="create-scenario-shell ${t?"modal-context-open":""}">
       <section class="subtabs-dock">
         <div class="subtabs">
@@ -1380,7 +1380,7 @@ Error generating stack: `+a.message+`
         <div><strong>\u041F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440 \u0442\u0435\u043A\u0443\u0449\u0435\u0433\u043E JSON</strong></div>
         <pre><code>${w(JSON.stringify(t,null,2))}</code></pre>
       </section>
-    `};var Gi=e=>{let t=e._logs.length?e._logs.map(n=>`
+    `};var Xi=e=>{let t=e._logs.length?e._logs.map(n=>`
           <div class="log-item ${w(n.level)}">
             <div class="log-meta">
               <span class="log-time">${w(n.ts)}</span>
@@ -1421,7 +1421,7 @@ Error generating stack: `+a.message+`
         >${a?"Hide":"Show"}</button>
       </div>
     </label>
-  `},Xi=e=>`
+  `},Ji=e=>`
       <section class="hero-card">
         <h1>Settings</h1>
         <p>\u041E\u0431\u0449\u0438\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F \u0434\u043B\u044F \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0435\u0432 \u0438 Yandex TTS: IP, client_id, \u0442\u043E\u043A\u0435\u043D\u044B, timeout, voice/speed/folderId \u0438 \u0441\u043B\u0443\u0436\u0435\u0431\u043D\u044B\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F.</p>
@@ -1518,7 +1518,7 @@ Error generating stack: `+a.message+`
         ${e._error?`<div class="status error">${w(e._error)}</div>`:""}
         ${e._status?`<div class="status ok">${w(e._status)}</div>`:""}
       </section>
-    `;var Ji=e=>{let t=e._scripts(),n=Array.isArray(e._config.scenarios)?e._config.scenarios:[],r=Math.max(1,Number(e._scenariosPageSize)||20),i=n.length,a=Math.max(1,Math.ceil(i/r)),o=Number(e._scenariosPage)||1,s=Math.min(Math.max(1,Math.trunc(o)),a);e._scenariosPage!==s&&(e._scenariosPage=s);let l=(s-1)*r,d=n.slice(l,l+r),m=Math.max(1,s-2),c=Math.min(a,m+4),h=[];for(let _=m;_<=c;_+=1)h.push(`
+    `;var Zi=e=>{let t=e._scripts(),n=Array.isArray(e._config.scenarios)?e._config.scenarios:[],r=Math.max(1,Number(e._scenariosPageSize)||20),i=n.length,a=Math.max(1,Math.ceil(i/r)),o=Number(e._scenariosPage)||1,s=Math.min(Math.max(1,Math.trunc(o)),a);e._scenariosPage!==s&&(e._scenariosPage=s);let l=(s-1)*r,d=n.slice(l,l+r),m=Math.max(1,s-2),c=Math.min(a,m+4),h=[];for(let _=m;_<=c;_+=1)h.push(`
       <button
         type="button"
         class="${_===s?"primary compact-button":"ghost compact-button"}"
@@ -1724,7 +1724,7 @@ Error generating stack: `+a.message+`
         <div>\u041F\u0440\u0438 \u0441\u043E\u0432\u043F\u0430\u0434\u0435\u043D\u0438\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u0430 \u0432\u044B\u0437\u044B\u0432\u0430\u0435\u0442\u0441\u044F \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0439 <code>script.*</code> \u0438 \u043F\u043E\u043B\u0443\u0447\u0430\u0435\u0442 \u043F\u0435\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435: <code>dialog_payload</code>, <code>dialog_children_type</code>, <code>dialog_children_direct_type</code>, <code>dialog_type</code>, <code>dialog_parent_type</code>, <code>dialog_value</code>, <code>dialog_client_id</code>, <code>dialog_device_id</code>.</div>
         <pre><code>${w(tf)}</code></pre>
       </section>
-    `};var Zi=e=>e._timerAlarmLoaded?`
+    `};var ea=e=>e._timerAlarmLoaded?`
       <section class="hero-card">
         <h1>Timer / Alarm</h1>
       </section>
@@ -1817,7 +1817,7 @@ Error generating stack: `+a.message+`
         </div>
       </div>
     </section>
-  `},ea=e=>{let t=Array.isArray(e._yandexScenarios)?e._yandexScenarios:[];return`
+  `},ta=e=>{let t=Array.isArray(e._yandexScenarios)?e._yandexScenarios:[];return`
     <section class="hero-card">
       <h1>\u042F\u043D\u0434\u0435\u043A\u0441 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0438</h1>
       <p>\u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A: <code>homeassistant/yandex_intents.yaml</code>. \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0439 \u0432\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0435 \u0438 \u043E\u0442\u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u0443\u0439\u0442\u0435 \u0435\u0433\u043E \u0432 \u0444\u043E\u0440\u043C\u0435 \u043D\u0438\u0436\u0435.</p>
@@ -2833,4 +2833,4 @@ Error generating stack: `+a.message+`
           </section>
         </div>
       </div>
-    `;this._mountReact(a),this._bindEvents(),this._syncEmbeddedTimerAlarmHass()}_syncEmbeddedTimerAlarmHass(){if(!this._hass||!this.shadowRoot)return;let t=this.shadowRoot.querySelector("dialog-custom-ui-timer-alarm");t&&(t.hass=this._hass,t.config={theme:this._config.theme})}};customElements.get("dialog-custom-ui-panel")||customElements.define("dialog-custom-ui-panel",Ls);
+    `;this._mountReact(a),this._bindEvents(),this._syncEmbeddedTimerAlarmHass()}_syncEmbeddedTimerAlarmHass(){if(!this._hass||!this.shadowRoot)return;let t=this.shadowRoot.querySelector("dialog-custom-ui-timer-alarm");t&&(t.hass=this._hass,t.config={theme:this._config.theme})}};customElements.get("dialog-custom-ui-panel")||customElements.define("dialog-custom-ui-panel",Ns);
