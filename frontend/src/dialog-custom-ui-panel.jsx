@@ -10,7 +10,7 @@ import {
 import { createEventBinder } from './panel/events/shared/bind-helpers.jsx';
 import { bindPanelActions } from './panel/events/binders/bind-panel-actions.jsx';
 import { bindPanelFields } from './panel/events/binders/bind-panel-fields.jsx';
-import { renderActiveTopLevelPage } from './panel/render/render-active-top-level-page.jsx';
+import DialogCustomUiPanelContent from './DialogCustomUiPanelContent.jsx';
 import { renderCreateScenario } from './panel/render/render-create-scenario.jsx';
 import { renderJsonTools } from './panel/render/render-json-tools.jsx';
 import { renderLogs } from './panel/render/render-logs.jsx';
@@ -1116,47 +1116,18 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   _render() {
-    this._activeTab = this._resolveAllowedTab(this._activeTab);
-    const content = this._renderActiveTopLevelPage();
-    const isAdmin = this._isCurrentUserAdmin();
-    const tabs = isAdmin
-      ? [
-        { id: 'scenarios', label: 'Scenarios' },
-        { id: 'create-scenario', label: 'Create Scenario' },
-        { id: 'timer-alarm', label: 'Timer / Alarm' },
-        { id: 'yandex-scenarios', label: 'Яндекс сценарии' },
-        { id: 'json', label: 'JSON' },
-        { id: 'logs', label: 'Logs' },
-        { id: 'settings', label: 'Settings' },
-      ]
-      : [
-        { id: 'scenarios', label: 'Scenarios' },
-        { id: 'create-scenario', label: 'Create Scenario' },
-        { id: 'timer-alarm', label: 'Timer / Alarm' },
-        { id: 'yandex-scenarios', label: 'Яндекс сценарии' },
-        { id: 'json', label: 'JSON' },
-        { id: 'logs', label: 'Logs' },
-      ];
-    const tabsMarkup = tabs
-      .map((tab) => `<button type="button" class="tab-button ${this._activeTab === tab.id ? 'active' : ''}" data-tab="${tab.id}">${tab.label}</button>`)
-      .join('');
-
-    const markup = `
-      ${PANEL_STYLES}
-      <div class="page">
-        <div class="hero">
-          <section class="panel-shell">
-            <div class="tabs">
-              ${tabsMarkup}
-            </div>
-            ${content}
-          </section>
-        </div>
-      </div>
-    `;
-    this._mountReact(markup);
+    flushSync(() => {
+      if (!this._reactRoot) {
+        this._reactRoot = createRoot(this.shadowRoot);
+      }
+      this._reactRoot.render(<DialogCustomUiPanelContent ctx={this} />);
+    });
     this._bindEvents();
     this._syncEmbeddedTimerAlarmHass();
+  }
+
+  _forceUpdate() {
+    this._render();
   }
 
   _syncEmbeddedTimerAlarmHass() {

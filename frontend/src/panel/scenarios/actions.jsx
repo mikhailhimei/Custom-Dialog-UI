@@ -15,7 +15,7 @@ export const toggleScenario = (ctx, id) => {
   } else {
     ctx._expandedScenarios.add(id);
   }
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const toggleCondition = (ctx, id) => {
@@ -24,7 +24,7 @@ export const toggleCondition = (ctx, id) => {
   } else {
     ctx._expandedConditions.add(id);
   }
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const updateConfigField = (ctx, field, value, rerender = false) => {
@@ -34,14 +34,11 @@ export const updateConfigField = (ctx, field, value, rerender = false) => {
   }
   ctx._status = '';
   ctx._error = '';
-  if (rerender) {
-    ctx._render();
-  }
 };
 
 export const toggleDeviceAccordion = (ctx) => {
   ctx._deviceAccordionOpen = !ctx._deviceAccordionOpen;
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const addTimerAlarmDeviceId = (ctx) => {
@@ -79,7 +76,7 @@ export const removeTimerAlarmDeviceId = (ctx, index) => {
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const updateScenario = (ctx, id, field, value, rerender = false) => {
@@ -91,9 +88,7 @@ export const updateScenario = (ctx, id, field, value, rerender = false) => {
   };
   ctx._status = '';
   ctx._error = '';
-  if (rerender) {
-    ctx._render();
-  }
+  ctx._forceUpdate();
 };
 
 export const updateCondition = (ctx, scenarioId, conditionId, field, value, rerender = false) => {
@@ -112,9 +107,7 @@ export const updateCondition = (ctx, scenarioId, conditionId, field, value, rere
   };
   ctx._status = '';
   ctx._error = '';
-  if (rerender) {
-    ctx._render();
-  }
+  ctx._forceUpdate();
 };
 
 export const enableConditionChildrenType = (ctx, scenarioId, conditionId) => {
@@ -135,7 +128,7 @@ export const enableConditionChildrenType = (ctx, scenarioId, conditionId) => {
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const disableConditionChildrenType = (ctx, scenarioId, conditionId) => {
@@ -156,7 +149,7 @@ export const disableConditionChildrenType = (ctx, scenarioId, conditionId) => {
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const enableConditionChildrenDirectType = (ctx, scenarioId, conditionId) => {
@@ -181,7 +174,7 @@ export const enableConditionChildrenDirectType = (ctx, scenarioId, conditionId) 
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const disableConditionChildrenDirectType = (ctx, scenarioId, conditionId) => {
@@ -202,7 +195,7 @@ export const disableConditionChildrenDirectType = (ctx, scenarioId, conditionId)
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const addCondition = (ctx, scenarioId) => {
@@ -218,7 +211,7 @@ export const addCondition = (ctx, scenarioId) => {
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const removeCondition = (ctx, scenarioId, conditionId) => {
@@ -233,7 +226,7 @@ export const removeCondition = (ctx, scenarioId, conditionId) => {
   };
   ctx._status = '';
   ctx._error = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const addScenario = (ctx) => {
@@ -251,7 +244,7 @@ export const addScenario = (ctx) => {
   };
   ctx._scenariosPage = 1;
   ctx._status = '';
-  ctx._render();
+  ctx._forceUpdate();
   window.requestAnimationFrame(() => ctx._scrollScenarioIntoView(scenario.id));
 };
 
@@ -269,7 +262,7 @@ export const removeScenario = (ctx, id) => {
   };
   ctx._scenariosPage = normalizeScenariosPage(ctx, ctx._scenariosPage);
   ctx._status = '';
-  ctx._render();
+  ctx._forceUpdate();
 };
 
 export const setScenariosPage = (ctx, page) => {
@@ -278,5 +271,5 @@ export const setScenariosPage = (ctx, page) => {
     return;
   }
   ctx._scenariosPage = nextPage;
-  ctx._render();
+  ctx._forceUpdate();
 };
