@@ -87,12 +87,18 @@ export const selectSearchResult = (ctx, itemId, result) => {
   const normalizedItemId = String(itemId ?? '').trim();
   const activeType = ctx._searchActiveType;
   if (activeType === 'directControl') {
+    const resolvedUuid = String(result.uuid ?? '').trim();
+    ctx._lastSelectedDirectControlUuid = {
+      itemId: normalizedItemId,
+      uuid: resolvedUuid,
+      at: Date.now(),
+    };
     const nextItems = (Array.isArray(ctx._draft.directControlItems) ? ctx._draft.directControlItems : [])
       .map((item) => (
         item.id === normalizedItemId
           ? {
             ...item,
-            uuid: String(result.uuid ?? ''),
+            uuid: resolvedUuid,
             displayValue: resolveResultTitle(result),
             mappingType: resolveResultMappingType(result),
           }
@@ -104,11 +110,24 @@ export const selectSearchResult = (ctx, itemId, result) => {
     };
   } else if (activeType === 'nextAction') {
     const resolvedMappingType = resolveResultMappingType(result);
-    ctx._updateNextActionItem(normalizedItemId, 'displayValue', resolveResultTitle(result));
-    ctx._updateNextActionItem(normalizedItemId, 'mappingType', resolvedMappingType);
-    ctx._updateNextActionItem(normalizedItemId, 'actionType', resolvedMappingType);
+    const resolvedUuid = String(result.uuid ?? '').trim();
+    ctx._lastSelectedNextActionUuid = {
+      itemId: normalizedItemId,
+      uuid: resolvedUuid,
+      at: Date.now(),
+    };
     const nextItems = (Array.isArray(ctx._draft.nextActionItems) ? ctx._draft.nextActionItems : [])
-      .map((item) => (item.id === normalizedItemId ? { ...item, uuid: result.uuid } : item));
+      .map((item) => (
+        item.id === normalizedItemId
+          ? {
+            ...item,
+            uuid: resolvedUuid,
+            displayValue: resolveResultTitle(result),
+            mappingType: resolvedMappingType,
+            actionType: resolvedMappingType,
+          }
+          : item
+      ));
     ctx._draft = {
       ...ctx._draft,
       nextActionItems: nextItems,
