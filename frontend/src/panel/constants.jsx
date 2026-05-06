@@ -5,6 +5,8 @@ export const DEFAULT_CONFIG = {
   command_receive_mode: 'http',
   redis_url: 'redis://127.0.0.1:6379/0',
   redis_channel: 'dialog_commands',
+  redis_username: '',
+  redis_password: '',
   timer_alarm_token: '',
   yandex_tts_api_key: '',
   yandex_tts_folder_id: '',

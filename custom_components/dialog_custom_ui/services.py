@@ -18,6 +18,8 @@ from homeassistant.helpers import aiohttp_client
 
 from .const import (
     CONF_BASE_URL,
+    CONF_CLIENT_ID,
+    CONF_COMMAND_RECEIVE_MODE,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
@@ -80,11 +82,27 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
 
     variables = _parse_variables(call.data.get(ATTR_VARIABLES))
     payload = {
-        ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)),
+        ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get(CONF_CLIENT_ID)),
         ATTR_DEVICE_ID: _normalize_value(call.data.get(ATTR_DEVICE_ID)),
         ATTR_ACTION_TYPE: _normalize_value(call.data.get(ATTR_ACTION_TYPE)),
         ATTR_VARIABLES: variables,
     }
+
+
+    if _normalize_value(options.get(CONF_COMMAND_RECEIVE_MODE)).lower() == "redis_subscribe":
+        requested_event_type = f"DIALOG_MESSAGE:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}"
+        event_type = requested_event_type if len(requested_event_type) <= 64 else "DIALOG_MESSAGE"
+        event_payload = {
+            ATTR_CLIENT_ID: payload[ATTR_CLIENT_ID],
+            ATTR_DEVICE_ID: payload[ATTR_DEVICE_ID],
+            ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
+            ATTR_VARIABLES: payload[ATTR_VARIABLES],
+        }
+        hass.bus.async_fire(event_type, event_payload)
+        if event_type != requested_event_type:
+            _append_log(hass, "warning", f"EVENT type too long ({len(requested_event_type)}), fallback to {event_type}")
+        _append_log(hass, "request", f"EVENT {event_type}")
+        return
 
     url = f"{base_url}{_SAVE_COMMANDS_PATH}"
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -134,6 +152,8 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     stored = dict(entry.options)
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
+        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
+        CONF_COMMAND_RECEIVE_MODE: stored.get(CONF_COMMAND_RECEIVE_MODE, "http"),
         CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
     }
