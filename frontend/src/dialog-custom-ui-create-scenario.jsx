@@ -197,6 +197,12 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _mountReact(markup) {
+    const viewportX = typeof window !== 'undefined' ? window.scrollX : 0;
+    const viewportY = typeof window !== 'undefined' ? window.scrollY : 0;
+    const scrollingElement = typeof document !== 'undefined' ? document.scrollingElement : null;
+    const documentScrollTop = scrollingElement ? scrollingElement.scrollTop : 0;
+    const documentScrollLeft = scrollingElement ? scrollingElement.scrollLeft : 0;
+
     const activeInputState = this._captureActiveInputState();
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
@@ -213,6 +219,14 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       newModal.scrollTop = this._modalScrollTop;
     }
     this._restoreActiveInputState(activeInputState);
+
+    if (scrollingElement) {
+      scrollingElement.scrollTop = documentScrollTop;
+      scrollingElement.scrollLeft = documentScrollLeft;
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo(viewportX, viewportY);
+    }
   }
 
   _captureActiveInputState() {
@@ -507,11 +521,15 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _setTab(tab) {
+    const viewportScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     if (tab === TABS.defaults && !this._isCurrentUserAdmin()) {
       this._tab = TABS.primary;
       this._error = '';
       this._status = '';
       this._render();
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, viewportScrollY);
+      }
       if (!this._loading || this._lastLoadedTab !== TABS.primary) {
         this._loadPage(this._pageByTab[TABS.primary] || 1);
       }
@@ -521,6 +539,9 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._error = '';
     this._status = '';
     this._render();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, viewportScrollY);
+    }
     if (tab === TABS.primary || tab === TABS.secondary) {
       const page = this._pageByTab[tab] || 1;
       if (!this._loading || this._lastLoadedTab !== tab) {
