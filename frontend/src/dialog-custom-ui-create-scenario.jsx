@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
@@ -114,9 +114,33 @@ import { renderDefaultsModal, renderDirectModal, renderItemActionsModal, renderT
 import { renderMainModal } from './create-scenario/modals/render-main-modal.jsx';
 import { renderRoot } from './create-scenario/render/render-root.jsx';
 import { ensureModalBackdropStyle, initializeCreateScenarioState } from './create-scenario/state/init-state.jsx';
-const ShadowMarkup = ({ html }) => (
-  <div dangerouslySetInnerHTML={{ __html: html }} />
-);
+
+const CreateScenarioReactRoot = ({ controller, initialRenderState }) => {
+  const mountRef = useRef(null);
+  const [renderState, setRenderState] = useState(initialRenderState);
+
+  useLayoutEffect(() => {
+    controller._reactRender = (nextState) => setRenderState(nextState);
+  }, [controller]);
+
+  useEffect(() => {
+    return () => {
+      if (controller._reactRender) {
+        controller._reactRender = null;
+      }
+    };
+  }, [controller]);
+
+  useLayoutEffect(() => {
+    if (!mountRef.current) {
+      return;
+    }
+    controller._applyMarkupPatch(mountRef.current, renderState.markup);
+  }, [controller, renderState]);
+
+  return <div ref={mountRef} data-create-scenario-react-root />;
+};
+
 class DialogCustomUiCreateScenario extends HTMLElement {
   constructor() {
     super();
@@ -190,9 +214,14 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._bindController?.abort) {
+      this._bindController.abort();
+      this._bindController = null;
+    }
     if (this._reactRoot) {
       this._reactRoot.unmount();
       this._reactRoot = null;
+      this._reactRender = null;
     }
   }
 
@@ -204,16 +233,30 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     const documentScrollLeft = scrollingElement ? scrollingElement.scrollLeft : 0;
 
     const activeInputState = this._captureActiveInputState();
-    if (!this._reactRoot) {
-      this._reactRoot = createRoot(this.shadowRoot);
-    }
     const modal = this.shadowRoot.querySelector('.modal');
     if (modal) {
       this._modalScrollTop = modal.scrollTop;
     }
-    flushSync(() => {
-      this._reactRoot.render(<ShadowMarkup html={markup} />);
-    });
+
+    const nextRenderState = {
+      markup,
+      version: (this._reactRenderVersion ?? 0) + 1,
+    };
+    this._reactRenderVersion = nextRenderState.version;
+
+    if (!this._reactRoot) {
+      this._reactRoot = createRoot(this.shadowRoot);
+      flushSync(() => {
+        this._reactRoot.render(
+          <CreateScenarioReactRoot controller={this} initialRenderState={nextRenderState} />
+        );
+      });
+    } else if (this._reactRender) {
+      flushSync(() => {
+        this._reactRender(nextRenderState);
+      });
+    }
+
     const newModal = this.shadowRoot.querySelector('.modal');
     if (newModal) {
       newModal.scrollTop = this._modalScrollTop;
@@ -226,6 +269,106 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     }
     if (typeof window !== 'undefined') {
       window.scrollTo(viewportX, viewportY);
+    }
+  }
+
+  _applyMarkupPatch(parent, markup) {
+    const template = document.createElement('template');
+    template.innerHTML = markup;
+    this._patchChildren(parent, template.content);
+  }
+
+  _patchChildren(parent, nextParent) {
+    const currentChildren = Array.from(parent.childNodes);
+    const nextChildren = Array.from(nextParent.childNodes);
+    const maxLength = Math.max(currentChildren.length, nextChildren.length);
+
+    for (let index = 0; index < maxLength; index += 1) {
+      const current = currentChildren[index];
+      const next = nextChildren[index];
+
+      if (!next) {
+        current?.remove();
+        continue;
+      }
+
+      if (!current) {
+        parent.appendChild(next.cloneNode(true));
+        continue;
+      }
+
+      this._patchNode(parent, current, next);
+    }
+  }
+
+  _patchNode(parent, current, next) {
+    if (!this._canPatchNode(current, next)) {
+      parent.replaceChild(next.cloneNode(true), current);
+      return;
+    }
+
+    if (current.isEqualNode?.(next)) {
+      return;
+    }
+
+    if (current.nodeType === Node.TEXT_NODE || current.nodeType === Node.COMMENT_NODE) {
+      if (current.nodeValue !== next.nodeValue) {
+        current.nodeValue = next.nodeValue;
+      }
+      return;
+    }
+
+    if (current.nodeType !== Node.ELEMENT_NODE || next.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    this._patchAttributes(current, next);
+    this._syncFormElement(current, next);
+    this._patchChildren(current, next);
+  }
+
+  _canPatchNode(current, next) {
+    if (!current || !next || current.nodeType !== next.nodeType) {
+      return false;
+    }
+    if (current.nodeType !== Node.ELEMENT_NODE) {
+      return true;
+    }
+    return current.nodeName === next.nodeName;
+  }
+
+  _patchAttributes(current, next) {
+    Array.from(current.attributes).forEach((attribute) => {
+      if (!next.hasAttribute(attribute.name)) {
+        current.removeAttribute(attribute.name);
+      }
+    });
+
+    Array.from(next.attributes).forEach((attribute) => {
+      if (current.getAttribute(attribute.name) !== attribute.value) {
+        current.setAttribute(attribute.name, attribute.value);
+      }
+    });
+  }
+
+  _syncFormElement(current, next) {
+    const tagName = String(current.tagName ?? '').toLowerCase();
+    if (tagName === 'input') {
+      if (current.type === 'checkbox' || current.type === 'radio') {
+        current.checked = next.checked;
+      } else if (this.shadowRoot?.activeElement !== current && current.value !== next.value) {
+        current.value = next.value;
+      }
+      return;
+    }
+    if (tagName === 'textarea') {
+      if (this.shadowRoot?.activeElement !== current && current.value !== next.value) {
+        current.value = next.value;
+      }
+      return;
+    }
+    if (tagName === 'select' && current.value !== next.value) {
+      current.value = next.value;
     }
   }
 
