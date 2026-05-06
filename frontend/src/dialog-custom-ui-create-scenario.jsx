@@ -197,6 +197,12 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _mountReact(markup) {
+    const viewportX = typeof window !== 'undefined' ? window.scrollX : 0;
+    const viewportY = typeof window !== 'undefined' ? window.scrollY : 0;
+    const scrollingElement = typeof document !== 'undefined' ? document.scrollingElement : null;
+    const documentScrollTop = scrollingElement ? scrollingElement.scrollTop : 0;
+    const documentScrollLeft = scrollingElement ? scrollingElement.scrollLeft : 0;
+
     const activeInputState = this._captureActiveInputState();
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
@@ -213,6 +219,14 @@ class DialogCustomUiCreateScenario extends HTMLElement {
       newModal.scrollTop = this._modalScrollTop;
     }
     this._restoreActiveInputState(activeInputState);
+
+    if (scrollingElement) {
+      scrollingElement.scrollTop = documentScrollTop;
+      scrollingElement.scrollLeft = documentScrollLeft;
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo(viewportX, viewportY);
+    }
   }
 
   _captureActiveInputState() {
