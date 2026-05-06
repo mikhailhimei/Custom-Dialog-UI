@@ -1,6 +1,6 @@
 send_command:
   name: Send dialog command
-  description: Send a custom command payload. In redis_subscribe mode fires HA event DIALOG_MESSAGE; otherwise POSTs to /api/dialog/save-commands.
+  description: Send a custom command payload. In redis_subscribe mode fires HA event DIALOG_MESSAGE:{clientId}:{deviceId} with {actionType, variables}; otherwise POSTs to /api/dialog/save-commands.
   fields:
     clientId:
       name: Client ID

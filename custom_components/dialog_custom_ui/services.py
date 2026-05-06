@@ -90,8 +90,13 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
 
 
     if _normalize_value(options.get(CONF_COMMAND_RECEIVE_MODE)).lower() == "redis_subscribe":
-        hass.bus.async_fire("DIALOG_MESSAGE", payload)
-        _append_log(hass, "request", "EVENT DIALOG_MESSAGE")
+        event_type = f"DIALOG_MESSAGE:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}"
+        event_payload = {
+            ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
+            ATTR_VARIABLES: payload[ATTR_VARIABLES],
+        }
+        hass.bus.async_fire(event_type, event_payload)
+        _append_log(hass, "request", f"EVENT {event_type}")
         return
 
     url = f"{base_url}{_SAVE_COMMANDS_PATH}"
