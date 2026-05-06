@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { flushSync } from 'react-dom';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   COMMANDS_PAGE_SIZE,
@@ -114,9 +113,38 @@ import { renderDefaultsModal, renderDirectModal, renderItemActionsModal, renderT
 import { renderMainModal } from './create-scenario/modals/render-main-modal.jsx';
 import { renderRoot } from './create-scenario/render/render-root.jsx';
 import { ensureModalBackdropStyle, initializeCreateScenarioState } from './create-scenario/state/init-state.jsx';
-const ShadowMarkup = ({ html }) => (
-  <div dangerouslySetInnerHTML={{ __html: html }} />
-);
+
+const CreateScenarioReactRoot = ({ controller, initialRenderState }) => {
+  const mountRef = useRef(null);
+  const [renderState, setRenderState] = useState(initialRenderState);
+
+  useLayoutEffect(() => {
+    controller._reactRender = (nextState) => setRenderState(nextState);
+    if (controller._queuedReactRenderState) {
+      const queuedState = controller._queuedReactRenderState;
+      controller._queuedReactRenderState = null;
+      setRenderState(queuedState);
+    }
+  }, [controller]);
+
+  useEffect(() => {
+    return () => {
+      if (controller._reactRender) {
+        controller._reactRender = null;
+      }
+    };
+  }, [controller]);
+
+  useLayoutEffect(() => {
+    if (!mountRef.current) {
+      return;
+    }
+    controller._applyMarkupPatch(mountRef.current, renderState.markup);
+  }, [controller, renderState]);
+
+  return <div ref={mountRef} data-create-scenario-react-root />;
+};
+
 class DialogCustomUiCreateScenario extends HTMLElement {
   constructor() {
     super();
@@ -190,29 +218,160 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._bindController?.abort) {
+      this._bindController.abort();
+      this._bindController = null;
+    }
     if (this._reactRoot) {
       this._reactRoot.unmount();
       this._reactRoot = null;
+      this._reactRender = null;
     }
   }
 
   _mountReact(markup) {
-    const activeInputState = this._captureActiveInputState();
+    const nextRenderState = {
+      markup,
+      version: (this._reactRenderVersion ?? 0) + 1,
+    };
+    this._reactRenderVersion = nextRenderState.version;
+
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
+      this._reactRoot.render(
+        <CreateScenarioReactRoot controller={this} initialRenderState={nextRenderState} />
+      );
+    } else if (this._reactRender) {
+      this._reactRender(nextRenderState);
+    } else {
+      this._queuedReactRenderState = nextRenderState;
     }
+  }
+
+  _applyMarkupPatch(parent, markup) {
+    const viewportX = typeof window !== 'undefined' ? window.scrollX : 0;
+    const viewportY = typeof window !== 'undefined' ? window.scrollY : 0;
+    const scrollingElement = typeof document !== 'undefined' ? document.scrollingElement : null;
+    const documentScrollTop = scrollingElement ? scrollingElement.scrollTop : 0;
+    const documentScrollLeft = scrollingElement ? scrollingElement.scrollLeft : 0;
+    const activeInputState = this._captureActiveInputState();
     const modal = this.shadowRoot.querySelector('.modal');
     if (modal) {
       this._modalScrollTop = modal.scrollTop;
     }
-    flushSync(() => {
-      this._reactRoot.render(<ShadowMarkup html={markup} />);
-    });
+
+    const template = document.createElement('template');
+    template.innerHTML = markup;
+    this._patchChildren(parent, template.content);
+
     const newModal = this.shadowRoot.querySelector('.modal');
     if (newModal) {
       newModal.scrollTop = this._modalScrollTop;
     }
     this._restoreActiveInputState(activeInputState);
+
+    if (scrollingElement) {
+      scrollingElement.scrollTop = documentScrollTop;
+      scrollingElement.scrollLeft = documentScrollLeft;
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo(viewportX, viewportY);
+    }
+    this._bind();
+  }
+
+  _patchChildren(parent, nextParent) {
+    const currentChildren = Array.from(parent.childNodes);
+    const nextChildren = Array.from(nextParent.childNodes);
+    const maxLength = Math.max(currentChildren.length, nextChildren.length);
+
+    for (let index = 0; index < maxLength; index += 1) {
+      const current = currentChildren[index];
+      const next = nextChildren[index];
+
+      if (!next) {
+        current?.remove();
+        continue;
+      }
+
+      if (!current) {
+        parent.appendChild(next.cloneNode(true));
+        continue;
+      }
+
+      this._patchNode(parent, current, next);
+    }
+  }
+
+  _patchNode(parent, current, next) {
+    if (!this._canPatchNode(current, next)) {
+      parent.replaceChild(next.cloneNode(true), current);
+      return;
+    }
+
+    if (current.isEqualNode?.(next)) {
+      return;
+    }
+
+    if (current.nodeType === Node.TEXT_NODE || current.nodeType === Node.COMMENT_NODE) {
+      if (current.nodeValue !== next.nodeValue) {
+        current.nodeValue = next.nodeValue;
+      }
+      return;
+    }
+
+    if (current.nodeType !== Node.ELEMENT_NODE || next.nodeType !== Node.ELEMENT_NODE) {
+      return;
+    }
+
+    this._patchAttributes(current, next);
+    this._syncFormElement(current, next);
+    this._patchChildren(current, next);
+  }
+
+  _canPatchNode(current, next) {
+    if (!current || !next || current.nodeType !== next.nodeType) {
+      return false;
+    }
+    if (current.nodeType !== Node.ELEMENT_NODE) {
+      return true;
+    }
+    return current.nodeName === next.nodeName;
+  }
+
+  _patchAttributes(current, next) {
+    Array.from(current.attributes).forEach((attribute) => {
+      if (!next.hasAttribute(attribute.name)) {
+        current.removeAttribute(attribute.name);
+      }
+    });
+
+    Array.from(next.attributes).forEach((attribute) => {
+      if (current.getAttribute(attribute.name) !== attribute.value) {
+        current.setAttribute(attribute.name, attribute.value);
+      }
+    });
+  }
+
+  _syncFormElement(current, next) {
+    const tagName = String(current.tagName ?? '').toLowerCase();
+    if (tagName === 'input') {
+      if (current.type === 'checkbox' || current.type === 'radio') {
+        current.checked = next.checked;
+      } else if (this.shadowRoot?.activeElement !== current && current.value !== next.value) {
+        current.value = next.value;
+      }
+      return;
+    }
+    if (tagName === 'textarea') {
+      if (this.shadowRoot?.activeElement !== current && current.value !== next.value) {
+        current.value = next.value;
+      }
+      return;
+    }
+    if (tagName === 'select' && current.value !== next.value) {
+      current.value = next.value;
+    }
   }
 
   _captureActiveInputState() {
@@ -507,11 +666,15 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _setTab(tab) {
+    const viewportScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
     if (tab === TABS.defaults && !this._isCurrentUserAdmin()) {
       this._tab = TABS.primary;
       this._error = '';
       this._status = '';
       this._render();
+      if (typeof window !== 'undefined') {
+        window.scrollTo(0, viewportScrollY);
+      }
       if (!this._loading || this._lastLoadedTab !== TABS.primary) {
         this._loadPage(this._pageByTab[TABS.primary] || 1);
       }
@@ -521,6 +684,9 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     this._error = '';
     this._status = '';
     this._render();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, viewportScrollY);
+    }
     if (tab === TABS.primary || tab === TABS.secondary) {
       const page = this._pageByTab[tab] || 1;
       if (!this._loading || this._lastLoadedTab !== tab) {

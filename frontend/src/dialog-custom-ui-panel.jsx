@@ -1,5 +1,4 @@
-﻿import React from 'react';
-import { flushSync } from 'react-dom';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './dialog-custom-ui-create-scenario.jsx';
 import {
@@ -87,9 +86,7 @@ class DialogCustomUiPanel extends HTMLElement {
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
     }
-    flushSync(() => {
-      this._reactRoot.render(<ShadowMarkup html={markup} />);
-    });
+    this._reactRoot.render(<ShadowMarkup html={markup} />);
   }
 
   _unmountReact() {
