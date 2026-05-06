@@ -1,5 +1,4 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import {
   COMMANDS_PAGE_SIZE,
@@ -121,6 +120,11 @@ const CreateScenarioReactRoot = ({ controller, initialRenderState }) => {
 
   useLayoutEffect(() => {
     controller._reactRender = (nextState) => setRenderState(nextState);
+    if (controller._queuedReactRenderState) {
+      const queuedState = controller._queuedReactRenderState;
+      controller._queuedReactRenderState = null;
+      setRenderState(queuedState);
+    }
   }, [controller]);
 
   useEffect(() => {
@@ -226,18 +230,6 @@ class DialogCustomUiCreateScenario extends HTMLElement {
   }
 
   _mountReact(markup) {
-    const viewportX = typeof window !== 'undefined' ? window.scrollX : 0;
-    const viewportY = typeof window !== 'undefined' ? window.scrollY : 0;
-    const scrollingElement = typeof document !== 'undefined' ? document.scrollingElement : null;
-    const documentScrollTop = scrollingElement ? scrollingElement.scrollTop : 0;
-    const documentScrollLeft = scrollingElement ? scrollingElement.scrollLeft : 0;
-
-    const activeInputState = this._captureActiveInputState();
-    const modal = this.shadowRoot.querySelector('.modal');
-    if (modal) {
-      this._modalScrollTop = modal.scrollTop;
-    }
-
     const nextRenderState = {
       markup,
       version: (this._reactRenderVersion ?? 0) + 1,
@@ -246,16 +238,31 @@ class DialogCustomUiCreateScenario extends HTMLElement {
 
     if (!this._reactRoot) {
       this._reactRoot = createRoot(this.shadowRoot);
-      flushSync(() => {
-        this._reactRoot.render(
-          <CreateScenarioReactRoot controller={this} initialRenderState={nextRenderState} />
-        );
-      });
+      this._reactRoot.render(
+        <CreateScenarioReactRoot controller={this} initialRenderState={nextRenderState} />
+      );
     } else if (this._reactRender) {
-      flushSync(() => {
-        this._reactRender(nextRenderState);
-      });
+      this._reactRender(nextRenderState);
+    } else {
+      this._queuedReactRenderState = nextRenderState;
     }
+  }
+
+  _applyMarkupPatch(parent, markup) {
+    const viewportX = typeof window !== 'undefined' ? window.scrollX : 0;
+    const viewportY = typeof window !== 'undefined' ? window.scrollY : 0;
+    const scrollingElement = typeof document !== 'undefined' ? document.scrollingElement : null;
+    const documentScrollTop = scrollingElement ? scrollingElement.scrollTop : 0;
+    const documentScrollLeft = scrollingElement ? scrollingElement.scrollLeft : 0;
+    const activeInputState = this._captureActiveInputState();
+    const modal = this.shadowRoot.querySelector('.modal');
+    if (modal) {
+      this._modalScrollTop = modal.scrollTop;
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = markup;
+    this._patchChildren(parent, template.content);
 
     const newModal = this.shadowRoot.querySelector('.modal');
     if (newModal) {
@@ -270,12 +277,7 @@ class DialogCustomUiCreateScenario extends HTMLElement {
     if (typeof window !== 'undefined') {
       window.scrollTo(viewportX, viewportY);
     }
-  }
-
-  _applyMarkupPatch(parent, markup) {
-    const template = document.createElement('template');
-    template.innerHTML = markup;
-    this._patchChildren(parent, template.content);
+    this._bind();
   }
 
   _patchChildren(parent, nextParent) {
