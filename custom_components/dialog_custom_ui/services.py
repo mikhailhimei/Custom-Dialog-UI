@@ -10,6 +10,7 @@ from typing import Any
 import aiohttp
 import async_timeout
 import voluptuous as vol
+import redis.asyncio as redis
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -18,8 +19,10 @@ from homeassistant.helpers import aiohttp_client
 
 from .const import (
     CONF_BASE_URL,
+    CONF_CLIENT_ID,
+    CONF_REDIS_PASSWORD,
+    CONF_REDIS_URL,
     CONF_TIMEOUT,
-    CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
@@ -28,7 +31,6 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
-_SAVE_COMMANDS_PATH = "/api/dialog/save-commands"
 
 ATTR_CLIENT_ID = "clientId"
 ATTR_DEVICE_ID = "deviceId"
@@ -68,7 +70,7 @@ def async_unregister_services(hass: HomeAssistant) -> None:
 
 
 async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> None:
-    """Send a command payload to /api/dialog/save-commands."""
+    """Publish a command payload to Redis channel."""
     entry = _get_entry(hass)
     if entry is None:
         raise HomeAssistantError("Dialog Custom UI integration entry not found")
@@ -80,34 +82,40 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
 
     variables = _parse_variables(call.data.get(ATTR_VARIABLES))
     payload = {
-        ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)),
+        ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get(CONF_CLIENT_ID)),
         ATTR_DEVICE_ID: _normalize_value(call.data.get(ATTR_DEVICE_ID)),
         ATTR_ACTION_TYPE: _normalize_value(call.data.get(ATTR_ACTION_TYPE)),
         ATTR_VARIABLES: variables,
     }
 
-    url = f"{base_url}{_SAVE_COMMANDS_PATH}"
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    authorization = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
-    if authorization:
-        headers["Authorization"] = authorization
 
-    session = aiohttp_client.async_get_clientsession(hass)
+    channel = f"DIALOG_MESSAGE:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}"
+    redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or "redis://127.0.0.1:6379/0"
+    redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+    redis_payload = {
+        ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
+        ATTR_VARIABLES: payload[ATTR_VARIABLES],
+    }
+    client = redis.Redis.from_url(
+        redis_url,
+        decode_responses=True,
+        password=redis_password or None,
+    )
     timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
     try:
         async with async_timeout.timeout(timeout):
-            response = await session.post(url, json=payload, headers=headers)
-        body = await response.text()
-    except (aiohttp.ClientError, TimeoutError) as err:
-        _append_log(hass, "error", f"send_command request failed: {err}")
-        raise HomeAssistantError(f"Failed to send dialog command: {err}") from err
-
-    if response.status >= 400:
-        _append_log(hass, "error", f"send_command returned {response.status}")
-        _LOGGER.warning("Dialog send_command returned %s: %s", response.status, body[:300])
-        raise HomeAssistantError(f"Dialog endpoint returned HTTP {response.status}")
-
-    _append_log(hass, "request", f"POST {_SAVE_COMMANDS_PATH} ({response.status})")
+            await client.publish(channel, json.dumps(redis_payload, ensure_ascii=False))
+        _append_log(hass, "request", f"PUBLISH {channel}")
+        return
+    except (redis.RedisError, TimeoutError) as err:
+        _append_log(hass, "error", f"send_command redis publish failed: {err}")
+        raise HomeAssistantError(f"Failed to publish dialog command to Redis: {err}") from err
+    finally:
+        close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
+        if close_client:
+            result = close_client()
+            if hasattr(result, "__await__"):
+                await result
 
 
 def _parse_variables(value: Any) -> dict[str, Any]:
@@ -134,7 +142,9 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     stored = dict(entry.options)
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-        CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
+        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
+        CONF_REDIS_URL: stored.get(CONF_REDIS_URL, "redis://127.0.0.1:6379/0"),
+        CONF_REDIS_PASSWORD: stored.get(CONF_REDIS_PASSWORD, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
     }
 

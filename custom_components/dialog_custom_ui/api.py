@@ -25,12 +25,10 @@ from .const import (
     CONF_BASE_URL,
     CONF_ALLOW_NON_ADMIN_PANEL,
     CONF_CLIENT_ID,
-    CONF_COMMAND_RECEIVE_MODE,
-    CONF_REDIS_CHANNEL,
+    CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
     CONF_SCENARIOS,
     CONF_THEME,
-    CONF_TIMEOUT,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
@@ -46,10 +44,7 @@ from .const import (
     CONF_YANDEX_TTS_EMOTION,
     CONF_YANDEX_TTS_SPEED,
     DEFAULT_BASE_URL,
-    DEFAULT_COMMAND_RECEIVE_MODE,
-    DEFAULT_REDIS_CHANNEL,
     DEFAULT_REDIS_URL,
-    DEFAULT_TIMEOUT,
     DEFAULT_THEME,
     DEFAULT_YANDEX_TTS_LANG,
     DEFAULT_YANDEX_TTS_CODEC,
@@ -102,9 +97,8 @@ async def _ws_get_config(
         "base_url": entry.options.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         "allow_non_admin_panel": bool(entry.options.get(CONF_ALLOW_NON_ADMIN_PANEL, True)),
         "client_id": entry.options.get(CONF_CLIENT_ID, ""),
-        "command_receive_mode": entry.options.get(CONF_COMMAND_RECEIVE_MODE, DEFAULT_COMMAND_RECEIVE_MODE),
         "redis_url": entry.options.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
-        "redis_channel": entry.options.get(CONF_REDIS_CHANNEL, DEFAULT_REDIS_CHANNEL),
+        "redis_password": entry.options.get(CONF_REDIS_PASSWORD, ""),
         "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
         "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
         "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
@@ -119,7 +113,6 @@ async def _ws_get_config(
             DEFAULT_YANDEX_TTS_SPEED,
         ),
         "theme": _normalize_theme(entry.options.get(CONF_THEME, DEFAULT_THEME)),
-        "timeout": int(entry.options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         "timer_alarm_device_ids": _normalize_device_ids(
             entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
         ),
@@ -152,9 +145,8 @@ async def _ws_get_logs(
         vol.Required("type"): WS_SAVE_CONFIG,
         vol.Required(CONF_BASE_URL): str,
         vol.Required(CONF_CLIENT_ID): str,
-        vol.Optional(CONF_COMMAND_RECEIVE_MODE, default=DEFAULT_COMMAND_RECEIVE_MODE): str,
         vol.Optional(CONF_REDIS_URL, default=DEFAULT_REDIS_URL): str,
-        vol.Optional(CONF_REDIS_CHANNEL, default=DEFAULT_REDIS_CHANNEL): str,
+        vol.Optional(CONF_REDIS_PASSWORD, default=""): vol.Any(str, None),
         vol.Optional(CONF_ALLOW_NON_ADMIN_PANEL, default=True): bool,
         vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
         vol.Optional(CONF_THEME, default=DEFAULT_THEME): str,
@@ -167,7 +159,6 @@ async def _ws_get_logs(
         vol.Optional(CONF_YANDEX_TTS_VOICE): str,
         vol.Optional(CONF_YANDEX_TTS_EMOTION): str,
         vol.Optional(CONF_YANDEX_TTS_SPEED): vol.Any(int, float),
-        vol.Required(CONF_TIMEOUT): vol.Any(int, float),
         vol.Optional(CONF_TIMER_ALARM_DEVICE_IDS, default=[]): [str],
         vol.Required(CONF_SCENARIOS): [
             {
@@ -224,9 +215,8 @@ async def _ws_save_config(
     options = {
         CONF_BASE_URL: msg[CONF_BASE_URL].strip(),
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
-        CONF_COMMAND_RECEIVE_MODE: _normalize_command_receive_mode(msg.get(CONF_COMMAND_RECEIVE_MODE, DEFAULT_COMMAND_RECEIVE_MODE)),
         CONF_REDIS_URL: str(msg.get(CONF_REDIS_URL, DEFAULT_REDIS_URL)).strip() or DEFAULT_REDIS_URL,
-        CONF_REDIS_CHANNEL: str(msg.get(CONF_REDIS_CHANNEL, DEFAULT_REDIS_CHANNEL)).strip() or DEFAULT_REDIS_CHANNEL,
+        CONF_REDIS_PASSWORD: _normalize_optional_str(msg.get(CONF_REDIS_PASSWORD, "")),
         CONF_ALLOW_NON_ADMIN_PANEL: bool(msg.get(CONF_ALLOW_NON_ADMIN_PANEL, False)),
         CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
         CONF_THEME: _normalize_theme(msg.get(CONF_THEME, DEFAULT_THEME)),
@@ -243,7 +233,6 @@ async def _ws_save_config(
         CONF_YANDEX_TTS_VOICE: yandex_tts_voice,
         CONF_YANDEX_TTS_EMOTION: yandex_tts_emotion,
         CONF_YANDEX_TTS_SPEED: yandex_tts_speed,
-        CONF_TIMEOUT: max(1, int(msg[CONF_TIMEOUT])),
         CONF_TIMER_ALARM_DEVICE_IDS: [
             device_id.strip()
             for device_id in msg[CONF_TIMER_ALARM_DEVICE_IDS]
@@ -262,9 +251,10 @@ async def _ws_save_config(
     connection.send_result(msg["id"], {"saved": True})
 
 
-def _normalize_command_receive_mode(value: Any) -> str:
-    normalized = str(value or DEFAULT_COMMAND_RECEIVE_MODE).strip().lower()
-    return "redis_subscribe" if normalized == "redis_subscribe" else DEFAULT_COMMAND_RECEIVE_MODE
+def _normalize_optional_str(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:

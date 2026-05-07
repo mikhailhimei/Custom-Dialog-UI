@@ -1,6 +1,6 @@
 send_command:
   name: Send dialog command
-  description: Send a custom command payload to the configured Dialog API /api/dialog/save-commands endpoint.
+  description: Send a custom command payload. Publishes to Redis channel DIALOG_MESSAGE:{clientId}:{deviceId} with JSON payload {actionType, variables}.
   fields:
     clientId:
       name: Client ID
