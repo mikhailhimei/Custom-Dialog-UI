@@ -31,41 +31,25 @@ export const renderSettings = (ctx) => {
   return `
       <section class="hero-card">
         <h1>Settings</h1>
-        <p>Общие параметры подключения для сценариев и Yandex TTS: IP, client_id, токены, timeout, voice/speed/folderId и служебные действия.</p>
+        <p>Общие параметры подключения для сценариев и Yandex TTS: IP, client_id, токены, voice/speed/folderId и служебные действия.</p>
         <div class="config-grid">
           <label>
             <span>Base URL</span>
             <input data-config-field="base_url" value="${escapeHtml(ctx._config.base_url)}" placeholder="http://127.0.0.1:8000" />
-            <small>Интеграция отправляет POST на <code>{base_url}/api/dialog/command-check</code>.</small>
+            <small>Интеграция подключается к Redis и слушает SUBSCRIBE-канал ACTIVE_COMMAND:{clientId}.</small>
           </label>
           <label>
             <span>Client ID</span>
             <input data-config-field="client_id" value="${escapeHtml(ctx._config.client_id)}" placeholder="user-123" />
             <small>Поле уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
           </label>
-          <label>
-            <span>Получение команд</span>
-            <select data-config-field="command_receive_mode">
-              <option value="http" ${String(ctx._config.command_receive_mode ?? 'http') === 'http' ? 'selected' : ''}>HTTP polling</option>
-              <option value="redis_subscribe" ${String(ctx._config.command_receive_mode ?? '') === 'redis_subscribe' ? 'selected' : ''}>Redis SUBSCRIBE</option>
-            </select>
-            <small>HTTP делает <code>command-check</code> раз в секунду, Redis слушает канал через <code>SUBSCRIBE</code>.</small>
-          </label>
+          ${renderSecretField(ctx, 'timer_alarm_token', 'Authorization token', ctx._config.timer_alarm_token, 'Bearer xxx')}
           <label>
             <span>Redis URL</span>
             <input data-config-field="redis_url" value="${escapeHtml(ctx._config.redis_url)}" placeholder="redis://127.0.0.1:6379/0" />
             <small>Используется только в режиме Redis SUBSCRIBE.</small>
           </label>
-          <label>
-            <span>Redis channel</span>
-            <input data-config-field="redis_channel" value="${escapeHtml(ctx._config.redis_channel)}" placeholder="dialog_commands" />
-            <small>Канал, куда публикуются JSON-команды для сценариев.</small>
-          </label>
-          ${renderSecretField(ctx, 'timer_alarm_token', 'Authorization token', ctx._config.timer_alarm_token, 'Bearer xxx')}
-          <label class="field-narrow">
-            <span>Timeout, секунд</span>
-            <input data-config-field="timeout" type="number" min="1" value="${escapeHtml(ctx._config.timeout)}" />
-          </label>
+          ${renderSecretField(ctx, 'redis_password', 'Redis password', ctx._config.redis_password, '••••••')}
           <label class="field-narrow">
             <span>Тема</span>
             <div class="switch-control">

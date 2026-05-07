@@ -841,9 +841,8 @@ class DialogCustomUiPanel extends HTMLElement {
     return {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
-      command_receive_mode: this._config.command_receive_mode === 'redis_subscribe' ? 'redis_subscribe' : 'http',
       redis_url: this._config.redis_url,
-      redis_channel: this._config.redis_channel,
+      redis_password: this._config.redis_password,
       allow_non_admin_panel: Boolean(this._config.allow_non_admin_panel),
       timer_alarm_token: this._config.timer_alarm_token,
       yandex_tts_api_key: this._config.yandex_tts_api_key,
@@ -855,7 +854,6 @@ class DialogCustomUiPanel extends HTMLElement {
       yandex_tts_speed: Number(this._config.yandex_tts_speed) || 1.1,
       theme: this._config.theme,
       timer_alarm_device_ids: this._timerAlarmDeviceIdsForSave(),
-      timeout: Number(this._config.timeout) || 10,
       scenarios: this._config.scenarios.map((scenario) => this._serializeScenario(scenario)),
     };
   }
@@ -972,7 +970,6 @@ class DialogCustomUiPanel extends HTMLElement {
       this._config = {
         ...DEFAULT_CONFIG,
         ...parsed,
-        timeout: Number(parsed.timeout) || 10,
         timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(
           parsed.timer_alarm_device_ids ?? []
         ),
