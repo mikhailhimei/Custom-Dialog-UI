@@ -25,7 +25,9 @@ from .const import (
     CONF_CLIENT_ID,
     CONF_COMMAND_RECEIVE_MODE,
     CONF_REDIS_CHANNEL,
+    CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
+    CONF_REDIS_USERNAME,
     CONF_SCENARIOS,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_ITEMS,
@@ -42,8 +44,6 @@ from .const import (
 from .timer_alarm_manager import DialogTimerAlarmManager
 
 _LOGGER = logging.getLogger(__name__)
-_COMMAND_CHECK_PATH = "/api/dialog/command-check"
-_SAVE_COMMANDS_PATH = "/api/dialog/save-commands"
 
 
 class DialogCommandCoordinator:
@@ -85,10 +85,7 @@ class DialogCommandCoordinator:
         while True:
             try:
                 options = _get_options(self.entry)
-                if options[CONF_COMMAND_RECEIVE_MODE] == "redis_subscribe":
-                    await self._async_subscribe_redis(options)
-                else:
-                    await self._async_poll_once()
+                await self._async_subscribe_redis(options)
             except asyncio.CancelledError:
                 raise
             except Exception as err:
@@ -96,55 +93,21 @@ class DialogCommandCoordinator:
                 _LOGGER.exception("Unexpected error while receiving dialog command")
             await asyncio.sleep(UPDATE_INTERVAL_SECONDS)
 
-    async def _async_poll_once(self) -> None:
-        options = _get_options(self.entry)
-        client_id = options[CONF_CLIENT_ID].strip()
-        if not client_id:
-            return
-
-        url = f"{options[CONF_BASE_URL].rstrip('/')}{_COMMAND_CHECK_PATH}"
-        timeout = options[CONF_TIMEOUT]
-        self._append_log("request", f"POST {url} clientId={client_id}")
-
-        try:
-            headers = {"Accept": "application/json"}
-            authorization = _normalize_value(options[CONF_TIMER_ALARM_TOKEN])
-            if authorization:
-                headers["Authorization"] = authorization
-            async with async_timeout.timeout(timeout):
-                response = await self._session.post(
-                    url,
-                    json={"clientId": client_id},
-                    headers=headers,
-                )
-        except (aiohttp.ClientError, TimeoutError) as err:
-            self._append_log("error", f"Request failed: {err}")
-            return
-
-        if response.status == 204:
-            self._append_log("idle", "No command found (204)")
-            return
-        if response.status >= 400:
-            body = await response.text()
-            self._append_log("error", f"Endpoint returned {response.status}")
-            _LOGGER.warning("Dialog endpoint returned %s: %s", response.status, body[:300])
-            return
-
-        try:
-            raw_payload = await response.json(content_type=None)
-        except (aiohttp.ContentTypeError, ValueError) as err:
-            body = await response.text()
-            self._append_log("error", "Endpoint returned invalid JSON")
-            _LOGGER.warning("Dialog endpoint returned invalid JSON: %s; body=%s", err, body[:300])
-            return
-
-        await self._async_handle_raw_payload(raw_payload, options, "Endpoint")
-
     async def _async_subscribe_redis(self, options: dict[str, Any]) -> None:
         redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
-        channel = _normalize_value(options.get(CONF_REDIS_CHANNEL)) or DEFAULT_REDIS_CHANNEL
+        client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        if not client_id:
+            self._append_log("error", "client_id is required for Redis subscribe")
+            await asyncio.sleep(UPDATE_INTERVAL_SECONDS)
+            return
+        channel = f"ACTIVE_COMMAND:{client_id}"
         timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
-        client = redis.Redis.from_url(redis_url, decode_responses=True)
+        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+        client = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            password=redis_password or None,
+        )
         pubsub = client.pubsub()
         self._append_log("request", f"SUBSCRIBE {channel}")
         try:
@@ -153,9 +116,9 @@ class DialogCommandCoordinator:
             while True:
                 current_options = _get_options(self.entry)
                 if (
-                    current_options[CONF_COMMAND_RECEIVE_MODE] != "redis_subscribe"
-                    or _normalize_value(current_options.get(CONF_REDIS_URL)) != redis_url
-                    or _normalize_value(current_options.get(CONF_REDIS_CHANNEL)) != channel
+                    _normalize_value(current_options.get(CONF_REDIS_URL)) != redis_url
+                    or _normalize_value(current_options.get(CONF_CLIENT_ID)) != client_id
+                    or _normalize_value(current_options.get(CONF_REDIS_PASSWORD)) != redis_password
                 ):
                     return
 
@@ -249,33 +212,8 @@ class DialogCommandCoordinator:
         self._append_log("success", f"Started {script_entity_id}")
 
     async def _async_post_save_commands(self, options: dict[str, Any], body: dict[str, Any]) -> None:
-        base_url = _normalize_value(options.get(CONF_BASE_URL)).rstrip("/")
-        if not base_url:
-            return
-        payload = dict(body or {})
-        configured_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-        if configured_client_id and not _normalize_value(payload.get("clientId")):
-            payload["clientId"] = configured_client_id
-        # Keep backward compatibility for consumers that still read snake_case.
-        if configured_client_id and not _normalize_value(payload.get("client_id")):
-            payload["client_id"] = configured_client_id
-        url = f"{base_url}{_SAVE_COMMANDS_PATH}"
-        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
-        headers = {"Accept": "application/json", "Content-Type": "application/json"}
-        authorization = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
-        if authorization:
-            headers["Authorization"] = authorization
-        try:
-            async with async_timeout.timeout(timeout):
-                response = await self._session.post(url, json=payload, headers=headers)
-            if response.status >= 400:
-                body_text = await response.text()
-                self._append_log("error", f"save-commands returned {response.status}")
-                _LOGGER.warning("save-commands returned %s: %s", response.status, body_text[:300])
-                return
-            self._append_log("request", f"POST {_SAVE_COMMANDS_PATH} ({response.status})")
-        except (aiohttp.ClientError, TimeoutError) as err:
-            self._append_log("error", f"save-commands request failed: {err}")
+        # HTTP save-commands path removed in Redis-only mode.
+        return
 
     def get_ha_timer_ids(self) -> set[str]:
         return self.timer_alarm_manager.get_ha_timer_ids()
@@ -489,21 +427,12 @@ def _matches_condition(
     return True
 
 
-def _normalize_command_receive_mode(value: Any) -> str:
-    normalized = str(value or DEFAULT_COMMAND_RECEIVE_MODE).strip().lower()
-    return "redis_subscribe" if normalized == "redis_subscribe" else DEFAULT_COMMAND_RECEIVE_MODE
-
-
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     stored = dict(entry.options)
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
         CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
-        CONF_COMMAND_RECEIVE_MODE: _normalize_command_receive_mode(
-            stored.get(CONF_COMMAND_RECEIVE_MODE, DEFAULT_COMMAND_RECEIVE_MODE)
-        ),
         CONF_REDIS_URL: stored.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
-        CONF_REDIS_CHANNEL: stored.get(CONF_REDIS_CHANNEL, DEFAULT_REDIS_CHANNEL),
         CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
         CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
         CONF_SCENARIOS: list(stored.get(CONF_SCENARIOS, [])),

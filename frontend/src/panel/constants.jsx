@@ -2,9 +2,8 @@ export const DEFAULT_CONFIG = {
   base_url: 'http://127.0.0.1:8000',
   allow_non_admin_panel: true,
   client_id: '',
-  command_receive_mode: 'http',
   redis_url: 'redis://127.0.0.1:6379/0',
-  redis_channel: 'dialog_commands',
+  redis_password: '',
   timer_alarm_token: '',
   yandex_tts_api_key: '',
   yandex_tts_folder_id: '',
@@ -15,7 +14,6 @@ export const DEFAULT_CONFIG = {
   yandex_tts_speed: 1.1,
   timer_alarm_device_ids: [''],
   theme: 'light',
-  timeout: 10,
   scenarios: [],
 };
 
@@ -35,7 +33,7 @@ export const EXAMPLE_PAYLOAD = `{
   "device_id": "..."
 }`;
 
-export const LOG_POLL_INTERVAL_MS = 2000;
+export const LOG_POLL_INTERVAL_MS = 30000;
 const MODULE_VERSION = new URL(import.meta.url).searchParams.get('v') || '';
 const IS_LOCAL_DEV = ['localhost', '127.0.0.1'].includes(globalThis.location?.hostname ?? '');
 
