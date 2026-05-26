@@ -16,6 +16,19 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import aiohttp_client
 
+from .normalize import (
+    _normalize_value,
+    _normalize_values,
+    _normalize_children_direct_type_values,
+    _describe_payload_type,
+    _normalize_condition,
+    _normalize_legacy_conditions
+)
+
+from .matches import (
+    _matches_expected_value
+)
+
 from .const import (
     ATTR_CHILDREN_DIRECT_TYPE,
     ATTR_CHILDREN_TYPE,
@@ -23,24 +36,20 @@ from .const import (
     ATTR_SCRIPT_ENTITY_ID,
     CONF_BASE_URL,
     CONF_CLIENT_ID,
-    CONF_COMMAND_RECEIVE_MODE,
-    CONF_REDIS_CHANNEL,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
-    CONF_REDIS_USERNAME,
     CONF_SCENARIOS,
     CONF_TIMEOUT,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_PRESETS,
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
-    DEFAULT_COMMAND_RECEIVE_MODE,
-    DEFAULT_REDIS_CHANNEL,
     DEFAULT_REDIS_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
     UPDATE_INTERVAL_SECONDS,
 )
+
 from .timer_alarm_manager import DialogTimerAlarmManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -200,10 +209,9 @@ class DialogCommandCoordinator:
             "variables": {
                 "dialog_payload": payload,
                 "dialog_children_type": payload.get("children_type") or payload.get("actionType"),
-                "dialog_type": payload.get("children_type") or payload.get("actionType"),
-                "dialog_children_direct_type": payload.get(ATTR_CHILDREN_DIRECT_TYPE),
+                "dialog_direct_type": payload.get(ATTR_CHILDREN_DIRECT_TYPE),
                 "dialog_parent_type": payload.get("parent_type"),
-                "dialog_value": payload.get("value"),
+                "dialog_value": payload.get("data", {}).get("commands", ""),
                 "dialog_client_id": payload.get("client_id") or payload.get("clientId"),
                 "dialog_device_id": payload.get("device_id") or payload.get("deviceId"),
             },
@@ -211,9 +219,44 @@ class DialogCommandCoordinator:
         await self.hass.services.async_call("script", "turn_on", service_data, blocking=False)
         self._append_log("success", f"Started {script_entity_id}")
 
-    async def _async_post_save_commands(self, options: dict[str, Any], body: dict[str, Any]) -> None:
-        # HTTP save-commands path removed in Redis-only mode.
-        return
+    async def _async_post_save_commands(self, options: dict[str, Any], payload: dict[str, Any]) -> None:
+        """Опубликовывает post-save команды в Redis канал для клиента/устройства.
+
+        Данная функция используется `DialogTimerAlarmManager` для передачи
+        ответов/статусов (actionType + variables) обратно в внешнюю систему
+        через Redis. Формат канала: `DIALOG_MESSAGE:{clientId}:{deviceId}`.
+        """
+        client_id = _normalize_value(payload.get("clientId") or payload.get("client_id")) or _normalize_value(options.get(CONF_CLIENT_ID))
+        device_id = _normalize_value(payload.get("deviceId") or payload.get("device_id") or "")
+        if not client_id:
+            self._append_log("error", "client_id is required for post_save_commands")
+            return
+
+        channel = f"DIALOG_MESSAGE:{client_id}:{device_id}"
+        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
+        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+        redis_payload = {
+            "actionType": _normalize_value(payload.get("actionType")),
+            "variables": payload.get("variables") or {},
+        }
+        client = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            password=redis_password or None,
+        )
+        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
+        try:
+            async with async_timeout.timeout(timeout):
+                await client.publish(channel, json.dumps(redis_payload, ensure_ascii=False))
+            self._append_log("request", f"PUBLISH {channel}")
+        except (redis.RedisError, TimeoutError) as err:
+            self._append_log("error", f"post_save_commands redis publish failed: {err}")
+        finally:
+            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
+            if close_client:
+                result = close_client()
+                if hasattr(result, "__await__"):
+                    await result
 
     def get_ha_timer_ids(self) -> set[str]:
         return self.timer_alarm_manager.get_ha_timer_ids()
@@ -280,40 +323,7 @@ def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) ->
             continue
         return scenario
     return None
-
-
-def _normalize_value(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _normalize_values(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, (list, tuple, set)):
-        values = value
-    else:
-        values = [value]
-    return [normalized for normalized in (_normalize_value(item) for item in values) if normalized]
-
-
-def _describe_payload_type(value: Any) -> str:
-    values = _normalize_values(value)
-    if not values:
-        return "<empty>"
-    if len(values) == 1:
-        return values[0]
-    return "[" + ", ".join(values) + "]"
-
-
-def _matches_expected_value(expected_value: str, incoming_value: Any) -> bool:
-    if not expected_value:
-        return True
-    allowed_values = [part.strip() for part in expected_value.split(";") if part.strip()]
-    if not allowed_values:
-        return not _normalize_values(incoming_value)
-    return any(value in allowed_values for value in _normalize_values(incoming_value))
+    
 
 
 def _matches_children_type(expected_value: str, incoming_value: Any) -> bool:
@@ -323,34 +333,6 @@ def _matches_children_type(expected_value: str, incoming_value: Any) -> bool:
     if "all" in allowed_values:
         return bool(_normalize_values(incoming_value))
     return _matches_expected_value(expected_value, incoming_value)
-
-
-def _normalize_children_direct_type_values(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, dict):
-        values: list[Any] = [value]
-    elif isinstance(value, (list, tuple, set)):
-        values = list(value)
-    else:
-        values = [value]
-
-    normalized_values: list[str] = []
-    for item in values:
-        if isinstance(item, dict):
-            candidates = [item.get("type"), item.get("mapping_type"), item.get("mappingType")]
-            value_payload = item.get("value")
-            if isinstance(value_payload, dict):
-                candidates.extend(value_payload.keys())
-            for candidate in candidates:
-                normalized = _normalize_value(candidate)
-                if normalized:
-                    normalized_values.append(normalized)
-        else:
-            normalized = _normalize_value(item)
-            if normalized:
-                normalized_values.append(normalized)
-    return normalized_values
 
 
 def _matches_children_direct_type(expected_value: str, incoming_value: Any) -> bool:
@@ -374,40 +356,6 @@ def _get_scenario_conditions(scenario: dict[str, Any]) -> list[dict[str, str]]:
         if conditions:
             return conditions
     return _normalize_legacy_conditions(scenario)
-
-
-def _normalize_condition(condition: dict[str, Any]) -> dict[str, str] | None:
-    parent_type = _normalize_value(condition.get(ATTR_PARENT_TYPE))
-    children_type = _normalize_value(condition.get(ATTR_CHILDREN_TYPE) or condition.get("type"))
-    children_direct_type = _normalize_value(condition.get(ATTR_CHILDREN_DIRECT_TYPE))
-    if not parent_type and not children_type and not children_direct_type:
-        return None
-    normalized = {ATTR_PARENT_TYPE: parent_type}
-    if children_type:
-        normalized[ATTR_CHILDREN_TYPE] = children_type
-    if children_direct_type:
-        normalized[ATTR_CHILDREN_DIRECT_TYPE] = children_direct_type
-    return normalized
-
-
-def _normalize_legacy_conditions(scenario: dict[str, Any]) -> list[dict[str, str]]:
-    parent_values = [part.strip() for part in _normalize_value(scenario.get(ATTR_PARENT_TYPE)).split(";")]
-    children_values = [part.strip() for part in _normalize_value(scenario.get(ATTR_CHILDREN_TYPE) or scenario.get("type")).split(";")]
-    direct_values = [part.strip() for part in _normalize_value(scenario.get(ATTR_CHILDREN_DIRECT_TYPE)).split(";")]
-    max_length = max(len(parent_values), len(children_values), len(direct_values), 1)
-    conditions: list[dict[str, str]] = []
-    for index in range(max_length):
-        condition = _normalize_condition(
-            {
-                ATTR_PARENT_TYPE: parent_values[index] if index < len(parent_values) else "",
-                ATTR_CHILDREN_TYPE: children_values[index] if index < len(children_values) else "",
-                ATTR_CHILDREN_DIRECT_TYPE: direct_values[index] if index < len(direct_values) else "",
-            }
-        )
-        if condition:
-            conditions.append(condition)
-    return conditions
-
 
 def _matches_condition(
     condition: dict[str, str],

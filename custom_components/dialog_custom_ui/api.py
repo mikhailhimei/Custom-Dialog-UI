@@ -16,6 +16,13 @@ from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
+from .normalize import (
+    _normalize_value,
+    _normalize_scenario,
+    _normalize_str_list,
+    _normalize_device_ids
+)
+
 from .const import (
     ATTR_CHILDREN_TYPE,
     ATTR_CHILDREN_DIRECT_TYPE,
@@ -27,7 +34,6 @@ from .const import (
     CONF_CLIENT_ID,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
-    CONF_REDIS_USERNAME,
     CONF_SCENARIOS,
     CONF_THEME,
     CONF_TIMER_ALARM_DEVICE_IDS,
@@ -217,7 +223,7 @@ async def _ws_save_config(
         CONF_BASE_URL: msg[CONF_BASE_URL].strip(),
         CONF_CLIENT_ID: msg[CONF_CLIENT_ID].strip(),
         CONF_REDIS_URL: str(msg.get(CONF_REDIS_URL, DEFAULT_REDIS_URL)).strip() or DEFAULT_REDIS_URL,
-        CONF_REDIS_PASSWORD: _normalize_optional_str(msg.get(CONF_REDIS_PASSWORD, "")),
+        CONF_REDIS_PASSWORD: _normalize_value(msg.get(CONF_REDIS_PASSWORD, "")),
         CONF_ALLOW_NON_ADMIN_PANEL: bool(msg.get(CONF_ALLOW_NON_ADMIN_PANEL, False)),
         CONF_TIMER_ALARM_TOKEN: msg[CONF_TIMER_ALARM_TOKEN].strip(),
         CONF_THEME: _normalize_theme(msg.get(CONF_THEME, DEFAULT_THEME)),
@@ -252,99 +258,8 @@ async def _ws_save_config(
     connection.send_result(msg["id"], {"saved": True})
 
 
-def _normalize_optional_str(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
-    scenario = {
-        ATTR_SCENARIO_ID: item[ATTR_SCENARIO_ID].strip(),
-        "name": item["name"].strip(),
-        ATTR_SCRIPT_ENTITY_ID: item[ATTR_SCRIPT_ENTITY_ID].strip(),
-    }
-
-    conditions = [
-        normalized
-        for condition in item.get("conditions", [])
-        if isinstance(condition, dict)
-        if (normalized := _normalize_condition(condition))
-    ]
-
-    if not conditions:
-        conditions = _normalize_legacy_conditions(item)
-
-    if conditions:
-        scenario["conditions"] = conditions
-
-    return scenario
-
-
-def _normalize_device_ids(value: Any) -> list[str]:
-    if isinstance(value, str):
-        value = [value]
-    if not isinstance(value, list):
-        return []
-    return [device_id.strip() for device_id in value if device_id.strip()]
-
-
 def _normalize_theme(value: Any) -> str:
     return "dark" if str(value or "").strip().lower() == "dark" else "light"
-
-
-def _normalize_condition(item: dict[str, Any]) -> dict[str, str] | None:
-    parent_type = item.get(ATTR_PARENT_TYPE, "").strip()
-    children_type = item.get(
-        ATTR_CHILDREN_TYPE, item.get("actionType", item.get("type", ""))
-    ).strip()
-    children_direct_type = item.get(ATTR_CHILDREN_DIRECT_TYPE, "").strip()
-
-    if not parent_type and not children_type and not children_direct_type:
-        return None
-
-    condition = {
-        ATTR_PARENT_TYPE: parent_type,
-    }
-    if children_type:
-        condition[ATTR_CHILDREN_TYPE] = children_type
-    if children_direct_type:
-        condition[ATTR_CHILDREN_DIRECT_TYPE] = children_direct_type
-
-    return condition
-
-
-def _normalize_legacy_conditions(item: dict[str, Any]) -> list[dict[str, str]]:
-    parent_values = [part.strip() for part in item.get(ATTR_PARENT_TYPE, "").split(";")]
-    children_values = [
-        part.strip()
-        for part in item.get(
-            ATTR_CHILDREN_TYPE, item.get("actionType", item.get("type", ""))
-        ).split(";")
-    ]
-    direct_values = [
-        part.strip()
-        for part in item.get(ATTR_CHILDREN_DIRECT_TYPE, "").split(";")
-    ]
-    max_length = max(len(parent_values), len(children_values), len(direct_values), 1)
-    conditions: list[dict[str, str]] = []
-
-    for index in range(max_length):
-        condition = _normalize_condition(
-            {
-                ATTR_PARENT_TYPE: parent_values[index] if index < len(parent_values) else "",
-                ATTR_CHILDREN_TYPE: (
-                    children_values[index] if index < len(children_values) else ""
-                ),
-                ATTR_CHILDREN_DIRECT_TYPE: (
-                    direct_values[index] if index < len(direct_values) else ""
-                ),
-            }
-        )
-        if condition:
-            conditions.append(condition)
-
-    return conditions
 
 
 def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
@@ -600,16 +515,6 @@ def _normalize_sub_items(value: Any) -> list[str]:
         if text:
             result.append(text)
     return result
-
-
-def _normalize_str_list(value: Any) -> list[str]:
-    if isinstance(value, list):
-        values = value
-    elif value is None:
-        values = []
-    else:
-        values = [value]
-    return [str(item).strip() for item in values if str(item).strip()]
 
 
 def _normalize_accounts(value: Any) -> list[str]:
