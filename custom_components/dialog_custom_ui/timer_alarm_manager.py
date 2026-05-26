@@ -34,6 +34,11 @@ from .const import (
     WS_SAVE_TIMER_ALARM_CONFIG,
 )
 
+from .normalize import (
+    _normalize_value,
+    _normalize_device_ids
+)
+
 _LOGGER = logging.getLogger(__name__)
 _DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
 _TIMER_PREFIX = "ha_timer:"
@@ -64,6 +69,11 @@ class DialogTimerAlarmManager:
         self._runtime_state_key = f"timer_alarm_runtime:{id(self)}"
 
     async def async_restore_from_options(self, options: dict[str, Any]) -> None:
+        """Восстанавливает состояние таймеров/будильников из опций конфига.
+
+        Однажды восстанавливает внутренние структуры `_timers` и `_alarms` из
+        сохранённых в опциях значений и применяет их к рантайм-менеджеру.
+        """
         if self._restored:
             return
         shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
@@ -74,6 +84,11 @@ class DialogTimerAlarmManager:
         self._restored = True
 
     async def async_stop(self) -> None:
+        """Останавливает все активные задачи таймеров и цикл будильников.
+
+        Отменяет асинхронные таски, очищает контейнеры таймеров/будильников и
+        удаляет runtime-состояние из памяти Home Assistant.
+        """
         for entry in list(self._timers.values()):
             task = entry.get("task")
             if isinstance(task, asyncio.Task):
@@ -95,52 +110,83 @@ class DialogTimerAlarmManager:
         payload: dict[str, Any],
         options: dict[str, Any],
     ) -> bool:
-        script_entity_id = _normalize_value(scenario.get("script_entity_id")).lower()
-        if script_entity_id not in {"timer", "alarm"}:
-            return False
+        """Обрабатывает встроенные сценарии `timer` и `alarm`.
+
+        На вход получает сценарий (конфигурацию), payload и опции интеграции.
+        В зависимости от типа сценария диспатчит обработчики старта/остановки/
+        паузы/инфо и т.д. Возвращает True если сценарий был обработан.
+        """
 
         parent_type = _normalize_value(payload.get("parent_type")).lower()
-        if script_entity_id == "timer":
-            parent_type = _resolve_timer_parent_type(payload, parent_type)
-            if parent_type == "timer_start":
-                await self.async_handle_timer_start(payload, options)
-                return True
-            if parent_type == "timer_stop":
-                await self.async_handle_timer_stop(payload, options)
-                return True
-            if parent_type == "timer_info":
-                await self.async_handle_timer_info(payload, options)
-                return True
-            if parent_type == "timer_pause":
-                await self.async_handle_timer_pause(payload, options)
-                return True
-            if parent_type == "timer_resume":
-                await self.async_handle_timer_resume(payload, options)
-                return True
-            return False
-
-        parent_type = _resolve_alarm_parent_type(payload, parent_type)
+        client_id = _normalize_value(payload.get("client_id"))
+        device_id = _normalize_value(payload.get("device_id"))
+        
+        count = _extract_count(payload)
+        
+        if parent_type == "timer_start":
+            await self.async_handle_timer_start(payload.get("children_direct_type"), options, client_id, device_id, payload.get("mainCommand"))
+            return True
+            
+        if parent_type == "timer_stop":
+            await self.async_handle_timer_stop(options, client_id, count, payload.get("mainCommand"))
+            return True
+            
+        if parent_type == "timer_info":
+            await self.async_handle_timer_info(options, client_id, payload.get("mainCommand"))
+            return True
+        if parent_type == "timer_pause":
+            await self.async_handle_timer_pause(options, client_id, count, payload.get("mainCommand"))
+            return True
+        if parent_type == "timer_resume":
+            await self.async_handle_timer_resume(client_id, count)
+            return True
+        
         if parent_type == "alarm_start":
-            await self.async_handle_alarm_start(payload, options)
+            await self.async_handle_alarm_start(payload.get("children_direct_type"), options, client_id, device_id, payload.get("mainCommand"))
             return True
+        
         if parent_type == "alarm_stop":
-            await self.async_handle_alarm_stop(payload, options)
+            await self.async_handle_alarm_stop(options, client_id, count, payload.get("mainCommand"))
             return True
+        
         if parent_type == "alarm_info":
-            await self.async_handle_alarm_info(payload, options)
+            await self.async_handle_alarm_info(options, client_id, count, payload.get("mainCommand"))
             return True
+        
         return False
 
-    async def async_handle_timer_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
-        device_id = _extract_device_id(payload)
-        if not client_id and _is_main_command(payload):
-            await self._send_action(options, "error", "Не удалось установить таймер: отсутствует client_id")
+    async def async_handle_timer_start(self, children_direct_type, options: dict[str, Any], client_id: str, device_id: str, mainCommand: bool) -> None:
+        """Обработчик команды на создание/запуск таймера.
+
+        Извлекает client_id/device_id, парсит длительность и текст команд,
+        создаёт запись таймера и планирует таск окончания. При `mainCommand`
+        отправляет результат в `_post_save` для дальнейшей публикации.
+        """
+
+        if not client_id and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
+                },
+            )
             return
 
-        timer_parts = _extract_timer_parts(payload)
-        total_seconds = max(1, timer_parts["hour"] * 3600 + timer_parts["minut"] * 60 + timer_parts["second"])
-        commands_text = _extract_commands_text(payload)
+        timer = _extract_timer_parts(children_direct_type)
+
+        if timer is None:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить таймер: некорректный формат времени"},
+                },
+            )
+            return
+
+        total_seconds = max(1, timer["hour"] * 3600 + timer["minute"] * 60 + timer["second"])
+
         timer_id = f"{_TIMER_PREFIX}{client_id}:{uuid.uuid4().hex[:8]}"
 
         self._create_timer(
@@ -148,83 +194,160 @@ class DialogTimerAlarmManager:
             client_id=client_id,
             device_id=device_id,
             total_seconds=total_seconds,
-            commands_text=commands_text,
             paused=False,
         )
 
         success_message = f"на {_seconds_to_minute_phrase(total_seconds)}"
-        await self._send_action(options, "success", success_message, payload)
 
-    async def async_handle_timer_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
-        if not client_id and _is_main_command(payload):
-            await self._send_action(options, "error", "Не удалось установить таймер: отсутствует client_id")
+        if mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                    "variables": {"message": success_message},
+                },
+            )
+
+    async def async_handle_timer_stop(self, options: dict[str, Any], client_id: str, count: int, mainCommand: bool) -> None:
+        """Обрабатывает команду остановки таймера.
+
+        Поддерживает выбор по индексу/количеству, отменяет таск и удаляет
+        запись таймера; при необходимости отправляет ответ через `_post_save`.
+        """
+        if not client_id and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
+                },
+            )
             return
 
         timers = self._timers_for_client(client_id)
-        if not timers and _is_main_command(payload):
-            await self._send_action(options, "not")
+
+        if not timers and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "not_timers",
+                },
+            )
             return
 
-        target_count = _extract_count(payload)
-        if target_count is None and len(timers) > 1 and _is_main_command(payload):
+        
+        if count is None and len(timers) > 1 and mainCommand:
             _, text_timer = self._timer_count_message(timers)
-            await self._send_action(options, "several", text_timer)
+            await self._post_save(
+                options,
+                {
+                    "actionType": "several",
+                    "variables": {
+                        "message": text_timer,
+                    },
+                },
+            )
             return
         
-        selected_index = len(timers) - 1 if target_count is None else max(0, target_count - 1)
+        selected_index = len(timers) - 1 if count is None else max(0, count - 1)
         selected_index = min(selected_index, len(timers) - 1)
+
         timer_id = _normalize_value(timers[selected_index].get("id"))
         timer_entry = self._timers.pop(timer_id, None)
+
         if timer_entry is None:
             return
+        
         self._cancel_timer_task(timer_entry)
         self._mark_updated()
-        await self._send_action(options, "success", payload=payload)
 
-    async def async_handle_timer_pause(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
+        if mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success"
+                },
+            )
+
+    async def async_handle_timer_pause(self, options: dict[str, Any], client_id: str, count: int, mainCommand: bool) -> None:
+        """Ставит указанный таймер на паузу.
+
+        Сохраняет оставшееся время и отменяет текущий таск ожидания.
+        """
         timers = self._timers_for_client(client_id)
-        if not timers and _is_main_command(payload):
-            await self._send_action(options, "not_timers")
+        if not timers and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "not_timers",
+                },
+            )
             return
-        target_count = _extract_count(payload)
-        index = len(timers) - 1 if target_count is None else min(max(target_count - 1, 0), len(timers) - 1)
+        
+        index = len(timers) - 1 if count is None else min(max(count - 1, 0), len(timers) - 1)
         await self._pause_timer(_normalize_value(timers[index].get("id")))
-        await self._send_action(options, "success", payload=payload)
 
-    async def async_handle_timer_resume(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
+        if mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                },
+            )
+
+    async def async_handle_timer_resume(self, client_id: str, count: int) -> None:
+        """Возобновляет паузнутый таймер — планирует таск ожидания заново."""
+
         timers = self._timers_for_client(client_id)
+
         if not timers:
             return
-        target_count = _extract_count(payload)
-        index = len(timers) - 1 if target_count is None else min(max(target_count - 1, 0), len(timers) - 1)
+        
+        index = len(timers) - 1 if count is None else min(max(count - 1, 0), len(timers) - 1)
         await self._resume_timer(_normalize_value(timers[index].get("id")))
 
-    async def async_handle_timer_info(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
+    async def async_handle_timer_info(self, options: dict[str, Any], client_id: str, mainCommand: bool) -> None:
+        """Возвращает информацию по таймерам для клиента (один/несколько)."""
         if not client_id:
             return
+        
         timers = self._timers_for_client(client_id)
         count_timer, text_timer = self._timer_count_message(timers)
         
-        await self._send_action(options, "several" if count_timer else "one", text_timer, payload)
+        if mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "several" if count_timer else "one",
+                    "variables": {
+                        "message": text_timer
+                    }
+                },
+            )
 
-    async def async_handle_alarm_start(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
-        device_id = _extract_device_id(payload)
-        if not client_id and _is_main_command(payload):
-            await self._send_action(options, "error", "Не удалось установить будильник: отсутствует client_id")
+    async def async_handle_alarm_start(self, direct_values, options, client_id: str, device_id: str, mainCommand: bool) -> None:
+        """Обработчик создания/включения будильника.
+
+        Проверяет конфликты по device_id и времени, обновляет пресеты и
+        планирует тикер будильников при необходимости.
+        """
+        if not client_id and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
+                },
+            )
             return
         
-        alarm_time = _extract_alarm_time(payload)
+        alarm_time = _extract_alarm_time(direct_values)
 
         for existing in self._alarms.values():
             existing_device_id = _normalize_value(existing.get("device_id"))
             if device_id and existing_device_id and existing_device_id != device_id:
                 continue
-            if _normalize_alarm_clock(_normalize_value(existing.get("time"))) != alarm_time:
+            if _normalize_value(existing.get("time")) != alarm_time:
                 continue
             if _normalize_value(existing.get("status")).lower() != "off":
                 continue
@@ -236,7 +359,14 @@ class DialogTimerAlarmManager:
             self._alarm_presets.add(alarm_time)
             self._ensure_alarm_tick_task()
             self._mark_updated()
-            await self._send_action(options, "success", alarm_time, payload)
+            if mainCommand:
+                await self._post_save(
+                    options,
+                    {
+                        "actionType": "success",
+                        "variables": {"message": f"{alarm_time}"},
+                    },
+                )
 
             return
         
@@ -254,35 +384,53 @@ class DialogTimerAlarmManager:
         self._alarm_presets.add(alarm_time)
         self._ensure_alarm_tick_task()
         self._mark_updated()
-        await self._send_action(options, "success", alarm_time, payload)
+        if mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "success",
+                    "variables": {"message": f"{alarm_time}"},
+                },
+            )
 
-    async def async_handle_alarm_stop(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
-        if not client_id and _is_main_command(payload):
-            await self._send_action(options, "error", "Не удалось установить будильник: отсутствует client_id")
+    async def async_handle_alarm_stop(self, options: dict[str, Any], client_id: str, count: int, mainCommand: bool) -> None:
+        """Останавливает/удаляет будильник по запросу клиента."""
+        if not client_id and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "error",
+                    "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
+                },
+            )
             return
         
         alarms = self._alarms_for_client(client_id)
-        if not alarms and _is_main_command(payload):
-            await self._send_action(options, "not")
+        
+        if not alarms and mainCommand:
+            await self._post_save(
+                options,
+                {
+                    "actionType": "not_alarm"
+                },
+            )
             return
         
-        target_count = _extract_count(payload)
-        if target_count is None and _is_main_command(payload):
-            await self._send_action(
+        if not count and mainCommand:
+            await self._post_save(
                 options,
                 "several",
                 "\n".join(f"{i+1}. на {_normalize_value(item.get('time'))}" for i, item in enumerate(alarms)),
             )
             return
 
-        index = len(alarms) - 1 if target_count is None else min(max(target_count - 1, 0), len(alarms) - 1)
+        index = len(alarms) - 1 if count is None else min(max(count - 1, 0), len(alarms) - 1)
         alarm_id = _normalize_value(alarms[index].get("id"))
         self._alarms.pop(alarm_id, None)
         self._mark_updated()
 
-    async def async_handle_alarm_info(self, payload: dict[str, Any], options: dict[str, Any]) -> None:
-        client_id = _extract_client_id(payload, options)
+    async def async_handle_alarm_info(self, options: dict[str, Any], client_id: str, count: int, mainCommand: bool) -> None:
+        """Отдаёт информацию о будильниках (один/несколько) через `_post_save`."""
         alarms = self._alarms_for_client(client_id)
         if len(alarms) == 1:
             count = "one"
@@ -294,7 +442,7 @@ class DialogTimerAlarmManager:
                 for i, item in enumerate(alarms)
             )
 
-        if _is_main_command(payload):
+        if mainCommand:
             await self._post_save(
                 options,
                 {
@@ -305,12 +453,18 @@ class DialogTimerAlarmManager:
             )
 
     def get_ha_timer_ids(self) -> set[str]:
+        """Возвращает набор идентификаторов таймеров, которыми управляет HA."""
         return set(self._timers.keys())
 
     def get_ha_timer_items(self) -> list[dict[str, Any]]:
+        """Возвращает список элементов типа `timer` для UI/сохранения."""
         return [item for item in self.get_items() if _normalize_value(item.get("type")) == "timer"]
 
     async def async_cancel_ha_timer(self, timer_id: str) -> bool:
+        """Принудительно отменяет таймер по его `timer_id`.
+
+        Возвращает True если таймер найден и отменён, иначе False.
+        """
         timer_key = _normalize_value(timer_id)
         timer_entry = self._timers.pop(timer_key, None)
         if timer_entry is None:
@@ -320,28 +474,26 @@ class DialogTimerAlarmManager:
         return True
 
     async def async_apply_ui_items(self, items: list[dict[str, Any]], shared_client_id: str) -> list[dict[str, Any]]:
+        """Применяет набор элементов, пришедших из UI.
+
+        Нормализует элементы, сопоставляет существующие таймеры/будильники,
+        создаёт/обновляет/удаляет записи и планирует таски при необходимости.
+        Возвращает итоговый список элементов рантайма.
+        """
         normalized_items = [self._normalize_ui_item(item, shared_client_id) for item in items if isinstance(item, dict)]
-        incoming_timers = self._collect_ui_items_by_type(normalized_items, "timer")
-        incoming_alarms = self._collect_ui_items_by_type(normalized_items, "alarm")
-
-        self._remove_missing_timers(incoming_timers)
-        await self._apply_incoming_timers(incoming_timers, shared_client_id)
-        self._remove_missing_alarms(incoming_alarms)
-        self._apply_incoming_alarms(incoming_alarms, shared_client_id)
-
-        if self._alarms:
-            self._ensure_alarm_tick_task()
-        self._mark_updated()
-        return self.get_items()
-
-    def _collect_ui_items_by_type(self, normalized_items: list[dict[str, Any]], item_type: str) -> dict[str, dict[str, Any]]:
-        return {
+        
+        incoming_timers = {
             _normalize_value(item.get("id")): item
             for item in normalized_items
-            if _normalize_value(item.get("type")) == item_type
+            if _normalize_value(item.get("type")) == "timer"
+        }
+        
+        incoming_alarms = {
+            _normalize_value(item.get("id")): item
+            for item in normalized_items
+            if _normalize_value(item.get("type")) == "alarm"
         }
 
-    def _remove_missing_timers(self, incoming_timers: dict[str, dict[str, Any]]) -> None:
         for timer_id in list(self._timers.keys()):
             if timer_id not in incoming_timers:
                 entry = self._timers.pop(timer_id)
@@ -426,7 +578,7 @@ class DialogTimerAlarmManager:
             device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
             status = _normalize_value(item.get("status")).lower() or "on"
             time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
-            alarm_time = _normalize_alarm_clock(_normalize_value(time_data.get("time") or "08:00"))
+            alarm_time = _normalize_value(time_data.get("time"))
             self._alarms[alarm_id] = {
                 "id": alarm_id,
                 "client_id": client_id,
@@ -437,6 +589,11 @@ class DialogTimerAlarmManager:
             }
 
     def get_items(self) -> list[dict[str, Any]]:
+        """Формирует и возвращает snapshot всех элементов (таймеры + будильники).
+
+        Snapshot содержит поля, удобные для UI, включая оставшееся время
+        и форматированные даты в часовой зоне HA.
+        """
         now_ts = datetime.now().timestamp()
         timezone_name = _default_timezone_name()
         items: list[dict[str, Any]] = []
@@ -485,12 +642,19 @@ class DialogTimerAlarmManager:
         return items
 
     def get_active_items(self) -> list[dict[str, Any]]:
+        """Возвращает только активные элементы (включенные и на паузе)."""
         return [item for item in self.get_items() if _normalize_value(item.get("status")).lower() in {"on", "paused"}]
 
     def get_alarm_presets(self) -> list[str]:
+        """Возвращает отсортированный список preset'ов для будильников."""
         return sorted(self._alarm_presets)
 
     def serialize_persisted_items(self) -> list[dict[str, Any]]:
+        """Подготавливает представление элементов для сохранения в опциях.
+
+        Конвертирует рантайм-представление в компактный формат, сохраняемый
+        в `entry.options` интеграции.
+        """
         result: list[dict[str, Any]] = []
         for item in self.get_items():
             item_type = _normalize_value(item.get("type"))
@@ -554,12 +718,11 @@ class DialogTimerAlarmManager:
             return max(1, int(end_dt.timestamp() - datetime.now().timestamp()))
         return 30 * 60
 
-    def _create_timer(self, timer_id: str, client_id: str, device_id: str, total_seconds: int, commands_text: str, paused: bool) -> None:
+    def _create_timer(self, timer_id: str, client_id: str, device_id: str, total_seconds: int, paused: bool) -> None:
         entry: dict[str, Any] = {
             "id": timer_id,
             "client_id": client_id,
             "device_id": device_id,
-            "commands": commands_text,
             "created_at": datetime.now().timestamp(),
             "total_seconds": max(1, total_seconds),
             "remaining_seconds": max(1, total_seconds),
@@ -662,7 +825,7 @@ class DialogTimerAlarmManager:
         for alarm in list(self._alarms.values()):
             if _normalize_value(alarm.get("status")).lower() == "off":
                 continue
-            alarm_time = _normalize_alarm_clock(_normalize_value(alarm.get("time") or "08:00"))
+            alarm_time = _normalize_value(alarm.get("time"))
             try:
                 hour, minute = [int(part) for part in alarm_time.split(":", 1)]
             except (TypeError, ValueError):
@@ -704,9 +867,8 @@ class DialogTimerAlarmManager:
         return configured or _DEFAULT_TIMER_MEDIA_CONTENT_ID
 
     def _timers_for_client(self, client_id: str) -> list[dict[str, Any]]:
-        normalized_client = _normalize_value(client_id)
-        if normalized_client:
-            items = [entry for entry in self._timers.values() if _normalize_value(entry.get("client_id")) == normalized_client]
+        if client_id:
+            items = [entry for entry in self._timers.values() if _normalize_value(entry.get("client_id")) == client_id]
             # Fallback for mixed payload formats where client identifiers differ.
             if not items:
                 items = list(self._timers.values())
@@ -716,9 +878,8 @@ class DialogTimerAlarmManager:
         return items
 
     def _alarms_for_client(self, client_id: str) -> list[dict[str, Any]]:
-        normalized_client = _normalize_value(client_id)
-        if normalized_client:
-            items = [entry for entry in self._alarms.values() if _normalize_value(entry.get("client_id")) == normalized_client]
+        if client_id:
+            items = [entry for entry in self._alarms.values() if _normalize_value(entry.get("client_id")) == client_id]
             if not items:
                 items = list(self._alarms.values())
         else:
@@ -735,7 +896,7 @@ class DialogTimerAlarmManager:
             ts = int(end_dt.timestamp()) if end_dt is not None else 10**18
         else:
             time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
-            alarm_time = _normalize_alarm_clock(_normalize_value(time_data.get("time") or "08:00"))
+            alarm_time = _normalize_value(time_data.get("time"))
             try:
                 h, m = [int(part) for part in alarm_time.split(":", 1)]
                 candidate = now.replace(hour=h, minute=m, second=0, microsecond=0)
@@ -765,21 +926,40 @@ class DialogTimerAlarmManager:
             )
         return count, "\n".join(lines)
 
-    async def _send_action(
-        self,
-        options: dict[str, Any],
-        action_type: str,
-        message: str | None = None,
-        payload: dict[str, Any] | None = None,
-    ) -> None:
-        if payload is not None and not _is_main_command(payload):
-            return
-        body: dict[str, Any] = {"actionType": action_type}
-        if message:
-            body["variables"] = {"message": message}
-        await self._post_save(options, body)
+    def _alarm_count_message(self, alarms: list[dict[str, Any]]) -> str:
+        active_alarms = [alarm for alarm in alarms if _normalize_value(alarm.get("status")).lower() != "off"]
+        if not active_alarms:
+            return "Активных будильников нет."
+        lines = [
+            f"{index}. на {_normalize_value(item.get('time'))}"
+            for index, item in enumerate(active_alarms, start=1)
+        ]
+        return "\n".join(lines)
+
+    async def _extract_and_validate_client(self, payload: dict[str, Any], options: dict[str, Any]) -> str:
+        """Извлечь и вернуть client_id из payload или опций.
+
+        Вспомогательный метод для уменьшения дублирования кода в обработчиках команд.
+        """
+        return _extract_client_id(payload, options)
+
+    async def _send_response_if_main_command(self, payload: dict[str, Any], options: dict[str, Any], action_type: str, variables: dict[str, Any] | None = None) -> None:
+        """Отправить ответ через post_save если это mainCommand, иначе ничего не делать.
+
+        Вспомогательный метод для уменьшения дублирования проверок mainCommand.
+        """
+        if payload.get('mainCommand'):
+            body = {"actionType": action_type}
+            if variables:
+                body["variables"] = variables
+            await self._post_save(options, body)
 
     async def _post_save(self, options: dict[str, Any], body: dict[str, Any]) -> None:
+        """Подготавливает payload и делегирует публикацию через `_post_save_commands`.
+
+        Добавляет совместимость с устаревшими ключами и подставляет
+        `clientId` из опций, если он не был указан в payload.
+        """
         payload = dict(body or {})
         configured_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
         if configured_client_id and not _normalize_value(payload.get("clientId")):
@@ -831,6 +1011,10 @@ def async_register_timer_alarm_websockets(hass: HomeAssistant) -> None:
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_TIMER_ALARM_CONFIG})
 @websocket_api.async_response
 async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """WebSocket handler: возвращает конфигурацию таймеров/будильников.
+
+    Отвечает клиенту данными из текущего рантайма и опций интеграции.
+    """
     entry = _get_entry(hass)
     if entry is None:
         connection.send_error(msg["id"], "not_configured", "Integration entry not found")
@@ -942,6 +1126,11 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
 )
 @websocket_api.async_response
 async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """WebSocket handler: сохранить конфигурацию таймеров/будильников.
+
+    Принимает набор элементов от UI и сохраняет их в опциях конфигурации.
+    Рассылает изменения всем менеджерам чтобы избежать split-brain.
+    """
     entry = _get_entry(hass)
     if entry is None:
         connection.send_error(msg["id"], "not_configured", "Integration entry not found")
@@ -986,6 +1175,11 @@ def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
 
 
 def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> Any | None:
+    """Попытаться извлечь объект менеджера таймеров/будильников из координатора.
+
+    Проверяет наличие необходимых методов и возвращает менеджер только
+    если он удовлетворяет интерфейсу.
+    """
     coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
     manager = getattr(coordinator, "timer_alarm_manager", None)
     if manager is None:
@@ -1001,6 +1195,10 @@ def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> Any | None:
 
 
 def _iter_managers(hass: HomeAssistant) -> list[Any]:
+    """Итератор по всем доступным менеджерам таймеров в hass.data[DOMAIN].
+
+    Возвращает список объектов, соответствующих ожидаемому интерфейсу.
+    """
     managers: list[Any] = []
     for value in hass.data.get(DOMAIN, {}).values():
         manager = getattr(value, "timer_alarm_manager", None)
@@ -1023,6 +1221,10 @@ def _select_manager(
     requested_items: list[dict[str, Any]],
     shared_client_id: str,
 ) -> Any | None:
+    """Выбрать наилучший менеджер для применения запрошенных элементов.
+
+    Оценивает менеджеры по пересечению id и совпадению client_id.
+    """
     if not managers:
         return None
     requested_ids = {_normalize_value(item.get("id")) for item in requested_items if _normalize_value(item.get("id"))}
@@ -1043,6 +1245,10 @@ def _select_manager(
 
 
 def _get_options(entry: ConfigEntry) -> dict[str, Any]:
+    """Нормализовать и вернуть опции из `ConfigEntry.options`.
+
+    Возвращает значения с дефолтами и приведение типов.
+    """
     stored = dict(entry.options)
     return {
         CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
@@ -1058,201 +1264,101 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
     }
 
 
-def _normalize_value(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def _normalize_device_ids(values: Any) -> list[str]:
-    if isinstance(values, str):
-        values = [values]
-    if not isinstance(values, Iterable):
-        return []
-    return [device_id for device_id in (_normalize_value(value) for value in values) if device_id]
-
-
 def _normalize_alarm_presets(values: Any) -> list[str]:
+    """Привести входной список preset'ов будильников к отсортированному списку часов:минут.
+
+    Поддерживает строку или итерируемую структуру.
+    """
     if isinstance(values, str):
         values = [values]
     if not isinstance(values, Iterable):
         return []
-    normalized = {_normalize_alarm_clock(_normalize_value(value)) for value in values if _normalize_value(value)}
+    normalized = {_normalize_value(value) for value in values if _normalize_value(value)}
     return sorted(normalized)
 
 
-def _extract_commands_text(payload: dict[str, Any]) -> str:
-    value = payload.get("data") if isinstance(payload.get("data"), dict) else payload.get("value")
-    if isinstance(value, dict):
-        command = _normalize_value(value.get("commands") or value.get("command"))
-        if command:
-            return command
-    direct_command = _normalize_value(payload.get("commands") or payload.get("command"))
-    if direct_command:
-        return direct_command
-    normalized = _normalize_value(payload.get("normalize_numbers"))
-    if normalized:
-        return normalized
-    client_command = payload.get("client_command") if isinstance(payload.get("client_command"), dict) else {}
-    request = client_command.get("request") if isinstance(client_command.get("request"), dict) else {}
-    nested_command = _normalize_value(request.get("command") or request.get("original_utterance"))
-    if nested_command:
-        return nested_command
-    return ""
+def _extract_timer_parts(direct_values) -> dict[str, int]:
+    """Распарсить части времени (hour/minut/second) для установки таймера.
 
-
-def _is_main_command(payload: dict[str, Any]) -> bool:
-    value = payload.get("mainCommand")
-    if isinstance(value, bool):
-        return value
-    return _normalize_value(value).lower() in {"true", "1", "yes", "on"}
-
-
-def _extract_client_id(payload: dict[str, Any], options: dict[str, Any]) -> str:
-    direct = _normalize_value(payload.get("client_id") or payload.get("clientId") or payload.get("user_id") or payload.get("userId"))
-    if direct:
-        return direct
-    client_command = payload.get("client_command") if isinstance(payload.get("client_command"), dict) else {}
-    session = client_command.get("session") if isinstance(client_command.get("session"), dict) else {}
-    user = session.get("user") if isinstance(session.get("user"), dict) else {}
-    nested = _normalize_value(user.get("user_id") or user.get("id"))
-    if nested:
-        return nested
-    return _normalize_value(options.get(CONF_CLIENT_ID))
-
-
-def _extract_device_id(payload: dict[str, Any]) -> str:
-    direct = _normalize_value(payload.get("device_id") or payload.get("deviceId") or payload.get("application_id") or payload.get("applicationId"))
-    if direct:
-        return direct
-    target = payload.get("target") if isinstance(payload.get("target"), dict) else {}
-    target_device = _normalize_value(target.get("device_id") or target.get("deviceId") or target.get("entity_id") or target.get("entityId"))
-    if target_device:
-        return target_device
-    client_command = payload.get("client_command") if isinstance(payload.get("client_command"), dict) else {}
-    session = client_command.get("session") if isinstance(client_command.get("session"), dict) else {}
-    application = session.get("application") if isinstance(session.get("application"), dict) else {}
-    return _normalize_value(application.get("application_id") or application.get("device_id"))
-
-
-def _extract_timer_parts(payload: dict[str, Any]) -> dict[str, int]:
-    defaults = {"hour": 0, "minut": 1, "second": 0}
-    direct_values = payload.get("children_direct_type")
+    Поддерживает как специализированные `children_direct_type`, так и
+    простую числовую выемку из текста команды.
+    """
+    
     if isinstance(direct_values, dict):
         direct_values = [direct_values]
     if isinstance(direct_values, (list, tuple)):
         for item in direct_values:
             if not isinstance(item, dict):
                 continue
-            mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
-            value = item.get("value") if isinstance(item.get("value"), dict) else {}
-            timer_data = value.get("timer") if isinstance(value.get("timer"), dict) else value
-            if mapping_type == "timer" and isinstance(timer_data, dict):
+            if item.get("valueType") == "time":
+                timer_data = item.get("value")
                 return {
                     "hour": _safe_int(timer_data.get("hour")),
-                    "minut": _safe_int(timer_data.get("minut") or timer_data.get("minute")),
+                    "minut": _safe_int(timer_data.get("minut")),
                     "second": _safe_int(timer_data.get("second")),
                 }
-    minutes = _extract_first_int(_extract_commands_text(payload))
-    if minutes is not None:
-        return {"hour": minutes // 60, "minut": minutes % 60, "second": 0}
-    return defaults
+            
+    return None
 
 
-def _extract_alarm_time(payload: dict[str, Any]) -> str:
-    direct_values = payload.get("children_direct_type")
+def _extract_alarm_time(direct_values) -> str:
+    """Извлечь время будильника из payload в формате HH:MM.
+
+    Поддерживает разные вложенные форматы и регулярное выражение из текста.
+    По умолчанию возвращает '08:00'.
+    """
+
     if isinstance(direct_values, dict):
         direct_values = [direct_values]
     if isinstance(direct_values, (list, tuple)):
         for item in direct_values:
             if not isinstance(item, dict):
                 continue
-            mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
-            if mapping_type not in {"alarm", "time", "cotimers"}:
+
+            value_type = _normalize_value(item.get("valueType")).lower()
+            if value_type != "time":
                 continue
-            value = item.get("value") if isinstance(item.get("value"), dict) else {}
-            if isinstance(value.get("cotimers"), dict):
-                value = value.get("cotimers")
-            if isinstance(value.get("alarm"), dict):
-                value = value.get("alarm")
+
+            value = item.get("value") 
+
             clock = _extract_alarm_clock(value)
-            if clock:
-                keep_raw_time = _extract_times_of_day_flag(payload, value)
-                return _resolve_alarm_time_for_today(clock, keep_raw_time)
-    match = re.search(r"(\d{1,2})[:\.](\d{1,2})", _extract_commands_text(payload))
-    if match:
-        keep_raw_time = _extract_times_of_day_flag(payload, {})
-        return _resolve_alarm_time_for_today(f"{match.group(1)}:{match.group(2)}", keep_raw_time)
-    return "08:00"
+            keep_raw_time = value.get("times_of_day")
+            if keep_raw_time:
+                return clock
+            
+            if value["hour"] == 0 or value["hour"] >= 12:
+                return clock
+            
+            return _resolve_alarm_time_for_today(value, keep_raw_time)
+    
+    return None
 
 
-def _extract_alarm_clock(value: dict[str, Any]) -> str:
-    direct_clock = _normalize_value(value.get("time") or value.get("alarm_time"))
-    if direct_clock:
-        return _normalize_alarm_clock(direct_clock)
+def _resolve_alarm_time_for_today(value: str) -> str:
+    """Уточнить для какого дня ставить будильник (утро/вечер).
 
-    has_hour = "hour" in value
-    has_minute = "minut" in value or "minute" in value
-    if not has_hour and not has_minute:
-        return ""
-
-    hour = min(23, max(0, _safe_int(value.get("hour"))))
-    minute = min(59, max(0, _safe_int(value.get("minut") or value.get("minute"))))
-    return f"{hour:02d}:{minute:02d}"
-
-
-
-
-def _extract_times_of_day_flag(payload: dict[str, Any], value: dict[str, Any]) -> bool:
-    candidates: list[Any] = [
-        value.get("times_of_Day"),
-        value.get("times_of_day"),
-        value.get("time_of_day"),
-        value.get("timesOfDay"),
-        payload.get("times_of_Day"),
-        payload.get("times_of_day"),
-        payload.get("time_of_day"),
-        payload.get("timesOfDay"),
-    ]
-    for candidate in candidates:
-        if isinstance(candidate, bool):
-            return candidate
-        normalized = _normalize_value(candidate).lower()
-        if normalized in {"true", "1", "yes", "on"}:
-            return True
-        if normalized in {"false", "0", "no", "off"}:
-            return False
-    return False
-
-
-def _resolve_alarm_time_for_today(value: str, keep_raw_time: bool) -> str:
-    normalized = _normalize_alarm_clock(value)
-    if keep_raw_time:
-        return normalized
-
-    try:
-        hour_str, minute_str = normalized.split(":", 1)
-        hour = int(hour_str)
-        minute = int(minute_str)
-    except (TypeError, ValueError):
-        return normalized
-
-    if hour == 0 or hour >= 12:
-        return normalized
+    Если `keep_raw_time` — возвращает нормализованное время как есть,
+    иначе пытается сопоставить AM/PM по логике автора.
+    """
 
     now = dt_util.now()
-    morning_candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    evening_candidate = now.replace(hour=hour + 12, minute=minute, second=0, microsecond=0)
+    morning_candidate = now.replace(hour=value["hour"], minute=value["minute"], second=0, microsecond=0)
+    evening_candidate = now.replace(hour=value["hour"] + 12, minute=value["minute"], second=0, microsecond=0)
+
     if morning_candidate <= now:
         morning_candidate = morning_candidate + timedelta(days=1)
     if evening_candidate <= now:
         evening_candidate = evening_candidate + timedelta(days=1)
 
     if evening_candidate < morning_candidate:
-        return f"{hour + 12:02d}:{minute:02d}"
-    return f"{hour:02d}:{minute:02d}"
+        return f"{value['hour'] + 12:02d}:{value['minute']:02d}"
+    return f"{value['hour']:02d}:{value['minute']:02d}"
 
 def _extract_count(payload: dict[str, Any]) -> int | None:
+    """Попытаться извлечь числовой счётчик (count) из `children_direct_type`.
+
+    Возвращает целое >0 или None.
+    """
     direct_values = payload.get("children_direct_type")
     if isinstance(direct_values, dict):
         direct_values = [direct_values]
@@ -1260,7 +1366,7 @@ def _extract_count(payload: dict[str, Any]) -> int | None:
         for item in direct_values:
             if not isinstance(item, dict):
                 continue
-            mapping_type = _normalize_value(item.get("mapping_type") or item.get("mappingType") or item.get("type")).lower()
+            mapping_type = _normalize_value(item.get("mapping_type")).lower()
             if mapping_type not in {"count"}:
                 continue
             value = item.get("value")
@@ -1269,51 +1375,8 @@ def _extract_count(payload: dict[str, Any]) -> int | None:
     return None
 
 
-def _resolve_timer_parent_type(payload: dict[str, Any], parent_type: str) -> str:
-    if parent_type in {"timer_start", "timer_stop", "timer_info", "timer_pause", "timer_resume", "timer_count"}:
-        return parent_type
-
-    text = _extract_commands_text(payload).lower()
-    if any(token in text for token in ("сколько", "какие", "count", "список")):
-        return "timer_count"
-    if any(token in text for token in ("пауз", "pause")):
-        return "timer_pause"
-    if any(token in text for token in ("возобн", "resume", "продолж")):
-        return "timer_resume"
-    if any(token in text for token in ("стоп", "отмен", "удал", "выключ", "stop")):
-        return "timer_stop"
-    if any(token in text for token in ("сколько", "остал", "info", "инфо")):
-        return "timer_info"
-    return "timer_start"
-
-
-def _resolve_alarm_parent_type(payload: dict[str, Any], parent_type: str) -> str:
-    if parent_type in {"alarm_start", "alarm_stop", "alarm_info", "alarm_count"}:
-        return parent_type
-
-    text = _extract_commands_text(payload).lower()
-    if any(token in text for token in ("сколько", "какие", "count", "список")):
-        return "alarm_count"
-    if any(token in text for token in ("стоп", "отмен", "удал", "выключ", "stop")):
-        return "alarm_stop"
-    if any(token in text for token in ("сколько", "какие", "info", "инфо")):
-        return "alarm_info"
-    return "alarm_start"
-
-
-def _extract_first_int(text: str) -> int | None:
-    if not text:
-        return None
-    match = re.search(r"\d+", text)
-    if not match:
-        return None
-    try:
-        return int(match.group(0))
-    except ValueError:
-        return None
-
-
 def _safe_int(value: Any) -> int:
+    """Безопасно преобразовать значение в неприцательное целое, иначе 0."""
     try:
         return max(0, int(value))
     except (TypeError, ValueError):
@@ -1321,6 +1384,7 @@ def _safe_int(value: Any) -> int:
 
 
 def _seconds_to_duration(total_seconds: int) -> str:
+    """Преобразовать секунды в строку формата HH:MM:SS."""
     safe_total = max(0, _safe_int(total_seconds))
     hours = safe_total // 3600
     minutes = (safe_total % 3600) // 60
@@ -1329,11 +1393,13 @@ def _seconds_to_duration(total_seconds: int) -> str:
 
 
 def _seconds_to_minute_phrase(total_seconds: int) -> str:
+    """Отобразить секунды в виде фразы 'N минут' (округлённо)."""
     minutes = max(1, int(round(max(0, _safe_int(total_seconds)) / 60)))
     return f"{minutes} минут"
 
 
 def _duration_to_seconds(value: str) -> int:
+    """Преобразовать строковое представление длительности (H:M:S или M:S или M) в секунды."""
     parts = [part.strip() for part in _normalize_value(value).split(":") if part.strip()]
     if not parts:
         return 0
@@ -1349,24 +1415,25 @@ def _duration_to_seconds(value: str) -> int:
         return max(0, numbers[0] * 60)
     return 0
 
+    
+def _extract_alarm_clock(value: dict[str, Any]) -> str:
+    """Попытаться получить значение часов:минут из вложенной структуры.
 
-def _normalize_alarm_clock(value: str) -> str:
-    normalized = _normalize_value(value)
-    try:
-        hour_str, minute_str = normalized.split(":", 1)
-        hour = min(23, max(0, int(hour_str)))
-        minute = min(59, max(0, int(minute_str)))
-        return f"{hour:02d}:{minute:02d}"
-    except (TypeError, ValueError):
-        return "08:00"
+    Возвращает пустую строку если часов/минут нет.
+    """
 
+    hour = min(23, max(0, _safe_int(value.get("hour"))))
+    minute = min(59, max(0, _safe_int(value.get("minut"))))
+    return f"{hour:02d}:{minute:02d}"
 
 def _default_timezone_name() -> str:
+    """Вернуть название локальной часовой зоны (без ленивых загрузок зон)."""
     local_dt = datetime.now().astimezone()
     return getattr(local_dt.tzinfo, "key", None) or str(local_dt.tzinfo or "")
 
 
 def _format_datetime(timestamp_value: float, timezone_name: str) -> str:
+    """Сформатировать timestamp в человекочитаемую дату/время с учётом tzinfo."""
     # Avoid ZoneInfo lazy loads in the event loop (HA reports import/open blocking calls).
     tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
     dt_value = datetime.fromtimestamp(float(timestamp_value), tz=tz)
@@ -1374,6 +1441,7 @@ def _format_datetime(timestamp_value: float, timezone_name: str) -> str:
 
 
 def _parse_datetime(value: str, timezone_name: str) -> datetime | None:
+    """Попытаться распарсить строку в datetime, вернуть локализованный объект или None."""
     normalized = _normalize_value(value)
     if not normalized:
         return None
@@ -1391,6 +1459,10 @@ def _parse_datetime(value: str, timezone_name: str) -> datetime | None:
 
 
 def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str:
+    """Попытаться разрешить переданную ссылку на устройство в entity_id media_player.*.
+
+    Возвращает пустую строку если не удалось сопоставить media_player.
+    """
     if not device_ref:
         return ""
     if hass.states.get(device_ref):
@@ -1408,6 +1480,7 @@ def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str
 
 
 def _resolve_device_label(hass: HomeAssistant, device_ref: str) -> str:
+    """Разрешить читаемую метку устройства по ссылке/entity/device registry."""
     normalized = _normalize_value(device_ref)
     if not normalized:
         return ""
@@ -1436,6 +1509,7 @@ def _resolve_device_label(hass: HomeAssistant, device_ref: str) -> str:
 
 
 def _collect_device_labels(hass: HomeAssistant, items: list[dict[str, Any]], configured_device_ids: Any) -> dict[str, str]:
+    """Собрать маппинг device_id -> label для переданных элементов и конфигурации."""
     candidates: set[str] = set()
     for item in items:
         ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
@@ -1451,6 +1525,12 @@ def _collect_device_labels(hass: HomeAssistant, items: list[dict[str, Any]], con
     return result
 
 def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
+    """Помочь собрать элементы таймеров/будильников из произвольного holder'а.
+
+    Используется для чтения runtime-снимков из объектов, у которых могут быть
+    атрибуты `_timers` и `_alarms` либо вложенный `timer_alarm_manager`.
+    Возвращает список элементов в формате, совместимом с `get_items()`.
+    """
     timer_map = getattr(holder, "_timers", None)
     alarm_map = getattr(holder, "_alarms", None)
     if not isinstance(timer_map, dict) and not isinstance(alarm_map, dict):

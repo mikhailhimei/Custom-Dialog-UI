@@ -59,6 +59,7 @@ ATTR_SCENARIO_ID = "id"
 ATTR_SCENARIO_NAME = "name"
 ATTR_CHILDREN_TYPE = "children_type"
 ATTR_CHILDREN_DIRECT_TYPE = "children_direct_type"
+ATTR_VALUE = "data"
 ATTR_PARENT_TYPE = "parent_type"
 ATTR_SCRIPT_ENTITY_ID = "script_entity_id"
 
