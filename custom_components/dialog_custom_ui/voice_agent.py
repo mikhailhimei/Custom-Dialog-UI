@@ -49,7 +49,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         session_id = user_input.conversation_id or str(uuid.uuid4())
-        entry = _get_entry(hass)
+        entry = _get_entry(self.hass)
         if entry is None:
             raise HomeAssistantError("Dialog Custom UI integration entry not found")
 
