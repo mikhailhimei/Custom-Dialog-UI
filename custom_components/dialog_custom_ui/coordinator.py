@@ -29,6 +29,10 @@ from .matches import (
     _matches_expected_value
 )
 
+from .utils import (
+    _get_options
+)
+
 from .const import (
     ATTR_CHILDREN_DIRECT_TYPE,
     ATTR_CHILDREN_TYPE,
@@ -374,17 +378,3 @@ def _matches_condition(
         return False
     return True
 
-
-def _get_options(entry: ConfigEntry) -> dict[str, Any]:
-    stored = dict(entry.options)
-    return {
-        CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
-        CONF_REDIS_URL: stored.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
-        CONF_REDIS_PASSWORD: stored.get(CONF_REDIS_PASSWORD, ""),
-        CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
-        CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
-        CONF_SCENARIOS: list(stored.get(CONF_SCENARIOS, [])),
-        CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
-        CONF_TIMER_ALARM_PRESETS: list(stored.get(CONF_TIMER_ALARM_PRESETS, [])),
-    }

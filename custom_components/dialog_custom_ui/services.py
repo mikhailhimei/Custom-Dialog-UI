@@ -17,18 +17,20 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import aiohttp_client
 
+from .utils import (
+    _get_entry,
+    _get_options
+)
+
 from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
     CONF_TIMEOUT,
-    DEFAULT_BASE_URL,
     DEFAULT_TIMEOUT,
     DOMAIN,
 )
-
-_LOGGER = logging.getLogger(__name__)
 
 SERVICE_SEND_COMMAND = "send_command"
 
@@ -133,20 +135,6 @@ def _parse_variables(value: Any) -> dict[str, Any]:
     raise HomeAssistantError("variables must be a JSON object")
 
 
-def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
-    entries = hass.config_entries.async_entries(DOMAIN)
-    return entries[0] if entries else None
-
-
-def _get_options(entry: ConfigEntry) -> dict[str, Any]:
-    stored = dict(entry.options)
-    return {
-        CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
-        CONF_REDIS_URL: stored.get(CONF_REDIS_URL, "redis://127.0.0.1:6379/0"),
-        CONF_REDIS_PASSWORD: stored.get(CONF_REDIS_PASSWORD, ""),
-        CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
-    }
 
 
 def _normalize_value(value: Any) -> str:

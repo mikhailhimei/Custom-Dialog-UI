@@ -16,11 +16,16 @@ from homeassistant.components.conversation import (
 )
 from homeassistant.helpers import intent
 
-from .services import _get_entry, _get_options
+from .utils import (
+    _get_entry,
+    _get_options
+)
+
 from .normalize import _normalize_value
 from .const import (
     CONF_BASE_URL,
-    CONF_CLIENT_ID
+    CONF_CLIENT_ID,
+    CONF_TIMER_ALARM_TOKEN
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -32,17 +37,11 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     def __init__(
         self,
         hass,
-        ip_address: str,
-        user_id: str,
         fallback_application_id: str,
-        authorization_token: str = "",
     ) -> None:
         self.hass = hass
-        self._ip_address = ip_address
-        self._user_id = user_id
         self._fallback_application_id = fallback_application_id
-        self._authorization_token = authorization_token
-
+     
     @property
     def supported_languages(self) -> list[str]:
         return ["ru"]
@@ -56,13 +55,15 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         options = _get_options(entry)
         base_url = _normalize_value(options.get(CONF_BASE_URL))
         clinet_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        authorization_token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
+        _LOGGER.error(authorization_token)
 
         
         application_id = getattr(user_input, "device_id", None) or self._fallback_application_id
         url = self._build_commands_url(base_url)
         headers: dict[str, str] = {}
-        if self._authorization_token:
-            headers["Authorization"] = self._authorization_token
+        if authorization_token:
+            headers["Authorization"] = authorization_token
 
         data: dict[str, Any] = {}
         try:

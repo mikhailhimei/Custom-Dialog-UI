@@ -19,6 +19,12 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
+from .utils import (
+    _get_entry,
+    _get_options,
+    _get_manager
+)
+
 from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
@@ -27,8 +33,6 @@ from .const import (
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_PRESETS,
-    DEFAULT_BASE_URL,
-    DEFAULT_TIMEOUT,
     DOMAIN,
     WS_GET_TIMER_ALARM_CONFIG,
     WS_SAVE_TIMER_ALARM_CONFIG,
@@ -514,7 +518,6 @@ class DialogTimerAlarmManager:
 
             if timer_entry is None:
                 self._create_timer(timer_id, client_id, device_id, duration_seconds, "", status == "paused")
-                self._log_ui_timer_create(timer_id, client_id, device_id, duration_seconds)
                 continue
 
             await self._sync_existing_timer(timer_id, timer_entry, status, client_id, device_id, duration_seconds)
@@ -548,23 +551,6 @@ class DialogTimerAlarmManager:
         if bool(timer_entry.get("paused")):
             await self._resume_timer(timer_id)
 
-    def _log_ui_timer_create(self, timer_id: str, client_id: str, device_id: str, duration_seconds: int) -> None:
-        self._append_log(
-            "info",
-            (
-                "Timer requested from UI: "
-                f"id={timer_id} client_id={client_id or '<empty>'} "
-                f"device_id={device_id or '<empty>'} "
-                f"duration={_seconds_to_duration(duration_seconds)}"
-            ),
-        )
-        _LOGGER.warning(
-            "Dialog Custom UI timer requested from UI: id=%s client_id=%s device_id=%s duration=%s",
-            timer_id,
-            client_id or "<empty>",
-            device_id or "<empty>",
-            _seconds_to_duration(duration_seconds),
-        )
 
     def _remove_missing_alarms(self, incoming_alarms: dict[str, dict[str, Any]]) -> None:
         for alarm_id in list(self._alarms.keys()):
@@ -935,23 +921,6 @@ class DialogTimerAlarmManager:
         ]
         return "\n".join(lines)
 
-    async def _extract_and_validate_client(self, payload: dict[str, Any], options: dict[str, Any]) -> str:
-        """Извлечь и вернуть client_id из payload или опций.
-
-        Вспомогательный метод для уменьшения дублирования кода в обработчиках команд.
-        """
-        return _extract_client_id(payload, options)
-
-    async def _send_response_if_main_command(self, payload: dict[str, Any], options: dict[str, Any], action_type: str, variables: dict[str, Any] | None = None) -> None:
-        """Отправить ответ через post_save если это mainCommand, иначе ничего не делать.
-
-        Вспомогательный метод для уменьшения дублирования проверок mainCommand.
-        """
-        if payload.get('mainCommand'):
-            body = {"actionType": action_type}
-            if variables:
-                body["variables"] = variables
-            await self._post_save(options, body)
 
     async def _post_save(self, options: dict[str, Any], body: dict[str, Any]) -> None:
         """Подготавливает payload и делегирует публикацию через `_post_save_commands`.
@@ -1087,12 +1056,7 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
     alarm_presets = sorted(all_presets) if all_presets else (manager.get_alarm_presets() if manager is not None else [])
     if last_updated is None and manager is not None:
         last_updated = manager.last_updated
-    _LOGGER.warning(
-        "dialog_custom_ui/get_timer_alarm_config: managers=%s items=%s active_items=%s",
-        len(managers),
-        len(items),
-        len(active_items),
-    )
+    
     connection.send_result(
         msg["id"],
         {
@@ -1168,31 +1132,6 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
     connection.send_result(msg["id"], {"saved": True})
 
 
-def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
-    entries = hass.config_entries.async_entries(DOMAIN)
-    return entries[0] if entries else None
-
-
-def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> Any | None:
-    """Попытаться извлечь объект менеджера таймеров/будильников из координатора.
-
-    Проверяет наличие необходимых методов и возвращает менеджер только
-    если он удовлетворяет интерфейсу.
-    """
-    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-    manager = getattr(coordinator, "timer_alarm_manager", None)
-    if manager is None:
-        return None
-    required_attrs = (
-        "get_items",
-        "get_active_items",
-        "get_alarm_presets",
-        "async_apply_ui_items",
-        "serialize_persisted_items",
-    )
-    return manager if all(hasattr(manager, attr) for attr in required_attrs) else None
-
-
 def _iter_managers(hass: HomeAssistant) -> list[Any]:
     """Итератор по всем доступным менеджерам таймеров в hass.data[DOMAIN].
 
@@ -1243,24 +1182,6 @@ def _select_manager(
     return best_manager or managers[0]
 
 
-def _get_options(entry: ConfigEntry) -> dict[str, Any]:
-    """Нормализовать и вернуть опции из `ConfigEntry.options`.
-
-    Возвращает значения с дефолтами и приведение типов.
-    """
-    stored = dict(entry.options)
-    return {
-        CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
-        CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
-        CONF_TIMER_ALARM_DEVICE_IDS: _normalize_device_ids(stored.get(CONF_TIMER_ALARM_DEVICE_IDS, [])),
-        CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
-        CONF_TIMER_ALARM_PRESETS: _normalize_alarm_presets(stored.get(CONF_TIMER_ALARM_PRESETS, [])),
-        CONF_TIMER_ALARM_MEDIA_CONTENT_ID: _normalize_value(
-            stored.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, _DEFAULT_TIMER_MEDIA_CONTENT_ID)
-        )
-        or _DEFAULT_TIMER_MEDIA_CONTENT_ID,
-    }
 
 
 def _normalize_alarm_presets(values: Any) -> list[str]:
@@ -1328,7 +1249,7 @@ def _extract_alarm_time(direct_values) -> str:
             if value["hour"] == 0 or value["hour"] >= 12:
                 return clock
             
-            return _resolve_alarm_time_for_today(value, keep_raw_time)
+            return _resolve_alarm_time_for_today(value)
     
     return None
 

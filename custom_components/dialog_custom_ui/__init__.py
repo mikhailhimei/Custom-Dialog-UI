@@ -47,19 +47,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DialogCommandCoordinator(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await coordinator.async_start()
-    voice_agent_ip = str(entry.options.get(CONF_VOICE_AGENT_IP, "")).strip()
-    voice_agent_user_id = str(entry.options.get(CONF_VOICE_AGENT_USER_ID, "")).strip()
-    authorization_token = str(entry.options.get(CONF_TIMER_ALARM_TOKEN, "")).strip()
-    if voice_agent_ip and voice_agent_user_id:
-        conversation.async_set_agent(
+    conversation.async_set_agent(
             hass,
             entry,
             DialogCustomUiVoiceAgent(
                 hass,
-                voice_agent_ip,
-                voice_agent_user_id,
                 entry.entry_id,
-                authorization_token,
             ),
         )
     return True
