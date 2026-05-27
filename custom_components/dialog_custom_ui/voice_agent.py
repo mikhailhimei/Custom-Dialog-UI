@@ -12,8 +12,16 @@ from homeassistant.components.conversation import (
     AbstractConversationAgent,
     ConversationInput,
     ConversationResult,
+    HomeAssistantError
 )
 from homeassistant.helpers import intent
+
+from .services import _get_entry, _get_options
+from .normalize import _normalize_value
+from .const import (
+    CONF_BASE_URL,
+    CONF_CLIENT_ID
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,11 +46,20 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     @property
     def supported_languages(self) -> list[str]:
         return ["ru"]
-
+    
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         session_id = user_input.conversation_id or str(uuid.uuid4())
+        entry = _get_entry(hass)
+        if entry is None:
+            raise HomeAssistantError("Dialog Custom UI integration entry not found")
+
+        options = _get_options(entry)
+        base_url = _normalize_value(options.get(CONF_BASE_URL))
+        clinet_id = _normalize_value(options.get(CONF_CLIENT_ID))
+
+        
         application_id = getattr(user_input, "device_id", None) or self._fallback_application_id
-        url = self._build_commands_url(self._ip_address)
+        url = self._build_commands_url(base_url)
         headers: dict[str, str] = {}
         if self._authorization_token:
             headers["Authorization"] = self._authorization_token
@@ -55,7 +72,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                     json={
                         "request": {"command": user_input.text},
                         "session": {
-                            "user": {"user_id": self._user_id},
+                            "user": {"user_id": clinet_id},
                             "application": {"application_id": application_id},
                             "session_id": session_id,
                             "new": user_input.conversation_id is None,

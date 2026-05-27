@@ -106,7 +106,6 @@ class DialogTimerAlarmManager:
 
     async def async_handle_builtin(
         self,
-        scenario: dict[str, Any],
         payload: dict[str, Any],
         options: dict[str, Any],
     ) -> bool:
