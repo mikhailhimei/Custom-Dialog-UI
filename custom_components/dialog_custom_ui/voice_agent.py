@@ -56,7 +56,6 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         base_url = _normalize_value(options.get(CONF_BASE_URL))
         clinet_id = _normalize_value(options.get(CONF_CLIENT_ID))
         authorization_token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
-        _LOGGER.error(authorization_token)
 
         
         application_id = getattr(user_input, "device_id", None) or self._fallback_application_id

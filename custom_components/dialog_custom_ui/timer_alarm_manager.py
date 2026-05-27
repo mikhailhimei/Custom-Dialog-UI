@@ -188,7 +188,7 @@ class DialogTimerAlarmManager:
             )
             return
 
-        total_seconds = max(1, timer["hour"] * 3600 + timer["minute"] * 60 + timer["second"])
+        total_seconds = max(1, timer["hour"] * 3600 + timer["minut"] * 60 + timer["second"])
 
         timer_id = f"{_TIMER_PREFIX}{client_id}:{uuid.uuid4().hex[:8]}"
 
@@ -1262,8 +1262,8 @@ def _resolve_alarm_time_for_today(value: str) -> str:
     """
 
     now = dt_util.now()
-    morning_candidate = now.replace(hour=value["hour"], minute=value["minute"], second=0, microsecond=0)
-    evening_candidate = now.replace(hour=value["hour"] + 12, minute=value["minute"], second=0, microsecond=0)
+    morning_candidate = now.replace(hour=value["hour"], minute=value["minut"], second=0, microsecond=0)
+    evening_candidate = now.replace(hour=value["hour"] + 12, minute=value["minut"], second=0, microsecond=0)
 
     if morning_candidate <= now:
         morning_candidate = morning_candidate + timedelta(days=1)
@@ -1271,8 +1271,8 @@ def _resolve_alarm_time_for_today(value: str) -> str:
         evening_candidate = evening_candidate + timedelta(days=1)
 
     if evening_candidate < morning_candidate:
-        return f"{value['hour'] + 12:02d}:{value['minute']:02d}"
-    return f"{value['hour']:02d}:{value['minute']:02d}"
+        return f"{value['hour'] + 12:02d}:{value['minut']:02d}"
+    return f"{value['hour']:02d}:{value['minut']:02d}"
 
 def _extract_count(payload: dict[str, Any]) -> int | None:
     """Попытаться извлечь числовой счётчик (count) из `children_direct_type`.

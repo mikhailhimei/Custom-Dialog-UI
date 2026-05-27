@@ -34,6 +34,10 @@ from .const import (
     DOMAIN,
 )
 
+from .normalize import (
+    _normalize_value
+)
+
 _LOGGER = logging.getLogger(__name__)
 
 YANDEX_API_URL = "https://tts.api.cloud.yandex.net/speech/v1/tts:synthesize"
@@ -72,12 +76,6 @@ SERVICE_SCHEMA = vol.Schema(
 )
 
 
-def _normalize_string(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
 def _normalize_speed(value: Any) -> float:
     try:
         speed = float(value)
@@ -107,12 +105,12 @@ def _codec_extension(codec: str) -> str:
 def _tts_options_from_entry(entry: ConfigEntry | None) -> dict[str, Any]:
     options = dict(entry.options) if entry else {}
     return {
-        CONF_YANDEX_TTS_API_KEY: _normalize_string(options.get(CONF_YANDEX_TTS_API_KEY)),
-        CONF_YANDEX_TTS_FOLDER_ID: _normalize_string(options.get(CONF_YANDEX_TTS_FOLDER_ID)),
-        CONF_YANDEX_TTS_LANG: _normalize_string(options.get(CONF_YANDEX_TTS_LANG) or DEFAULT_YANDEX_TTS_LANG),
-        CONF_YANDEX_TTS_CODEC: _normalize_string(options.get(CONF_YANDEX_TTS_CODEC) or DEFAULT_YANDEX_TTS_CODEC),
-        CONF_YANDEX_TTS_VOICE: _normalize_string(options.get(CONF_YANDEX_TTS_VOICE) or DEFAULT_YANDEX_TTS_VOICE),
-        CONF_YANDEX_TTS_EMOTION: _normalize_string(options.get(CONF_YANDEX_TTS_EMOTION) or DEFAULT_YANDEX_TTS_EMOTION),
+        CONF_YANDEX_TTS_API_KEY: _normalize_value(options.get(CONF_YANDEX_TTS_API_KEY)),
+        CONF_YANDEX_TTS_FOLDER_ID: _normalize_value(options.get(CONF_YANDEX_TTS_FOLDER_ID)),
+        CONF_YANDEX_TTS_LANG: _normalize_value(options.get(CONF_YANDEX_TTS_LANG) or DEFAULT_YANDEX_TTS_LANG),
+        CONF_YANDEX_TTS_CODEC: _normalize_value(options.get(CONF_YANDEX_TTS_CODEC) or DEFAULT_YANDEX_TTS_CODEC),
+        CONF_YANDEX_TTS_VOICE: _normalize_value(options.get(CONF_YANDEX_TTS_VOICE) or DEFAULT_YANDEX_TTS_VOICE),
+        CONF_YANDEX_TTS_EMOTION: _normalize_value(options.get(CONF_YANDEX_TTS_EMOTION) or DEFAULT_YANDEX_TTS_EMOTION),
         CONF_YANDEX_TTS_SPEED: _normalize_speed(options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED)),
     }
 
@@ -123,15 +121,15 @@ def _current_entry(hass: HomeAssistant) -> ConfigEntry | None:
 
 
 async def _async_synthesize(hass: HomeAssistant, text: str, options: dict[str, Any]) -> tuple[str, bytes]:
-    api_key = _normalize_string(options.get(CONF_YANDEX_TTS_API_KEY))
-    folder_id = _normalize_string(options.get(CONF_YANDEX_TTS_FOLDER_ID))
+    api_key = _normalize_value(options.get(CONF_YANDEX_TTS_API_KEY))
+    folder_id = _normalize_value(options.get(CONF_YANDEX_TTS_FOLDER_ID))
     if not api_key or not folder_id:
         raise HomeAssistantError("Заполните yandex_tts_api_key и yandex_tts_folder_id в Settings.")
 
-    language = _normalize_string(options.get(CONF_YANDEX_TTS_LANG) or DEFAULT_YANDEX_TTS_LANG)
-    codec = _normalize_string(options.get(CONF_YANDEX_TTS_CODEC) or DEFAULT_YANDEX_TTS_CODEC)
-    voice = _normalize_string(options.get(CONF_YANDEX_TTS_VOICE) or DEFAULT_YANDEX_TTS_VOICE)
-    emotion = _normalize_string(options.get(CONF_YANDEX_TTS_EMOTION) or DEFAULT_YANDEX_TTS_EMOTION)
+    language = _normalize_value(options.get(CONF_YANDEX_TTS_LANG) or DEFAULT_YANDEX_TTS_LANG)
+    codec = _normalize_value(options.get(CONF_YANDEX_TTS_CODEC) or DEFAULT_YANDEX_TTS_CODEC)
+    voice = _normalize_value(options.get(CONF_YANDEX_TTS_VOICE) or DEFAULT_YANDEX_TTS_VOICE)
+    emotion = _normalize_value(options.get(CONF_YANDEX_TTS_EMOTION) or DEFAULT_YANDEX_TTS_EMOTION)
     speed = _normalize_speed(options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED))
 
     if language not in SUPPORTED_LANGUAGES:
@@ -180,7 +178,7 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         return
 
     async def _async_handle_speak(call: ServiceCall) -> None:
-        text = _normalize_string(call.data.get("text"))
+        text = _normalize_value(call.data.get("text"))
         if not text:
             raise HomeAssistantError("Поле text обязательно.")
 

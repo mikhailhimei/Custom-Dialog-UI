@@ -22,6 +22,10 @@ from .utils import (
     _get_options
 )
 
+from .normalize import (
+    _normalize_value
+)
+
 from .const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
@@ -133,14 +137,6 @@ def _parse_variables(value: Any) -> dict[str, Any]:
         if isinstance(parsed, dict):
             return parsed
     raise HomeAssistantError("variables must be a JSON object")
-
-
-
-
-def _normalize_value(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
 
 
 def _append_log(hass: HomeAssistant, level: str, message: str) -> None:

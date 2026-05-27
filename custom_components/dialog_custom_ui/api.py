@@ -488,7 +488,6 @@ async def _ws_import_yandex_tts_files(
 
     connection.send_result(msg["id"], result)
 
-
 @websocket_api.websocket_command(
     {vol.Required("type"): WS_GET_YANDEX_SCENARIOS}
 )
@@ -509,7 +508,6 @@ async def _ws_get_yandex_scenarios(
             "scenarios": scenarios,
         },
     )
-
 
 @websocket_api.websocket_command(
     SAVE_YANDEX_SCENARIOS_SCHEMA
@@ -556,10 +554,8 @@ async def _ws_save_yandex_scenarios(
         },
     )
 
-
 class _FlowStyleList(list):
     """Serialize YAML list in flow style."""
-
 
 def _represent_flow_style_list(
     dumper: yaml.SafeDumper,
@@ -571,12 +567,10 @@ def _represent_flow_style_list(
         flow_style=True,
     )
 
-
 yaml.SafeDumper.add_representer(
     _FlowStyleList,
     _represent_flow_style_list,
 )
-
 
 def _validate_yandex_scenarios(
     items: list[dict[str, Any]],
@@ -589,7 +583,6 @@ def _validate_yandex_scenarios(
 
     return ""
 
-
 def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
     config_path = Path(hass.config.path("yandex_intents.yaml"))
 
@@ -600,7 +593,6 @@ def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
         return _YANDEX_INTENTS_PATH
 
     return config_path
-
 
 def _read_yandex_scenarios(
     hass: HomeAssistant,
@@ -664,7 +656,6 @@ def _read_yandex_scenarios(
 
     return result
 
-
 def _write_yandex_scenarios(
     hass: HomeAssistant,
     scenarios: list[dict[str, Any]],
@@ -711,7 +702,6 @@ def _write_yandex_scenarios(
 
     path.write_text(dumped, encoding="utf-8")
 
-
 def _resolve_tts_path(hass: HomeAssistant) -> Path:
     config_tts_path = Path(hass.config.path("tts"))
 
@@ -722,7 +712,6 @@ def _resolve_tts_path(hass: HomeAssistant) -> Path:
         return _TTS_CACHE_PATH
 
     return config_tts_path
-
 
 def _build_tts_archive(hass: HomeAssistant) -> bytes:
     tts_path = _resolve_tts_path(hass)
@@ -747,7 +736,6 @@ def _build_tts_archive(hass: HomeAssistant) -> bytes:
             )
 
     return buffer.getvalue()
-
 
 def _import_tts_archive(
     hass: HomeAssistant,
@@ -807,7 +795,6 @@ def _import_tts_archive(
 def _normalize_theme(value: Any) -> str:
     return "dark" if _clean_string(value).lower() == "dark" else "light"
 
-
 def _normalize_sub_items(value: Any) -> list[str]:
     if isinstance(value, list):
         entries = value
@@ -829,7 +816,6 @@ def _normalize_sub_items(value: Any) -> list[str]:
             result.append(text)
 
     return result
-
 
 def _normalize_accounts(value: Any) -> list[str]:
     if isinstance(value, list):

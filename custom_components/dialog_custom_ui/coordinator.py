@@ -1,380 +1,68 @@
-"""Polling coordinator for Dialog Custom UI."""
-
-from __future__ import annotations
-
 import asyncio
-import json
-import logging
 from datetime import datetime
-from typing import Any
-
-import aiohttp
-import async_timeout
-import redis.asyncio as redis
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import aiohttp_client
 
-from .normalize import (
-    _normalize_value,
-    _normalize_values,
-    _normalize_children_direct_type_values,
-    _describe_payload_type,
-    _normalize_condition,
-    _normalize_legacy_conditions
-)
-
-from .matches import (
-    _matches_expected_value
-)
-
-from .utils import (
-    _get_options
-)
-
-from .const import (
-    ATTR_CHILDREN_DIRECT_TYPE,
-    ATTR_CHILDREN_TYPE,
-    ATTR_PARENT_TYPE,
-    ATTR_SCRIPT_ENTITY_ID,
-    CONF_BASE_URL,
-    CONF_CLIENT_ID,
-    CONF_REDIS_PASSWORD,
-    CONF_REDIS_URL,
-    CONF_SCENARIOS,
-    CONF_TIMEOUT,
-    CONF_TIMER_ALARM_ITEMS,
-    CONF_TIMER_ALARM_PRESETS,
-    CONF_TIMER_ALARM_TOKEN,
-    DEFAULT_BASE_URL,
-    DEFAULT_REDIS_URL,
-    DEFAULT_TIMEOUT,
-    DOMAIN,
-    UPDATE_INTERVAL_SECONDS,
-)
-
-from .timer_alarm_manager import DialogTimerAlarmManager
-
-_LOGGER = logging.getLogger(__name__)
+from .utils import _get_options
+from .payload import unwrap_payload, normalize_payload
+from .scenario_engine import match_scenario
+from .script_runner import run_script
+from .redis_transport import RedisTransport
+from .const import DOMAIN
 
 
 class DialogCommandCoordinator:
-    """Background poller that dispatches payloads into HA scripts."""
-
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         self.hass = hass
         self.entry = entry
-        self._task: asyncio.Task | None = None
-        self._session = aiohttp_client.async_get_clientsession(hass)
-        self.timer_alarm_manager = DialogTimerAlarmManager(
-            hass,
-            self._append_log,
-            self._async_post_save_commands,
-        )
+        self._task = None
+        self.redis = RedisTransport(self._append_log)
 
-    async def async_start(self) -> None:
-        if self._task and not self._task.done():
+    async def async_start(self):
+        if self._task:
             return
-        await self.timer_alarm_manager.async_restore_from_options(_get_options(self.entry))
         self._task = self.hass.async_create_task(self._run())
 
-    async def async_stop(self) -> None:
+    async def async_stop(self):
         if self._task:
             self._task.cancel()
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
-        await self.timer_alarm_manager.async_stop()
 
-    async def async_reload(self) -> None:
-        await self.async_stop()
-        await self.async_start()
-        self._append_log("info", "Configuration reloaded")
-
-    async def _run(self) -> None:
+    async def _run(self):
         while True:
             try:
                 options = _get_options(self.entry)
-                await self._async_subscribe_redis(options)
-            except asyncio.CancelledError:
-                raise
-            except Exception as err:
-                self._append_log("error", f"Command receiver error: {err}")
-                _LOGGER.exception("Unexpected error while receiving dialog command")
-            await asyncio.sleep(UPDATE_INTERVAL_SECONDS)
 
-    async def _async_subscribe_redis(self, options: dict[str, Any]) -> None:
-        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
-        client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-        if not client_id:
-            self._append_log("error", "client_id is required for Redis subscribe")
-            await asyncio.sleep(UPDATE_INTERVAL_SECONDS)
-            return
-        channel = f"ACTIVE_COMMAND:{client_id}"
-        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
-        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
-        client = redis.Redis.from_url(
-            redis_url,
-            decode_responses=True,
-            password=redis_password or None,
-        )
-        pubsub = client.pubsub()
-        self._append_log("request", f"SUBSCRIBE {channel}")
-        try:
-            async with async_timeout.timeout(timeout):
-                await pubsub.subscribe(channel)
-            while True:
-                current_options = _get_options(self.entry)
-                if (
-                    _normalize_value(current_options.get(CONF_REDIS_URL)) != redis_url
-                    or _normalize_value(current_options.get(CONF_CLIENT_ID)) != client_id
-                    or _normalize_value(current_options.get(CONF_REDIS_PASSWORD)) != redis_password
-                ):
-                    return
+                await self.redis.subscribe(
+                    options,
+                    self._handle_payload,
+                )
 
-                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=UPDATE_INTERVAL_SECONDS)
-                if not message:
-                    continue
+            except Exception as e:
+                self._append_log("error", str(e))
 
-                raw_data = message.get("data")
-                if raw_data in (None, ""):
-                    continue
-                try:
-                    raw_payload = json.loads(raw_data) if isinstance(raw_data, str) else raw_data
-                except (TypeError, json.JSONDecodeError) as err:
-                    self._append_log("error", "Redis message contained invalid JSON")
-                    _LOGGER.warning("Redis message contained invalid JSON: %s; data=%r", err, raw_data)
-                    continue
+            await asyncio.sleep(5)
 
-                await self._async_handle_raw_payload(raw_payload, current_options, "Redis")
-        except (redis.RedisError, TimeoutError) as err:
-            self._append_log("error", f"Redis subscribe failed: {err}")
-            _LOGGER.warning("Redis subscribe failed: %s", err)
-        finally:
-            try:
-                await pubsub.unsubscribe(channel)
-            except redis.RedisError:
-                pass
-            close_pubsub = getattr(pubsub, "aclose", None) or getattr(pubsub, "close", None)
-            if close_pubsub:
-                result = close_pubsub()
-                if hasattr(result, "__await__"):
-                    await result
-            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
-            if close_client:
-                result = close_client()
-                if hasattr(result, "__await__"):
-                    await result
-
-    async def _async_handle_raw_payload(
-        self,
-        raw_payload: Any,
-        options: dict[str, Any],
-        source_label: str,
-    ) -> None:
-        payloads = _extract_payload(raw_payload)
-        if not payloads:
-            self._append_log("idle", f"{source_label} returned empty payload")
-            return
+    async def _handle_payload(self, raw):
+        raw = unwrap_payload(raw)
+        payloads = normalize_payload(raw)
 
         for payload in payloads:
-            if not isinstance(payload, dict) or not payload:
-                self._append_log("idle", f"{source_label} returned empty payload")
-                return
+            scenario = match_scenario(payload, _get_options(self.entry)["scenarios"])
 
-            scenario = _match_scenario(payload, options[CONF_SCENARIOS])
             if not scenario:
-                self._append_log(
-                    "idle",
-                    (
-                        "No match for "
-                        f"children_type={_describe_payload_type(payload.get('children_type') or payload.get('actionType'))} "
-                        f"children_direct_type={_describe_payload_type(payload.get(ATTR_CHILDREN_DIRECT_TYPE))} "
-                        f"parent_type={_normalize_value(payload.get('parent_type')) or '<empty>'}"
-                    ),
-                )
-                return
+                self._append_log("idle", "no match")
+                continue
 
-            self._append_log("match", f"Matched -> {scenario[ATTR_SCRIPT_ENTITY_ID]}")
-            await self.timer_alarm_manager.async_handle_builtin(payload, options)
-            await self._async_run_script(scenario[ATTR_SCRIPT_ENTITY_ID], payload)
+            self._append_log("match", scenario["entity_id"])
 
-    async def _async_run_script(self, script_entity_id: str, payload: dict[str, Any]) -> None:
-        if not self.hass.states.get(script_entity_id):
-            self._append_log("error", f"Script not found: {script_entity_id}")
-            _LOGGER.warning("Configured script not found: %s", script_entity_id)
-            return
-
-        service_data = {
-            "entity_id": script_entity_id,
-            "variables": {
-                "dialog_payload": payload,
-                "dialog_children_type": payload.get("children_type") or payload.get("actionType"),
-                "dialog_direct_type": payload.get(ATTR_CHILDREN_DIRECT_TYPE),
-                "dialog_parent_type": payload.get("parent_type"),
-                "dialog_value": payload.get("data", {}).get("commands", ""),
-                "dialog_client_id": payload.get("client_id") or payload.get("clientId"),
-                "dialog_device_id": payload.get("device_id") or payload.get("deviceId"),
-            },
-        }
-        await self.hass.services.async_call("script", "turn_on", service_data, blocking=False)
-        self._append_log("success", f"Started {script_entity_id}")
-
-    async def _async_post_save_commands(self, options: dict[str, Any], payload: dict[str, Any]) -> None:
-        """Опубликовывает post-save команды в Redis канал для клиента/устройства.
-
-        Данная функция используется `DialogTimerAlarmManager` для передачи
-        ответов/статусов (actionType + variables) обратно в внешнюю систему
-        через Redis. Формат канала: `DIALOG_MESSAGE:{clientId}:{deviceId}`.
-        """
-        client_id = _normalize_value(payload.get("clientId") or payload.get("client_id")) or _normalize_value(options.get(CONF_CLIENT_ID))
-        device_id = _normalize_value(payload.get("deviceId") or payload.get("device_id") or "")
-        if not client_id:
-            self._append_log("error", "client_id is required for post_save_commands")
-            return
-
-        channel = f"DIALOG_MESSAGE:{client_id}:{device_id}"
-        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
-        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
-        redis_payload = {
-            "actionType": _normalize_value(payload.get("actionType")),
-            "variables": payload.get("variables") or {},
-        }
-        client = redis.Redis.from_url(
-            redis_url,
-            decode_responses=True,
-            password=redis_password or None,
-        )
-        timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
-        try:
-            async with async_timeout.timeout(timeout):
-                await client.publish(channel, json.dumps(redis_payload, ensure_ascii=False))
-            self._append_log("request", f"PUBLISH {channel}")
-        except (redis.RedisError, TimeoutError) as err:
-            self._append_log("error", f"post_save_commands redis publish failed: {err}")
-        finally:
-            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
-            if close_client:
-                result = close_client()
-                if hasattr(result, "__await__"):
-                    await result
-
-    def get_ha_timer_ids(self) -> set[str]:
-        return self.timer_alarm_manager.get_ha_timer_ids()
-
-    def get_ha_timer_items(self) -> list[dict[str, Any]]:
-        return self.timer_alarm_manager.get_ha_timer_items()
-
-    async def async_cancel_ha_timer(self, timer_id: str) -> bool:
-        return await self.timer_alarm_manager.async_cancel_ha_timer(timer_id)
-
-    def _append_log(self, level: str, message: str) -> None:
-        logs = self.hass.data[DOMAIN].setdefault("logs", [])
-        logs.appendleft({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
-
-
-def _extract_payload(raw_payload: Any) -> list[dict[str, Any]] | None:
-    if raw_payload is None:
-        return None
-
-    # CASE 1: wrapped response
-    if isinstance(raw_payload, dict):
-        if raw_payload.get("status") is False:
-            return None
-
-        body = raw_payload.get("body")
-
-        if isinstance(body, list):
-            return body
-
-        if isinstance(body, dict):
-            return [body]
-
-        # Redis SUBSCRIBE commonly publishes the command payload directly.
-        # Accept raw dict payloads too, while still honoring status=false wrappers.
-        return [raw_payload]
-
-    # CASE 2: raw list response
-    if isinstance(raw_payload, list):
-        return raw_payload
-
-    return None
-
-
-def _match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict[str, Any] | None:
-    incoming_children_type = payload.get("children_type") or payload.get("actionType")
-    incoming_children_direct_type = payload.get(ATTR_CHILDREN_DIRECT_TYPE)
-    incoming_parent_type = payload.get("parent_type")
-
-    for scenario in scenarios:
-        conditions = _get_scenario_conditions(scenario)
-        if not conditions:
-            continue
-        if not any(
-            _matches_condition(
-                condition,
-                incoming_parent_type,
-                incoming_children_type,
-                incoming_children_direct_type,
+            await run_script(
+                self.hass,
+                scenario["script_entity_id"],
+                payload,
             )
-            for condition in conditions
-        ):
-            continue
-        if not _normalize_value(scenario.get(ATTR_SCRIPT_ENTITY_ID)):
-            continue
-        return scenario
-    return None
-    
 
-
-def _matches_children_type(expected_value: str, incoming_value: Any) -> bool:
-    allowed_values = [part.strip().lower() for part in expected_value.split(";") if part.strip()]
-    if not allowed_values:
-        return not _normalize_values(incoming_value)
-    if "all" in allowed_values:
-        return bool(_normalize_values(incoming_value))
-    return _matches_expected_value(expected_value, incoming_value)
-
-
-def _matches_children_direct_type(expected_value: str, incoming_value: Any) -> bool:
-    allowed_values = [part.strip().lower() for part in expected_value.split(";") if part.strip()]
-    if not allowed_values:
-        return not _normalize_children_direct_type_values(incoming_value)
-    if "all" in allowed_values:
-        return bool(_normalize_children_direct_type_values(incoming_value))
-    return any(value.lower() in allowed_values for value in _normalize_children_direct_type_values(incoming_value))
-
-
-def _get_scenario_conditions(scenario: dict[str, Any]) -> list[dict[str, str]]:
-    raw_conditions = scenario.get("conditions")
-    if isinstance(raw_conditions, list):
-        conditions = [
-            normalized
-            for item in raw_conditions
-            if isinstance(item, dict)
-            if (normalized := _normalize_condition(item))
-        ]
-        if conditions:
-            return conditions
-    return _normalize_legacy_conditions(scenario)
-
-def _matches_condition(
-    condition: dict[str, str],
-    incoming_parent_type: Any,
-    incoming_children_type: Any,
-    incoming_children_direct_type: Any,
-) -> bool:
-    expected_parent = _normalize_value(condition.get(ATTR_PARENT_TYPE))
-    expected_children_type = _normalize_value(condition.get(ATTR_CHILDREN_TYPE))
-    expected_children_direct_type = _normalize_value(condition.get(ATTR_CHILDREN_DIRECT_TYPE))
-    if expected_parent and not _matches_expected_value(expected_parent, incoming_parent_type):
-        return False
-    if expected_children_type and not _matches_children_type(expected_children_type, incoming_children_type):
-        return False
-    if expected_children_direct_type and not _matches_children_direct_type(expected_children_direct_type, incoming_children_direct_type):
-        return False
-    return True
-
+    def _append_log(self, level: str, message: str):
+        logs = self.hass.data[DOMAIN].setdefault("logs", [])
+        logs.append({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
