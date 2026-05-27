@@ -51,7 +51,6 @@ from .const import (
     WS_SAVE_CONFIG,
     WS_SAVE_YANDEX_SCENARIOS,
     CONF_TIMEOUT,
-    _DEFAULT_TIMER_MEDIA_CONTENT_ID,
     DEFAULT_TIMEOUT
 )
 
@@ -59,6 +58,8 @@ from .normalize import (
     _normalize_value,
     _normalize_device_ids
 )
+
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
 
 
 def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
