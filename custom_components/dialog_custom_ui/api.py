@@ -64,8 +64,7 @@ from .const import (
 from .normalize import (
     _normalize_device_ids,
     _normalize_scenario,
-    _normalize_str_list,
-    _normalize_theme
+    _normalize_str_list
 )
 
 from .utils import (
