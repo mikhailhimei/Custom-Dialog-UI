@@ -22,10 +22,6 @@ from .const import (
     ATTR_SCENARIO_ID
 )
 
-from .utils import (
-    _clean_string
-)
-
 
 def _normalize_value(value: Any) -> str:
     if value is None:
@@ -160,5 +156,3 @@ def _normalize_device_ids(value: Any) -> list[str]:
         return []
     return [device_id.strip() for device_id in value if device_id.strip()]
 
-def _normalize_theme(value: Any) -> str:
-    return "dark" if _clean_string(value).lower() == "dark" else "light"

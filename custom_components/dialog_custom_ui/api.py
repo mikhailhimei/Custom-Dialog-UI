@@ -805,6 +805,9 @@ def _import_tts_archive(
         "skipped_files": skipped,
     }
 
+def _normalize_theme(value: Any) -> str:
+    return "dark" if _clean_string(value).lower() == "dark" else "light"
+
 
 def _normalize_sub_items(value: Any) -> list[str]:
     if isinstance(value, list):
