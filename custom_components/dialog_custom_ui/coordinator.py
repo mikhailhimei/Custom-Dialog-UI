@@ -10,6 +10,7 @@ from .payload import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .redis_transport import RedisTransport
+from .timer_alarm_manager import DialogTimerAlarmManager
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,6 +22,11 @@ class DialogCommandCoordinator:
         self.entry = entry
         self._task = None
         self.redis = RedisTransport(self._append_log)
+        self.timer_alarm_manager = DialogTimerAlarmManager(
+            hass,
+            self._append_log,
+            self._post_save_commands,
+        )
         _LOGGER.debug("DialogCommandCoordinator initialized for entry %s", self.entry.entry_id)
 
     async def async_start(self):
@@ -28,6 +34,8 @@ class DialogCommandCoordinator:
             _LOGGER.debug("Coordinator already started for entry %s", self.entry.entry_id)
             return
         _LOGGER.info("Starting DialogCommandCoordinator for entry %s", self.entry.entry_id)
+        options = _get_options(self.entry)
+        await self.timer_alarm_manager.async_restore_from_options(options)
         self._append_log("info", "coordinator started")
         self._task = self.hass.async_create_task(self._run())
 
@@ -37,6 +45,7 @@ class DialogCommandCoordinator:
             self._append_log("info", "coordinator stopping")
             self._task.cancel()
             self._task = None
+        await self.timer_alarm_manager.async_stop()
 
     async def _run(self):
         while True:
@@ -100,3 +109,10 @@ class DialogCommandCoordinator:
     def _append_log(self, level: str, message: str):
         logs = self.hass.data[DOMAIN].setdefault("logs", [])
         logs.append({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
+
+    async def _post_save_commands(self, options: dict[str, str], payload: dict[str, str]) -> None:
+        _LOGGER.debug(
+            "TimerAlarmManager post-save payload for entry %s: %s",
+            self.entry.entry_id,
+            payload,
+        )
