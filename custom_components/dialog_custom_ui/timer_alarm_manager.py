@@ -422,8 +422,10 @@ class DialogTimerAlarmManager:
         if not count and mainCommand:
             await self._post_save(
                 options,
-                "several",
-                "\n".join(f"{i+1}. на {_normalize_value(item.get('time'))}" for i, item in enumerate(alarms)),
+                {
+                    "actionType": "several",
+                    "variables": {"message": "\n".join(f"{i+1}. на {_normalize_value(item.get('time'))}" for i, item in enumerate(alarms))}
+                }
             )
             return
 
