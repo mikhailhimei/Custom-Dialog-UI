@@ -124,3 +124,22 @@ def _get_str(
 def _clean_string(value: Any, default: str = "") -> str:
     return str(value or "").strip() or default
 
+def _extract_count(payload: dict[str, Any]) -> int | None:
+    """Попытаться извлечь числовой счётчик (count) из `children_direct_type`.
+
+    Возвращает целое >0 или None.
+    """
+    direct_values = payload.get("children_direct_type")
+    if isinstance(direct_values, dict):
+        direct_values = [direct_values]
+    if isinstance(direct_values, (list, tuple)):
+        for item in direct_values:
+            if not isinstance(item, dict):
+                continue
+            mapping_type = _normalize_value(item.get("mapping_type")).lower()
+            if mapping_type not in {"count"}:
+                continue
+            value = item.get("value")
+            if value > 0:
+                return value
+    return None

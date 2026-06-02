@@ -31,6 +31,19 @@ class DialogCommandCoordinator:
         )
         _LOGGER.debug("DialogCommandCoordinator initialized for entry %s", self.entry.entry_id)
 
+    def _append_log(self, level: str, message: str):
+        logs = self.hass.data[DOMAIN].setdefault("logs", [])
+        logs.append({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
+
+    async def async_reload(self):
+        _LOGGER.info(
+            "Reloading DialogCommandCoordinator for entry %s",
+            self.entry.entry_id,
+        )
+
+        await self.async_stop()
+        await self.async_start()
+
     async def async_start(self):
         if self._task:
             _LOGGER.debug("Coordinator already started for entry %s", self.entry.entry_id)
@@ -115,11 +128,8 @@ class DialogCommandCoordinator:
                 )
                 self._append_log("error", f"script run failed: {e}")
 
-    def _append_log(self, level: str, message: str):
-        logs = self.hass.data[DOMAIN].setdefault("logs", [])
-        logs.append({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
-
     async def _post_save_commands(self, options: dict[str, str], payload: dict[str, str]) -> None:
+
         _LOGGER.debug(
             "TimerAlarmManager post-save payload for entry %s: %s",
             self.entry.entry_id,

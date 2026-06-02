@@ -22,7 +22,8 @@ from homeassistant.util import dt as dt_util
 from .utils import (
     _get_entry,
     _get_options,
-    _get_manager
+    _get_manager,
+    _extract_count
 )
 
 from .const import (
@@ -418,8 +419,8 @@ class DialogTimerAlarmManager:
                 },
             )
             return
-        
-        if not count and mainCommand:
+                
+        if count is None and mainCommand and len(alarms) > 1:
             await self._post_save(
                 options,
                 {
@@ -1275,27 +1276,6 @@ def _resolve_alarm_time_for_today(value: str) -> str:
     if evening_candidate < morning_candidate:
         return f"{value['hour'] + 12:02d}:{value['minut']:02d}"
     return f"{value['hour']:02d}:{value['minut']:02d}"
-
-def _extract_count(payload: dict[str, Any]) -> int | None:
-    """Попытаться извлечь числовой счётчик (count) из `children_direct_type`.
-
-    Возвращает целое >0 или None.
-    """
-    direct_values = payload.get("children_direct_type")
-    if isinstance(direct_values, dict):
-        direct_values = [direct_values]
-    if isinstance(direct_values, (list, tuple)):
-        for item in direct_values:
-            if not isinstance(item, dict):
-                continue
-            mapping_type = _normalize_value(item.get("mapping_type")).lower()
-            if mapping_type not in {"count"}:
-                continue
-            value = item.get("value")
-            if value > 0:
-                return value
-    return None
-
 
 def _safe_int(value: Any) -> int:
     """Безопасно преобразовать значение в неприцательное целое, иначе 0."""
