@@ -122,8 +122,8 @@ class DialogTimerAlarmManager:
         """
 
         parent_type = _normalize_value(payload.get("parent_type")).lower()
-        client_id = _normalize_value(payload.get("client_id"))
         device_id = _normalize_value(payload.get("device_id"))
+        client_id = f"{_normalize_value(payload.get("client_id"))}:{device_id}"
         
         count = _extract_count(payload)
         
@@ -168,9 +168,10 @@ class DialogTimerAlarmManager:
         """
 
         if not client_id and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
                 },
@@ -180,9 +181,10 @@ class DialogTimerAlarmManager:
         timer = _extract_timer_parts(children_direct_type)
 
         if timer is None:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить таймер: некорректный формат времени"},
                 },
@@ -204,9 +206,10 @@ class DialogTimerAlarmManager:
         success_message = f"на {_seconds_to_minute_phrase(total_seconds)}"
 
         if mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "success",
                     "variables": {"message": success_message},
                 },
@@ -219,9 +222,10 @@ class DialogTimerAlarmManager:
         запись таймера; при необходимости отправляет ответ через `_post_save`.
         """
         if not client_id and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить таймер: отсутствует client_id"},
                 },
@@ -231,9 +235,10 @@ class DialogTimerAlarmManager:
         timers = self._timers_for_client(client_id)
 
         if not timers and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "not_timers",
                 },
             )
@@ -242,9 +247,10 @@ class DialogTimerAlarmManager:
         
         if count is None and len(timers) > 1 and mainCommand:
             _, text_timer = self._timer_count_message(timers)
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "several",
                     "variables": {
                         "message": text_timer,
@@ -266,9 +272,10 @@ class DialogTimerAlarmManager:
         self._mark_updated()
 
         if mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "success"
                 },
             )
@@ -280,9 +287,10 @@ class DialogTimerAlarmManager:
         """
         timers = self._timers_for_client(client_id)
         if not timers and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "not_timers",
                 },
             )
@@ -292,9 +300,10 @@ class DialogTimerAlarmManager:
         await self._pause_timer(_normalize_value(timers[index].get("id")))
 
         if mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "success",
                 },
             )
@@ -319,9 +328,10 @@ class DialogTimerAlarmManager:
         count_timer, text_timer = self._timer_count_message(timers)
         
         if mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "several" if count_timer else "one",
                     "variables": {
                         "message": text_timer
@@ -336,9 +346,10 @@ class DialogTimerAlarmManager:
         планирует тикер будильников при необходимости.
         """
         if not client_id and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
                 },
@@ -389,9 +400,10 @@ class DialogTimerAlarmManager:
         self._ensure_alarm_tick_task()
         self._mark_updated()
         if mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "success",
                     "variables": {"message": f"{alarm_time}"},
                 },
@@ -400,9 +412,10 @@ class DialogTimerAlarmManager:
     async def async_handle_alarm_stop(self, options: dict[str, Any], client_id: str, count: int, mainCommand: bool) -> None:
         """Останавливает/удаляет будильник по запросу клиента."""
         if not client_id and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "error",
                     "variables": {"message": "Не удалось установить будильник: отсутствует client_id"},
                 },
@@ -412,18 +425,20 @@ class DialogTimerAlarmManager:
         alarms = self._alarms_for_client(client_id)
         
         if not alarms and mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "not_alarm"
                 },
             )
             return
                 
         if count is None and mainCommand and len(alarms) > 1:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
+                    "clientId": client_id,
                     "actionType": "several",
                     "variables": {"message": "\n".join(f"{i+1}. на {_normalize_value(item.get('time'))}" for i, item in enumerate(alarms))}
                 }
@@ -449,7 +464,7 @@ class DialogTimerAlarmManager:
             )
 
         if mainCommand:
-            await self._post_save(
+            await self._post_save_commands(
                 options,
                 {
                 "clientId": client_id,
@@ -923,22 +938,6 @@ class DialogTimerAlarmManager:
             for index, item in enumerate(active_alarms, start=1)
         ]
         return "\n".join(lines)
-
-
-    async def _post_save(self, options: dict[str, Any], body: dict[str, Any]) -> None:
-        """Подготавливает payload и делегирует публикацию через `_post_save_commands`.
-
-        Добавляет совместимость с устаревшими ключами и подставляет
-        `clientId` из опций, если он не был указан в payload.
-        """
-        payload = dict(body or {})
-        configured_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-        if configured_client_id and not _normalize_value(payload.get("clientId")):
-            payload["clientId"] = configured_client_id
-        # backward compatibility
-        if configured_client_id and not _normalize_value(payload.get("client_id")):
-            payload["client_id"] = configured_client_id
-        await self._post_save_commands(options, payload)
 
     def _mark_updated(self) -> None:
         self._last_updated = dt_util.now().isoformat()
