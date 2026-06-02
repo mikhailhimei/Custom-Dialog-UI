@@ -18,7 +18,7 @@ from .const import (
     MAX_LOG_ENTRIES,
 )
 from .coordinator import DialogCommandCoordinator
-from .timer_alarm_manager import async_register_timer_alarm_websockets
+from .timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
 from .services import async_register_services, async_unregister_services
 from .voice_agent import DialogCustomUiVoiceAgent

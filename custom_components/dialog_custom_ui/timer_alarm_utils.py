@@ -1,0 +1,301 @@
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timedelta
+from typing import Any
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.util import dt as dt_util
+
+from .normalize import _normalize_device_ids, _normalize_value
+
+_LOGGER = logging.getLogger(__name__)
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
+_TIMER_PREFIX = "ha_timer:"
+_ALARM_PREFIX = "ha_alarm:"
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _seconds_to_duration(total_seconds: int) -> str:
+    safe_total = max(0, _safe_int(total_seconds))
+    hours = safe_total // 3600
+    minutes = (safe_total % 3600) // 60
+    seconds = safe_total % 60
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+def _seconds_to_minute_phrase(total_seconds: int) -> str:
+    minutes = max(1, int(round(max(0, _safe_int(total_seconds)) / 60)))
+    return f"{minutes} минут"
+
+
+def _duration_to_seconds(duration: str) -> int:
+    if not duration:
+        return 0
+    parts = [p.strip() for p in str(duration).split(":") if p.strip() != ""]
+    if any(part == "" for part in parts):
+        return 0
+    try:
+        numbers = [int(part) for part in parts]
+    except ValueError:
+        return 0
+    if len(numbers) == 3:
+        return numbers[0] * 3600 + numbers[1] * 60 + numbers[2]
+    if len(numbers) == 2:
+        return numbers[0] * 60 + numbers[1]
+    if len(numbers) == 1:
+        return numbers[0] * 60
+    return 0
+
+
+def _extract_alarm_clock(value: dict[str, Any]) -> str:
+    hour = min(23, max(0, _safe_int(value.get("hour"))))
+    minute = min(59, max(0, _safe_int(value.get("minut"))))
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _default_timezone_name() -> str:
+    local_dt = datetime.now().astimezone()
+    return getattr(local_dt.tzinfo, "key", None) or str(local_dt.tzinfo or "")
+
+
+def _format_datetime(timestamp_value: float, timezone_name: str) -> str:
+    tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
+    dt_value = datetime.fromtimestamp(float(timestamp_value), tz=tz)
+    return dt_value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _parse_datetime(value: str, timezone_name: str) -> datetime | None:
+    normalized = _normalize_value(value)
+    if not normalized:
+        return None
+    parsed = dt_util.parse_datetime(normalized)
+    if parsed is None:
+        try:
+            parsed = datetime.fromisoformat(normalized.replace(" ", "T"))
+        except ValueError:
+            return None
+    if parsed.tzinfo is None:
+        tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
+        parsed = parsed.replace(tzinfo=tz)
+    return dt_util.as_local(parsed)
+
+
+def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str:
+    if not device_ref:
+        return ""
+    if hass.states.get(device_ref):
+        state = hass.states.get(device_ref)
+        if state is not None and state.entity_id.startswith("media_player."):
+            return device_ref
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_device(registry, device_ref)
+    media_players = [entry.entity_id for entry in entities if entry.entity_id.startswith("media_player.")]
+    if media_players:
+        return media_players[0]
+    if hass.states.get(device_ref):
+        return device_ref
+    return ""
+
+
+def _extract_timer_parts(direct_values) -> dict[str, int] | None:
+    if isinstance(direct_values, dict):
+        direct_values = [direct_values]
+    if isinstance(direct_values, (list, tuple)):
+        for item in direct_values:
+            if not isinstance(item, dict):
+                continue
+            if item.get("valueType") == "time":
+                timer_data = item.get("value")
+                return {
+                    "hour": _safe_int(timer_data.get("hour")),
+                    "minut": _safe_int(timer_data.get("minut")),
+                    "second": _safe_int(timer_data.get("second")),
+                }
+    return None
+
+
+def _extract_alarm_time(direct_values) -> str | None:
+    if isinstance(direct_values, dict):
+        direct_values = [direct_values]
+    if isinstance(direct_values, (list, tuple)):
+        for item in direct_values:
+            if not isinstance(item, dict):
+                continue
+
+            value_type = _normalize_value(item.get("valueType")).lower()
+            if value_type != "time":
+                continue
+
+            value = item.get("value")
+            clock = _extract_alarm_clock(value)
+            keep_raw_time = value.get("times_of_day")
+            if keep_raw_time:
+                return clock
+
+            if value["hour"] == 0 or value["hour"] >= 12:
+                return clock
+
+            return _resolve_alarm_time_for_today(value)
+    return None
+
+
+def _resolve_alarm_time_for_today(value: dict[str, Any]) -> str:
+    now = dt_util.now()
+    morning_candidate = now.replace(hour=value["hour"], minute=value["minut"], second=0, microsecond=0)
+    evening_candidate = now.replace(hour=value["hour"] + 12, minute=value["minut"], second=0, microsecond=0)
+
+    if morning_candidate <= now:
+        morning_candidate = morning_candidate + timedelta(days=1)
+    if evening_candidate <= now:
+        evening_candidate = evening_candidate + timedelta(days=1)
+
+    if evening_candidate < morning_candidate:
+        return f"{value['hour'] + 12:02d}:{value['minut']:02d}"
+    return f"{value['hour']:02d}:{value['minut']:02d}"
+
+
+def _collect_device_labels(hass: HomeAssistant, items: list[dict[str, Any]], configured_device_ids: Any) -> dict[str, str]:
+    candidates: set[str] = set()
+    for item in items:
+        ref = _normalize_value(item.get("deviceId") or item.get("device_id"))
+        if ref:
+            candidates.add(ref)
+    candidates.update(_normalize_device_ids(configured_device_ids))
+
+    result: dict[str, str] = {}
+    for ref in sorted(candidates):
+        label = _resolve_device_label(hass, ref)
+        if label:
+            result[ref] = label
+    return result
+
+
+def _resolve_device_label(hass: HomeAssistant, device_ref: str) -> str:
+    normalized = _normalize_value(device_ref)
+    if not normalized:
+        return ""
+    state = hass.states.get(normalized)
+    if state is not None:
+        return _normalize_value(state.attributes.get("friendly_name")) or normalized
+
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_device(registry, normalized)
+    for entry in entities:
+        if not entry.entity_id.startswith("media_player."):
+            continue
+        entity_state = hass.states.get(entry.entity_id)
+        if entity_state is None:
+            continue
+        return _normalize_value(entity_state.attributes.get("friendly_name")) or entry.entity_id
+    for entry in entities:
+        if entry.entity_id:
+            return entry.entity_id
+
+    device_registry = dr.async_get(hass)
+    device_entry = device_registry.async_get(normalized)
+    if device_entry is not None:
+        return _normalize_value(device_entry.name_by_user or device_entry.name) or normalized
+    return normalized
+
+
+def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
+    timer_map = getattr(holder, "_timers", None)
+    alarm_map = getattr(holder, "_alarms", None)
+    if not isinstance(timer_map, dict) and not isinstance(alarm_map, dict):
+        manager = getattr(holder, "timer_alarm_manager", None)
+        timer_map = getattr(manager, "_timers", None)
+        alarm_map = getattr(manager, "_alarms", None)
+
+    items: list[dict[str, Any]] = []
+    now_ts = datetime.now().timestamp()
+    timezone_name = _default_timezone_name()
+
+    if isinstance(timer_map, dict):
+        for timer_id, entry in timer_map.items():
+            if not isinstance(entry, dict):
+                continue
+            total_seconds = _safe_int(entry.get("total_seconds"))
+            remaining_seconds = _safe_int(entry.get("remaining_seconds"))
+            paused = bool(entry.get("paused"))
+            ends_at = float(entry.get("ends_at") or (now_ts + remaining_seconds))
+            remaining_view = remaining_seconds if paused else max(0, int(ends_at - now_ts))
+            items.append(
+                {
+                    "id": _normalize_value(timer_id or entry.get("id")),
+                    "type": "timer",
+                    "status": "paused" if paused else "on",
+                    "clientId": _normalize_value(entry.get("client_id")),
+                    "userId": _normalize_value(entry.get("client_id")),
+                    "deviceId": _normalize_value(entry.get("device_id")),
+                    "ha_managed": True,
+                    "time": {
+                        "count_timer": _seconds_to_duration(max(1, total_seconds)),
+                        "date_end": _format_datetime(ends_at, timezone_name),
+                        "timezone": timezone_name,
+                        "time_zone": timezone_name,
+                        "remaining_seconds": remaining_view,
+                        "total_seconds": total_seconds,
+                    },
+                }
+            )
+
+    if isinstance(alarm_map, dict):
+        for alarm_id, entry in alarm_map.items():
+            if not isinstance(entry, dict):
+                continue
+            items.append(
+                {
+                    "id": _normalize_value(alarm_id or entry.get("id")),
+                    "type": "alarm",
+                    "status": "off" if _normalize_value(entry.get("status")).lower() == "off" else "on",
+                    "clientId": _normalize_value(entry.get("client_id")),
+                    "userId": _normalize_value(entry.get("client_id")),
+                    "deviceId": _normalize_value(entry.get("device_id")),
+                    "ha_managed": True,
+                    "time": {"time": _normalize_value(entry.get("time") or "08:00")},
+                }
+            )
+
+    return [item for item in items if _normalize_value(item.get("id"))]
+
+
+def _sort_item_key(item: dict[str, Any]) -> tuple[int, str, str]:
+    item_type = _normalize_value(item.get("type"))
+    now = dt_util.now()
+    if item_type == "timer":
+        time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
+        end_dt = _parse_datetime(
+            _normalize_value(time_data.get("date_end")),
+            _normalize_value(time_data.get("timezone") or time_data.get("time_zone")),
+        )
+        ts = int(end_dt.timestamp()) if end_dt is not None else 10**18
+    else:
+        time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
+        alarm_time = _normalize_value(time_data.get("time"))
+        try:
+            h, m = [int(part) for part in alarm_time.split(":", 1)]
+            candidate = now.replace(hour=h, minute=m, second=0, microsecond=0)
+            if candidate < now:
+                candidate = candidate + timedelta(days=1)
+            ts = int(candidate.timestamp())
+        except Exception:
+            ts = 10**18
+    return (ts, item_type, _normalize_value(item.get("id")))
+
+
+def _normalize_alarm_presets(values: Any) -> list[str]:
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, Iterable):
+        return []
+    normalized = {_normalize_value(value) for value in values if _normalize_value(value)}
+    return sorted(normalized)
