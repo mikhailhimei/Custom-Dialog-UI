@@ -1,17 +1,19 @@
 import asyncio
+import json
 import logging
 from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .utils import _get_options
+from .utils import _get_options, _normalize_value
 from .payload import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .redis_transport import RedisTransport
 from .timer_alarm_manager import DialogTimerAlarmManager
-from .const import DOMAIN
+from .const import CONF_REDIS_PASSWORD, CONF_REDIS_URL, DEFAULT_REDIS_URL, DOMAIN
+import redis.asyncio as redis
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,7 +78,8 @@ class DialogCommandCoordinator:
         _LOGGER.debug("Normalized payloads for entry %s: %s", self.entry.entry_id, payloads)
 
         for payload in payloads:
-            scenario = match_scenario(payload, _get_options(self.entry)["scenarios"])
+            options = _get_options(self.entry)
+            scenario = match_scenario(payload, options["scenarios"])
 
             if not scenario:
                 _LOGGER.debug("No scenario match for payload: %s", payload)
@@ -93,9 +96,15 @@ class DialogCommandCoordinator:
             self._append_log("match", scenario_name)
 
             try:
+                script_entity_id = _normalize_value(scenario.get("script_entity_id"))
+                if script_entity_id in {"timer", "alarm"}:
+                    handled = await self.timer_alarm_manager.async_handle_builtin(payload, options)
+                    if handled:
+                        continue
+
                 await run_script(
                     self.hass,
-                    scenario["script_entity_id"],
+                    script_entity_id,
                     payload,
                 )
             except Exception as e:
@@ -116,3 +125,37 @@ class DialogCommandCoordinator:
             self.entry.entry_id,
             payload,
         )
+        client_id = _normalize_value(
+            payload.get("clientId") or payload.get("client_id") or options.get("client_id")
+        )
+        device_id = _normalize_value(payload.get("deviceId") or payload.get("device_id"))
+        if not device_id:
+            configured_devices = options.get("timer_alarm_device_ids")
+            if isinstance(configured_devices, list) and configured_devices:
+                device_id = _normalize_value(configured_devices[0])
+        if not client_id or not device_id:
+            self._append_log("error", "post-save skipped: client_id or device_id missing")
+            return
+
+        channel = f"DIALOG_MESSAGE:{client_id}:{device_id}"
+        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
+        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+        message = {
+            key: value
+            for key, value in payload.items()
+            if key not in {"clientId", "client_id", "deviceId", "device_id"}
+        }
+        client = redis.Redis.from_url(
+            redis_url,
+            decode_responses=True,
+            password=redis_password or None,
+        )
+        try:
+            await client.publish(channel, json.dumps(message, ensure_ascii=False))
+            self._append_log("request", f"PUBLISH {channel}")
+        finally:
+            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
+            if close_client:
+                result = close_client()
+                if hasattr(result, "__await__"):
+                    await result

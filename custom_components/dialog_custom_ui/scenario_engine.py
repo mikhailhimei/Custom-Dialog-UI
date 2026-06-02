@@ -34,7 +34,7 @@ def _scenario_matches(payload: dict, scenario: dict) -> bool:
 def _get_conditions(scenario: dict) -> list[dict]:
     raw = scenario.get("conditions")
     if isinstance(raw, list):
-        return [_normalize_condition(x) for x in raw if isinstance(x, dict)] or []
+        return [condition for x in raw if isinstance(x, dict) if (condition := _normalize_condition(x))] or []
 
     return _normalize_legacy_conditions(scenario)
 
@@ -53,7 +53,7 @@ def _match_condition(payload: dict, cond: dict) -> bool:
     if direct:
         from .normalize import _normalize_children_direct_type_values
         vals = _normalize_children_direct_type_values(payload.get(ATTR_CHILDREN_DIRECT_TYPE))
-        if direct not in vals:
+        if not any(_matches_expected_value(direct, value) for value in vals):
             return False
 
     return True
