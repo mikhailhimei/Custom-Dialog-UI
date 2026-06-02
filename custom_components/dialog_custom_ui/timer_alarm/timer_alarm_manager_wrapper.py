@@ -10,10 +10,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .alarm_manager import DialogAlarmManager
-from .normalize import _normalize_value
+from ..normalize import _normalize_value
 from .timer_manager import DialogTimerManager
-from .utils import _get_entry, _get_manager, _get_options, _extract_count
-from .const import (
+from ..utils import _get_entry, _get_manager, _get_options, _extract_count
+from ..const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_TIMER_ALARM_DEVICE_IDS,

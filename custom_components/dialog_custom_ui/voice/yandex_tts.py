@@ -18,7 +18,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
-from .const import (
+from ..const import (
     CONF_YANDEX_TTS_API_KEY,
     CONF_YANDEX_TTS_CODEC,
     CONF_YANDEX_TTS_EMOTION,
@@ -34,7 +34,7 @@ from .const import (
     DOMAIN,
 )
 
-from .normalize import (
+from ..normalize import (
     _normalize_value
 )
 

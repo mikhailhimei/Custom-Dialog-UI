@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from homeassistant.core import HomeAssistant
 
-from .normalize import _normalize_value
+from ..normalize import _normalize_value
 from .timer_alarm_utils import (
     _resolve_media_player_entity_id,
     _safe_int,

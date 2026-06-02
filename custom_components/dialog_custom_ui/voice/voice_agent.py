@@ -1,4 +1,4 @@
-﻿"""Conversation agent bridged into Dialog Custom UI options."""
+﻿﻿"""Conversation agent bridged into Dialog Custom UI options."""
 
 from __future__ import annotations
 
@@ -16,13 +16,13 @@ from homeassistant.components.conversation import (
 )
 from homeassistant.helpers import intent
 
-from .utils import (
+from ..utils import (
     _get_entry,
     _get_options
 )
 
-from .normalize import _normalize_value
-from .const import (
+from ..normalize import _normalize_value
+from ..const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_TIMER_ALARM_TOKEN

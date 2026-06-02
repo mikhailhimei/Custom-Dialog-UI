@@ -5,20 +5,6 @@ from .const import (
     ATTR_CHILDREN_TYPE,
     ATTR_PARENT_TYPE,
     ATTR_SCRIPT_ENTITY_ID,
-    CONF_BASE_URL,
-    CONF_CLIENT_ID,
-    CONF_REDIS_PASSWORD,
-    CONF_REDIS_URL,
-    CONF_SCENARIOS,
-    CONF_TIMEOUT,
-    CONF_TIMER_ALARM_ITEMS,
-    CONF_TIMER_ALARM_PRESETS,
-    CONF_TIMER_ALARM_TOKEN,
-    DEFAULT_BASE_URL,
-    DEFAULT_REDIS_URL,
-    DEFAULT_TIMEOUT,
-    DOMAIN,
-    UPDATE_INTERVAL_SECONDS,
     ATTR_SCENARIO_ID
 )
 
@@ -156,3 +142,14 @@ def _normalize_device_ids(value: Any) -> list[str]:
         return []
     return [device_id.strip() for device_id in value if device_id.strip()]
 
+def unwrap_payload(raw: Any) -> Any | None:
+    if isinstance(raw, dict) and raw.get("status") is False:
+        return None
+    return raw
+
+def normalize_payload(raw: Any) -> list[dict]:
+    if isinstance(raw, list):
+        return [x for x in raw if isinstance(x, dict)]
+    if isinstance(raw, dict):
+        return [raw]
+    return []

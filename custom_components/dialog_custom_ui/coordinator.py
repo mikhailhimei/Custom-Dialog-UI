@@ -7,11 +7,11 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .utils import _get_options, _normalize_value
-from .payload import unwrap_payload, normalize_payload
+from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .redis_transport import RedisTransport
-from .timer_alarm_manager_wrapper import DialogTimerAlarmManager
+from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
 from .const import CONF_REDIS_PASSWORD, CONF_REDIS_URL, DEFAULT_REDIS_URL, DOMAIN
 import redis.asyncio as redis
 

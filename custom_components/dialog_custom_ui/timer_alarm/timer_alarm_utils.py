@@ -10,7 +10,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
-from .normalize import _normalize_device_ids, _normalize_value
+from ..normalize import _normalize_device_ids, _normalize_value
 
 _LOGGER = logging.getLogger(__name__)
 _DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"

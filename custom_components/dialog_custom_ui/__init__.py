@@ -11,18 +11,17 @@ from homeassistant.core import HomeAssistant
 
 from .api import async_register_websockets
 from .const import (
-    CONF_TIMER_ALARM_TOKEN,
     CONF_VOICE_AGENT_IP,
     CONF_VOICE_AGENT_USER_ID,
     DOMAIN,
     MAX_LOG_ENTRIES,
 )
 from .coordinator import DialogCommandCoordinator
-from .timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
+from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
 from .services import async_register_services, async_unregister_services
-from .voice_agent import DialogCustomUiVoiceAgent
-from .yandex_tts import SERVICE_SPEAK, async_register_tts_service
+from .voice.voice_agent import DialogCustomUiVoiceAgent
+from .voice.yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:

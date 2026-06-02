@@ -1,55 +1,22 @@
 from typing import Any
 
-from homeassistant.components import websocket_api
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
-from homeassistant.util import dt as dt_util
 
 from .const import (
-       ATTR_CHILDREN_TYPE,
-    ATTR_CHILDREN_DIRECT_TYPE,
-    ATTR_PARENT_TYPE,
-    ATTR_SCENARIO_ID,
-    ATTR_SCRIPT_ENTITY_ID,
     CONF_BASE_URL,
-    CONF_ALLOW_NON_ADMIN_PANEL,
     CONF_CLIENT_ID,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
     CONF_SCENARIOS,
-    CONF_THEME,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
     CONF_TIMER_ALARM_PRESETS,
     CONF_TIMER_ALARM_TOKEN,
-    CONF_VOICE_AGENT_IP,
-    CONF_VOICE_AGENT_USER_ID,
-    CONF_YANDEX_TTS_API_KEY,
-    CONF_YANDEX_TTS_FOLDER_ID,
-    CONF_YANDEX_TTS_LANG,
-    CONF_YANDEX_TTS_CODEC,
-    CONF_YANDEX_TTS_VOICE,
-    CONF_YANDEX_TTS_EMOTION,
-    CONF_YANDEX_TTS_SPEED,
     DEFAULT_BASE_URL,
     DEFAULT_REDIS_URL,
-    DEFAULT_THEME,
-    DEFAULT_YANDEX_TTS_LANG,
-    DEFAULT_YANDEX_TTS_CODEC,
-    DEFAULT_YANDEX_TTS_VOICE,
-    DEFAULT_YANDEX_TTS_EMOTION,
-    DEFAULT_YANDEX_TTS_SPEED,
     DOMAIN,
-    WS_EXPORT_YANDEX_TTS_FILES,
-    WS_GET_CONFIG,
-    WS_GET_LOGS,
-    WS_GET_YANDEX_SCENARIOS,
-    WS_IMPORT_YANDEX_TTS_FILES,
-    WS_SAVE_CONFIG,
-    WS_SAVE_YANDEX_SCENARIOS,
     CONF_TIMEOUT,
     DEFAULT_TIMEOUT
 )

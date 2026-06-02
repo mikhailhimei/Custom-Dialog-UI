@@ -9,7 +9,6 @@ from .const import (
     ATTR_PARENT_TYPE,
     ATTR_CHILDREN_TYPE,
     ATTR_CHILDREN_DIRECT_TYPE,
-    ATTR_SCRIPT_ENTITY_ID,
 )
 
 def match_scenario(payload: dict[str, Any], scenarios: list[dict[str, Any]]) -> dict | None:
