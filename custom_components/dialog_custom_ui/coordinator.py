@@ -135,25 +135,19 @@ class DialogCommandCoordinator:
             self.entry.entry_id,
             payload,
         )
-        client_id = _normalize_value(
-            payload.get("clientId") or payload.get("client_id") or options.get("client_id")
-        )
-        device_id = _normalize_value(payload.get("deviceId") or payload.get("device_id"))
-        if not device_id:
-            configured_devices = options.get("timer_alarm_device_ids")
-            if isinstance(configured_devices, list) and configured_devices:
-                device_id = _normalize_value(configured_devices[0])
-        if not client_id or not device_id:
+        client_id = _normalize_value(payload.get("clientId"))
+
+        if not client_id:
             self._append_log("error", "post-save skipped: client_id or device_id missing")
             return
 
-        channel = f"DIALOG_MESSAGE:{client_id}:{device_id}"
+        channel = f"DIALOG_MESSAGE:{client_id}"
         redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
         redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
         message = {
             key: value
             for key, value in payload.items()
-            if key not in {"clientId", "client_id", "deviceId", "device_id"}
+            if key not in {"clientId"}
         }
         client = redis.Redis.from_url(
             redis_url,
