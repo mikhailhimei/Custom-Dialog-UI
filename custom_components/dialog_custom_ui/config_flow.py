@@ -1,4 +1,4 @@
-﻿"""Config flow for Dialog Custom UI."""
+"""Config flow for Dialog Custom UI."""
 
 from __future__ import annotations
 

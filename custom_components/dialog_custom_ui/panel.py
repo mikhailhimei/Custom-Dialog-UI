@@ -1,4 +1,4 @@
-﻿"""Sidebar panel registration."""
+"""Sidebar panel registration."""
 
 from __future__ import annotations
 
