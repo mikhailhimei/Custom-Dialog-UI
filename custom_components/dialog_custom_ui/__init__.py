@@ -1,4 +1,4 @@
-﻿"""Dialog Custom UI integration."""
+"""Dialog Custom UI integration."""
 
 from __future__ import annotations
 
