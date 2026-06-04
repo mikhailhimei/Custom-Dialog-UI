@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import logging
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
 
@@ -10,17 +11,21 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .alarm_manager import DialogAlarmManager
+from .alarm_persistence import AlarmPersistence
 from ..normalize import _normalize_value
 from .timer_manager import DialogTimerManager
 from ..utils import _get_entry, _get_manager, _get_options, _extract_count
 from ..const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
+    CONF_REDIS_PASSWORD,
+    CONF_REDIS_URL,
     CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
     CONF_TIMER_ALARM_PRESETS,
     CONF_TIMEOUT,
+    DEFAULT_REDIS_URL,
     DOMAIN,
     WS_GET_TIMER_ALARM_CONFIG,
     WS_SAVE_TIMER_ALARM_CONFIG,
@@ -37,6 +42,8 @@ from .timer_alarm_utils import (
     _sort_item_key,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class DialogTimerAlarmManager:
     """In-memory timer/alarm manager owned by command coordinator."""
@@ -46,10 +53,17 @@ class DialogTimerAlarmManager:
         hass: HomeAssistant,
         append_log: Callable[[str, str], None],
         post_save_commands: Callable[[dict[str, Any], dict[str, Any]], Awaitable[None]],
+        redis_url: str | None = None,
+        redis_password: str | None = None,
     ) -> None:
         self.hass = hass
         self._append_log = append_log
         self._post_save_commands = post_save_commands
+
+        # Initialize persistence layer
+        self._persistence: AlarmPersistence | None = None
+        if redis_url:
+            self._persistence = AlarmPersistence(redis_url, redis_password)
 
         self.timer_manager = DialogTimerManager(
             hass,
@@ -60,6 +74,7 @@ class DialogTimerAlarmManager:
             hass,
             self._mark_updated,
             self._default_media_content_id,
+            self._persistence,
         )
 
         self._timers = self.timer_manager._timers
@@ -72,7 +87,18 @@ class DialogTimerAlarmManager:
     async def async_restore_from_options(self, options: dict[str, Any]) -> None:
         if self._restored:
             return
+        
+        # Connect to Redis for persistence if configured
+        if self._persistence:
+            await self._persistence.connect()
+        
         shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        
+        # Try to restore alarms from Redis first
+        if self._persistence and shared_client_id:
+            await self.alarm_manager.async_restore_from_persistence(shared_client_id)
+        
+        # Then restore from config (will override if both exist)
         self.alarm_manager.load_alarm_presets(_normalize_alarm_presets(options.get(CONF_TIMER_ALARM_PRESETS, [])))
         raw_items = options.get(CONF_TIMER_ALARM_ITEMS)
         items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
@@ -82,6 +108,8 @@ class DialogTimerAlarmManager:
     async def async_stop(self) -> None:
         await self.timer_manager.async_stop()
         await self.alarm_manager.async_stop()
+        if self._persistence:
+            await self._persistence.disconnect()
         self._remove_runtime_state()
 
     async def async_handle_builtin(
@@ -187,6 +215,18 @@ class DialogTimerAlarmManager:
         self._last_updated = dt_util.now().isoformat()
         self._persist_items_to_entry()
         self._publish_runtime_state()
+        # Also trigger async save to Redis (non-blocking)
+        if self._persistence:
+            self.hass.async_create_task(self._async_save_to_persistence())
+
+    async def _async_save_to_persistence(self) -> None:
+        """Async save alarms to Redis persistence."""
+        if not self._persistence:
+            return
+        try:
+            await self.alarm_manager._save_alarms_to_persistence()
+        except Exception as err:
+            _LOGGER.warning("Failed to save to persistence in mark_updated: %s", err)
 
     def _default_media_content_id(self) -> str:
         entry = _get_entry(self.hass)

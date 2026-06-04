@@ -4,6 +4,7 @@ import asyncio
 import uuid
 from datetime import datetime
 from typing import Any, Callable
+import logging
 
 from homeassistant.core import HomeAssistant
 
@@ -12,6 +13,9 @@ from .timer_alarm_utils import (
     _resolve_media_player_entity_id,
     _safe_int,
 )
+from .alarm_persistence import AlarmPersistence
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class DialogAlarmManager:
@@ -20,10 +24,12 @@ class DialogAlarmManager:
         hass: HomeAssistant,
         mark_updated: Callable[[], None],
         default_media_content_id: Callable[[], str],
+        persistence: AlarmPersistence | None = None,
     ) -> None:
         self.hass = hass
         self._mark_updated = mark_updated
         self._default_media_content_id = default_media_content_id
+        self._persistence = persistence
         self._alarms: dict[str, dict[str, Any]] = {}
         self._alarm_presets: set[str] = set()
         self._triggered_alarm_keys: set[str] = set()
@@ -37,7 +43,36 @@ class DialogAlarmManager:
             except asyncio.CancelledError:
                 pass
             self._alarm_tick_task = None
+        # Save alarms before stopping
+        if self._persistence:
+            await self._save_alarms_to_persistence()
         self._alarms.clear()
+
+    async def async_restore_from_persistence(self, client_id: str | None = None) -> None:
+        """Restore alarms from Redis persistence if available.
+        
+        This is called when the coordinator starts to recover alarms that were
+        active before a server restart.
+        """
+        if not self._persistence:
+            return
+        
+        try:
+            loaded_alarms = await self._persistence.load_alarms(client_id)
+            if loaded_alarms:
+                _LOGGER.info("Restored %d alarms from Redis persistence", len(loaded_alarms))
+                self._alarms.update(loaded_alarms)
+                for alarm in loaded_alarms.values():
+                    alarm_time = _normalize_value(alarm.get("time"))
+                    if alarm_time:
+                        self._alarm_presets.add(alarm_time)
+                # Ensure tick task is running for restored alarms
+                for alarm in loaded_alarms.values():
+                    if _normalize_value(alarm.get("status")).lower() == "on":
+                        self._ensure_alarm_tick_task()
+                        break
+        except Exception as err:
+            _LOGGER.warning("Failed to restore alarms from persistence: %s", err)
 
     async def async_handle_alarm_start(
         self,
@@ -320,3 +355,14 @@ class DialogAlarmManager:
             items = list(self._alarms.values())
         items.sort(key=lambda item: float(item.get("created_at") or 0.0))
         return items
+
+    async def _save_alarms_to_persistence(self, client_id: str | None = None) -> None:
+        """Save current alarms to Redis persistence."""
+        if not self._persistence or not self._alarms:
+            return
+        
+        try:
+            await self._persistence.save_alarms(self._alarms, client_id)
+            await self._persistence.save_alarm_presets(self._alarm_presets, client_id)
+        except Exception as err:
+            _LOGGER.warning("Failed to save alarms to persistence: %s", err)

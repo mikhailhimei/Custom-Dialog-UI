@@ -24,10 +24,18 @@ class DialogCommandCoordinator:
         self.entry = entry
         self._task = None
         self.redis = RedisTransport(self._append_log)
+        
+        # Get Redis configuration for alarm persistence
+        options = _get_options(entry)
+        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
+        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
+        
         self.timer_alarm_manager = DialogTimerAlarmManager(
             hass,
             self._append_log,
             self._post_save_commands,
+            redis_url=redis_url,
+            redis_password=redis_password,
         )
         _LOGGER.debug("DialogCommandCoordinator initialized for entry %s", self.entry.entry_id)
 
