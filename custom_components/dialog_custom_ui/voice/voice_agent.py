@@ -1,5 +1,4 @@
-﻿﻿"""Conversation agent bridged into Dialog Custom UI options."""
-from __future__ import annotations
+﻿﻿from __future__ import annotations
 
 import logging
 import uuid
