@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import uuid
 from typing import Any
 
@@ -83,7 +83,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             _LOGGER.error("Voice agent request failed: %s", err)
 
         response_payload = data.get("response", {}) if isinstance(data, dict) else {}
-        text = str(response_payload.get("text") or "Нет ответа")
+        text = str(response_payload.get("text") or "")
         should_continue = not bool(response_payload.get("end_session", True))
 
         response = intent.IntentResponse(language=user_input.language)

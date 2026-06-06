@@ -1,4 +1,4 @@
-"""Websocket API for Dialog Custom UI."""
+"""Websocket API for Dialog Custom UI (config operations)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import yaml
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
-from .const import (
+from ...const import (
     ATTR_CHILDREN_DIRECT_TYPE,
     ATTR_CHILDREN_TYPE,
     ATTR_PARENT_TYPE,
@@ -29,11 +29,9 @@ from .const import (
     CONF_REDIS_URL,
     CONF_SCENARIOS,
     CONF_THEME,
-    CONF_TIMER_ALARM_DEVICE_IDS,
     CONF_TIMER_ALARM_ITEMS,
     CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
     CONF_TIMER_ALARM_PRESETS,
-    CONF_TIMER_ALARM_TOKEN,
     CONF_VOICE_AGENT_IP,
     CONF_VOICE_AGENT_USER_ID,
     CONF_YANDEX_TTS_API_KEY,
@@ -43,6 +41,8 @@ from .const import (
     CONF_YANDEX_TTS_LANG,
     CONF_YANDEX_TTS_SPEED,
     CONF_YANDEX_TTS_VOICE,
+    CONF_TIMER_ALARM_DEVICE_IDS,
+    CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_REDIS_URL,
     DEFAULT_THEME,
@@ -54,24 +54,25 @@ from .const import (
     DOMAIN,
     WS_EXPORT_YANDEX_TTS_FILES,
     WS_GET_CONFIG,
-    WS_GET_LOGS,
     WS_GET_YANDEX_SCENARIOS,
     WS_IMPORT_YANDEX_TTS_FILES,
     WS_SAVE_CONFIG,
     WS_SAVE_YANDEX_SCENARIOS,
 )
 
-from .normalize import (
+from ...normalize import (
     _normalize_device_ids,
     _normalize_scenario,
-    _normalize_str_list
+    _normalize_str_list,
 )
 
-from .utils import (
+from ...utils import (
     _get_entry,
     _safe_float,
-    _clean_string
+    _clean_string,
 )
+from .timer_alarm_api import async_register_timer_alarm_websockets
+from .logs_api import async_register_logs_websockets
 
 LOGGER = logging.getLogger(__name__)
 
@@ -157,11 +158,12 @@ SAVE_YANDEX_SCENARIOS_SCHEMA = {
 def async_register_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_config)
     websocket_api.async_register_command(hass, _ws_save_config)
-    websocket_api.async_register_command(hass, _ws_get_logs)
     websocket_api.async_register_command(hass, _ws_get_yandex_scenarios)
     websocket_api.async_register_command(hass, _ws_save_yandex_scenarios)
     websocket_api.async_register_command(hass, _ws_export_yandex_tts_files)
     websocket_api.async_register_command(hass, _ws_import_yandex_tts_files)
+    async_register_timer_alarm_websockets(hass)
+    async_register_logs_websockets(hass)
 
 
 def _ws_error(
@@ -182,7 +184,6 @@ def _build_config_response(entry) -> dict[str, Any]:
         "client_id": entry.options.get(CONF_CLIENT_ID, ""),
         "redis_url": entry.options.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
         "redis_password": entry.options.get(CONF_REDIS_PASSWORD, ""),
-        "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
         "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
         "voice_agent_user_id": entry.options.get(CONF_VOICE_AGENT_USER_ID, ""),
         "yandex_tts_api_key": entry.options.get(CONF_YANDEX_TTS_API_KEY, ""),
@@ -213,10 +214,6 @@ def _build_config_response(entry) -> dict[str, Any]:
         "theme": _normalize_theme(
             entry.options.get(CONF_THEME, DEFAULT_THEME)
         ),
-        "timer_alarm_device_ids": _normalize_device_ids(
-            entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
-        ),
-        "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
     }
 
 
@@ -224,10 +221,15 @@ def _build_options(
     msg: dict[str, Any],
     previous: dict[str, Any],
 ) -> IntegrationOptions:
-    scenarios = [
-        _normalize_scenario(item)
-        for item in msg[CONF_SCENARIOS]
-    ]
+    raw_scenarios = msg.get(CONF_SCENARIOS, None)
+    if isinstance(raw_scenarios, list):
+        scenarios = [
+            _normalize_scenario(item)
+            for item in raw_scenarios
+            if isinstance(item, dict)
+        ]
+    else:
+        scenarios = list(previous.get(CONF_SCENARIOS, []))
 
     return {
         CONF_BASE_URL: _clean_string(
@@ -244,9 +246,6 @@ def _build_options(
         ),
         CONF_ALLOW_NON_ADMIN_PANEL: bool(
             msg.get(CONF_ALLOW_NON_ADMIN_PANEL, True)
-        ),
-        CONF_TIMER_ALARM_TOKEN: _clean_string(
-            msg.get(CONF_TIMER_ALARM_TOKEN)
         ),
         CONF_THEME: _normalize_theme(
             msg.get(CONF_THEME, DEFAULT_THEME)
@@ -287,8 +286,12 @@ def _build_options(
             msg.get(CONF_YANDEX_TTS_SPEED),
             DEFAULT_YANDEX_TTS_SPEED,
         ),
+        CONF_TIMER_ALARM_TOKEN: _clean_string(
+            msg.get(CONF_TIMER_ALARM_TOKEN),
+            previous.get(CONF_TIMER_ALARM_TOKEN, ""),
+        ),
         CONF_TIMER_ALARM_DEVICE_IDS: _normalize_device_ids(
-            msg.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
+            msg.get(CONF_TIMER_ALARM_DEVICE_IDS, previous.get(CONF_TIMER_ALARM_DEVICE_IDS, []))
         ),
         CONF_TIMER_ALARM_ITEMS: list(
             previous.get(CONF_TIMER_ALARM_ITEMS, [])
@@ -337,18 +340,7 @@ async def _ws_get_config(
 
     connection.send_result(msg["id"], result)
 
-
-@websocket_api.websocket_command({vol.Required("type"): WS_GET_LOGS})
-@websocket_api.async_response
-async def _ws_get_logs(
-    hass: HomeAssistant,
-    connection: websocket_api.ActiveConnection,
-    msg: dict[str, Any],
-) -> None:
-    logs = list(hass.data.get(DOMAIN, {}).get("logs", []))
-    connection.send_result(msg["id"], {"logs": logs})
-
-
+"Получаем весь конфиг но нужно дикомпозировать"
 @websocket_api.websocket_command(SAVE_CONFIG_SCHEMA)
 @websocket_api.require_admin
 @websocket_api.async_response
@@ -438,7 +430,8 @@ async def _ws_export_yandex_tts_files(
         },
     )
 
-@websocket_api.websocket_command(IMPORT_TTS_SCHEMA)
+
+@websocket_api.websocket_command({vol.Required("type"): WS_IMPORT_YANDEX_TTS_FILES})
 @websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_import_yandex_tts_files(
@@ -487,6 +480,7 @@ async def _ws_import_yandex_tts_files(
 
     connection.send_result(msg["id"], result)
 
+
 @websocket_api.websocket_command(
     {vol.Required("type"): WS_GET_YANDEX_SCENARIOS}
 )
@@ -507,6 +501,7 @@ async def _ws_get_yandex_scenarios(
             "scenarios": scenarios,
         },
     )
+
 
 @websocket_api.websocket_command(
     SAVE_YANDEX_SCENARIOS_SCHEMA
@@ -553,6 +548,10 @@ async def _ws_save_yandex_scenarios(
         },
     )
 
+
+
+
+
 class _FlowStyleList(list):
     """Serialize YAML list in flow style."""
 
@@ -571,6 +570,7 @@ yaml.SafeDumper.add_representer(
     _represent_flow_style_list,
 )
 
+
 def _validate_yandex_scenarios(
     items: list[dict[str, Any]],
 ) -> str:
@@ -582,6 +582,7 @@ def _validate_yandex_scenarios(
 
     return ""
 
+
 def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
     config_path = Path(hass.config.path("yandex_intents.yaml"))
 
@@ -592,6 +593,7 @@ def _resolve_yandex_intents_path(hass: HomeAssistant) -> Path:
         return _YANDEX_INTENTS_PATH
 
     return config_path
+
 
 def _read_yandex_scenarios(
     hass: HomeAssistant,
@@ -655,6 +657,7 @@ def _read_yandex_scenarios(
 
     return result
 
+
 def _write_yandex_scenarios(
     hass: HomeAssistant,
     scenarios: list[dict[str, Any]],
@@ -701,6 +704,7 @@ def _write_yandex_scenarios(
 
     path.write_text(dumped, encoding="utf-8")
 
+
 def _resolve_tts_path(hass: HomeAssistant) -> Path:
     config_tts_path = Path(hass.config.path("tts"))
 
@@ -711,6 +715,7 @@ def _resolve_tts_path(hass: HomeAssistant) -> Path:
         return _TTS_CACHE_PATH
 
     return config_tts_path
+
 
 def _build_tts_archive(hass: HomeAssistant) -> bytes:
     tts_path = _resolve_tts_path(hass)
@@ -735,6 +740,7 @@ def _build_tts_archive(hass: HomeAssistant) -> bytes:
             )
 
     return buffer.getvalue()
+
 
 def _import_tts_archive(
     hass: HomeAssistant,
@@ -791,8 +797,10 @@ def _import_tts_archive(
         "skipped_files": skipped,
     }
 
+
 def _normalize_theme(value: Any) -> str:
     return "dark" if _clean_string(value).lower() == "dark" else "light"
+
 
 def _normalize_sub_items(value: Any) -> list[str]:
     if isinstance(value, list):
@@ -815,6 +823,7 @@ def _normalize_sub_items(value: Any) -> list[str]:
             result.append(text)
 
     return result
+
 
 def _normalize_accounts(value: Any) -> list[str]:
     if isinstance(value, list):

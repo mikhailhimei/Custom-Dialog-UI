@@ -108,6 +108,8 @@ class DialogAlarmManager:
                     "actionType": "success",
                     "message": f"{alarm_time}",
                 }
+            
+            return
 
         alarm_id = f"ha_alarm:{client_id}:{uuid.uuid4().hex[:8]}"
         self._alarms[alarm_id] = {

@@ -3,11 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "vite --config frontend/vite.config.mjs",
-    "dev:ha": "node frontend/scripts/build.mjs --watch --mode=development",
-    "build": "node frontend/scripts/build.mjs --mode=production"
+    "dev": "vite --config frontend2.0/vite.config.mjs",
+    "dev:ha": "node frontend2.0/scripts/build.mjs --watch --mode=development",
+    "build": "node frontend2.0/scripts/build.mjs --mode=production"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.0.1",
+    "@mui/material": "^9.0.1",
+    "home-assistant-js-websocket": "^9.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_IP_ADDRESS
 from homeassistant.core import HomeAssistant
 
-from .api import async_register_websockets
+from .src.api.config_api import async_register_websockets
 from .const import (
     CONF_VOICE_AGENT_IP,
     CONF_VOICE_AGENT_USER_ID,
@@ -17,6 +17,7 @@ from .const import (
     MAX_LOG_ENTRIES,
 )
 from .coordinator import DialogCommandCoordinator
+from .src.api.scenarios_api import async_register_scenarios_websockets
 from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
 from .services import async_register_services, async_unregister_services
@@ -29,6 +30,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
     async_register_websockets(hass)
+    async_register_scenarios_websockets(hass)
     async_register_timer_alarm_websockets(hass)
     async_register_services(hass)
     await async_register_tts_service(hass)

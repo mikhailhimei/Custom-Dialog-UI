@@ -967,18 +967,37 @@ class DialogCustomUiPanel extends HTMLElement {
       const raw = await file.text();
       const parsed = JSON.parse(raw);
       const scenarios = Array.isArray(parsed.scenarios) ? parsed.scenarios : [];
+
+      // If uploaded JSON contains scenarios, save them via scenarios_api
+      if (scenarios.length && this._hass) {
+        try {
+          await this._hass.callWS({ type: 'dialog_custom_ui/save_scenarios', scenarios });
+          // refresh scenarios from backend
+          try {
+            const refreshed = await this._hass.callWS({ type: 'dialog_custom_ui/get_scenarios' });
+            parsed.scenarios = Array.isArray(refreshed.scenarios) ? refreshed.scenarios : parsed.scenarios;
+          } catch (err) {
+            // ignore refresh error, keep parsed scenarios
+          }
+          this._status = 'Сценарии импортированы и сохранены.';
+        } catch (err) {
+          this._error = err?.message || 'Не удалось сохранить сценарии.';
+          this._status = '';
+        }
+      }
+
       this._config = {
         ...DEFAULT_CONFIG,
         ...parsed,
         timer_alarm_device_ids: this._normalizeTimerAlarmDeviceIdsForUi(
           parsed.timer_alarm_device_ids ?? []
         ),
-        scenarios: scenarios.map((scenario) => this._normalizeScenarioForUi(scenario)),
+        scenarios: (Array.isArray(parsed.scenarios) ? parsed.scenarios : []).map((scenario) => this._normalizeScenarioForUi(scenario)),
       };
       this._applyTheme();
       this._expandedScenarios = new Set(this._config.scenarios.map((scenario) => scenario.id));
       this._scenariosPage = 1;
-      this._status = 'JSON загружен в форму.';
+      if (!this._error) this._status = this._status || 'JSON загружен в форму.';
       this._error = '';
     } catch (err) {
       this._error = err?.message || 'Не удалось загрузить JSON.';
