@@ -214,6 +214,11 @@ def _build_config_response(entry) -> dict[str, Any]:
         "theme": _normalize_theme(
             entry.options.get(CONF_THEME, DEFAULT_THEME)
         ),
+        "timer_alarm_token": entry.options.get(CONF_TIMER_ALARM_TOKEN, ""),
+        "timer_alarm_device_ids": _normalize_device_ids(
+            entry.options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
+        ),
+        "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
     }
 
 
