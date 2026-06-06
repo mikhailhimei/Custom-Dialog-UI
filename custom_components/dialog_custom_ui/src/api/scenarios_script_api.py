@@ -43,10 +43,16 @@ SAVE_SCENARIOS_SCHEMA = {
     ],
 }
 
+GET_SCENARIOS_SCHEMA = {
+    vol.Required("type"): WS_GET_SCENARIOS,
+    vol.Optional("page"): vol.All(vol.Coerce(int), vol.Range(min=1)),
+    vol.Optional("page_size"): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+}
+
 
 def async_register_scenarios_websockets(hass: HomeAssistant) -> None:
-    websocket_api.async_register_command(hass, _ws_get_scenarios)
-    websocket_api.async_register_command(hass, _ws_save_scenarios)
+    websocket_api.async_register_command(hass, _ws_get_scenarios_script)
+    websocket_api.async_register_command(hass, _ws_save_scenarios_script)
 
 
 def _ws_error(
@@ -58,9 +64,19 @@ def _ws_error(
     connection.send_error(msg["id"], code, message)
 
 
-def _build_scenarios_response(entry) -> dict[str, Any]:
+def _build_scenarios_response(
+    scenarios: list[dict[str, Any]],
+    page: int,
+    page_size: int,
+) -> dict[str, Any]:
+    total_items = len(scenarios)
+    total_pages = max(1, (total_items + page_size - 1) // page_size)
+    start = (page - 1) * page_size
+    end = start + page_size
     return {
-        "scenarios": list(entry.options.get(CONF_SCENARIOS, [])),
+        "scenarios": scenarios[start:end],
+        "page": page,
+        "total_pages": total_pages,
     }
 
 
@@ -76,9 +92,9 @@ def _build_scenarios_options(
     return options
 
 
-@websocket_api.websocket_command({vol.Required("type"): WS_GET_SCENARIOS})
+@websocket_api.websocket_command(GET_SCENARIOS_SCHEMA)
 @websocket_api.async_response
-async def _ws_get_scenarios(
+async def _ws_get_scenarios_script(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
@@ -105,13 +121,24 @@ async def _ws_get_scenarios(
         )
         return
 
-    connection.send_result(msg["id"], _build_scenarios_response(entry))
+    scenarios = list(entry.options.get(CONF_SCENARIOS, []))
+    if "page" not in msg:
+        page = 1
+        page_size = len(scenarios)
+    else:
+        page = msg["page"]
+        page_size = msg.get("page_size", 10)
+
+    connection.send_result(
+        msg["id"],
+        _build_scenarios_response(scenarios, page, page_size),
+    )
 
 
 @websocket_api.websocket_command(SAVE_SCENARIOS_SCHEMA)
 @websocket_api.require_admin
 @websocket_api.async_response
-async def _ws_save_scenarios(
+async def _ws_save_scenarios_script(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],

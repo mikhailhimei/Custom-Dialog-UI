@@ -1,0 +1,14 @@
+{
+    "id": 97,
+    "type": "result",
+    "success": true,
+    "result": {
+        "logs": [
+            {
+                "ts": "13:57:22",
+                "level": "info",
+                "message": "coordinator started"
+            }
+        ]
+    }
+}

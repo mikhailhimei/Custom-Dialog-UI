@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import ScenarioPage from "./page/ScenarioPage";
+import ScenarioPage from "./src/page/ScenarioPage";
 import { DialogProvider } from "./src/context/DialogProvider";
 
 ReactDOM.createRoot(

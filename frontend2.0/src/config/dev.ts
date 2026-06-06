@@ -1,6 +1,0 @@
-export const DEV_CONFIG = {
-  HA_URL: "http://192.168.31.83:8123",
-
-  TOKEN:
-    "PASTE_LONG_LIVED_ACCESS_TOKEN_HERE",
-};

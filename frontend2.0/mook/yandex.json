@@ -1,0 +1,307 @@
+{
+    "id": 95,
+    "type": "result",
+    "success": true,
+    "result": {
+        "scenarios": [
+            {
+                "id": "yandex-b067ce3e",
+                "mainCommand": "Запусти управление умным домом",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [
+                    {
+                        "id": "sv-11895d44",
+                        "text": "Узнай у У Дом"
+                    }
+                ],
+                "subCommands": []
+            },
+            {
+                "id": "yandex-f36cf1bc",
+                "mainCommand": "Включи датчик движения",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-20d525eb",
+                        "text": "Узнай у У Дом датчик он"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-c8bc8e38",
+                "mainCommand": "Включи распознавание лица",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-ad2fefa6",
+                        "text": "Узнай у У Дом вкл распознавание лица"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-38c65436",
+                "mainCommand": "Выключи датчик движения",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-8a98b8c3",
+                        "text": "Узнай у У Дом автосвет"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-426c40f3",
+                "mainCommand": "Выключи распознавание лица",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-7cce88f9",
+                        "text": "Узнай у У Дом выкл распознавание лица"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-a404e8e2",
+                "mainCommand": "Запусти пылесос",
+                "voiceResponse": "",
+                "accounts": "",
+                "subVoice": [
+                    {
+                        "id": "sv-b9aee2fb",
+                        "text": "Запусти пылесос в доме"
+                    },
+                    {
+                        "id": "sv-7b72202f",
+                        "text": "Отправь пылесос"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-5bbec83e",
+                        "text": "Узнай у У Дом запусти пылесос"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-21f56753",
+                "mainCommand": "Какая температура компьютера",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [
+                    {
+                        "id": "sv-10803dcf",
+                        "text": "Какая температура у сервера"
+                    },
+                    {
+                        "id": "sv-a4026fc2",
+                        "text": "какая температура сервера"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-d4f43c95",
+                        "text": "Узнай у У Дом какая темература пк"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-888d386f",
+                "mainCommand": "Какой статус у распознавания лица",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [
+                    {
+                        "id": "sv-4062ebcd",
+                        "text": "включен ли распознавание лица"
+                    },
+                    {
+                        "id": "sv-283b9daa",
+                        "text": "запущено ли распознавание лица"
+                    },
+                    {
+                        "id": "sv-c821c826",
+                        "text": "Распознавание лица включено"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-4156e1aa",
+                        "text": "Узнай у У Дом инфо распознавание лица"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-5dd91b38",
+                "mainCommand": "Накорми котов",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [
+                    {
+                        "id": "sv-12330b51",
+                        "text": "Покорми котов"
+                    },
+                    {
+                        "id": "sv-cc851e27",
+                        "text": "Насыпь еды"
+                    },
+                    {
+                        "id": "sv-8cb11ab9",
+                        "text": "Насыпь еды котам"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-7abf91a0",
+                        "text": "Узнай у У Дом покорми котов"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-3f55e1ad",
+                "mainCommand": "Перезапусти распознавание лица",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-4be4290b",
+                        "text": "Узнай у У Дом рес распознавание лица"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-7a083b07",
+                "mainCommand": "Помоги со стиркой",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-61898555",
+                        "text": "Узнай у У Дом стирка"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-1a511aed",
+                "mainCommand": "Продолжи уборку",
+                "voiceResponse": "",
+                "accounts": "",
+                "subVoice": [
+                    {
+                        "id": "sv-3ecf74ba",
+                        "text": "возобновление уборки"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-5f6f5b23",
+                        "text": "Узнай у У Дом продолжи уборку"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-668706e5",
+                "mainCommand": "Привет",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-599d6184",
+                        "text": "Узнай у У Дом привет"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-f1b11be5",
+                "mainCommand": "Проверь дверь",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [
+                    {
+                        "id": "sv-0a49aee6",
+                        "text": "Проверить дверь"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-0ffefadd",
+                        "text": "Узнай у У Дом стадверь"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-5eded633",
+                "mainCommand": "Закрой дверь",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-d9014d7f",
+                        "text": "Узнай у У Дом закрдверь"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-0bfd97f5",
+                "mainCommand": "сбрось кэш",
+                "voiceResponse": "",
+                "accounts": "mihailhimei",
+                "subVoice": [],
+                "subCommands": [
+                    {
+                        "id": "sc-b9b3ef19",
+                        "text": "Узнай у У Дом сброс кэш"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-9dc3c762",
+                "mainCommand": "Запусти пылесос везде",
+                "voiceResponse": "",
+                "accounts": "",
+                "subVoice": [
+                    {
+                        "id": "sv-206f082d",
+                        "text": "Отправь пылесос везде"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-2cdd744d",
+                        "text": "Узнай у У Дом пылвез"
+                    }
+                ]
+            },
+            {
+                "id": "yandex-25f6af21",
+                "mainCommand": "Напомни др",
+                "voiceResponse": "",
+                "accounts": "",
+                "subVoice": [
+                    {
+                        "id": "sv-5a22f89a",
+                        "text": "Напомни день рождение"
+                    }
+                ],
+                "subCommands": [
+                    {
+                        "id": "sc-3f21a98f",
+                        "text": "Узнай у У дом нвувдр"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Box, Button, Stack } from "@mui/material";
-import { PageHeader } from "../components/PageHeader";
-import { ScenarioTabs } from "../components/ScenarioTabs";
-import { ScenarioAccordion } from "../components/ScenarioAccordion";
-import { useScenarios } from "../src/hooks/useScenarios";
+import { PageHeader } from "../../components/PageHeader";
+import { ScenarioTabs } from "../../components/ScenarioTabs";
+import { ScenarioAccordion } from "../../components/ScenarioAccordion";
+import { useScenarios } from "../hooks/useScenarios";
 
 
 export default function ScenarioPage() {
