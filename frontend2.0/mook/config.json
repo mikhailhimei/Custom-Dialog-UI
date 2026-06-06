@@ -10,7 +10,7 @@
         "redis_password": "132143154D",
         "voice_agent_ip": "192.168.31.82:9379",
         "voice_agent_user_id": "4CDC6871493B1FB5532185457BA7864FB65F366F93C431FD8D8F847894B9287D",
-        "yandex_tts_api_key": "AQVNyUkOGXXmE6xpSf8HEfw3deYPl_PoyZD23Ix6",
+        "yandex_tts_api_key": "",
         "yandex_tts_folder_id": "b1gp059vb0ukreogbt0g",
         "yandex_tts_lang": "ru-RU",
         "yandex_tts_codec": "oggopus",
