@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import uuid
 from typing import Any
 
@@ -75,7 +75,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                         },
                         "version": "1.0",
                     }
-            data = await dialog_service.words_scripts(json)
+            data = await dialog_service.words_scripts(json, hass=self.hass)
             # async with aiohttp.ClientSession() as session:
                 # async with session.post(
                 #     url,
