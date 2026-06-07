@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import logging
 
 from homeassistant.core import callback
 from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
@@ -11,6 +12,7 @@ from ..utils.redis_init import get_redis
 from ..utils.text_normalize import fix_text
 
 r = get_redis()
+logger = logging.getLogger(__name__)
 REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 VOICE_RESPONSE_TYPE_ALIASES = {
     "default": "default",
@@ -117,11 +119,13 @@ def should_store_current_node(has_children, end_status, uuid=None):
 
 
 async def dialogs_wait(hass, client_id, device_id, timeout=8):
-    future = asyncio.Future()
+    future = hass.loop.create_future()
 
     @callback
     def listener(event):
         data = event.data
+
+        logger.debug("dialogs_wait listener got event data: %s", data)
 
         if (
             data.get("client_id") == client_id
