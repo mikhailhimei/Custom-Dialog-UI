@@ -9,6 +9,7 @@ from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
+from .src.service.dialog_runtime import cache_dialog_message_response
 from .const import (
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
@@ -82,7 +83,21 @@ class DialogCommandCoordinator:
         event_client_id = _normalize_value(data.get("client_id"))
         configured_client_id = _normalize_value(options.get("client_id"))
 
+        _LOGGER.error(
+            "Coordinator received %s event: client_id=%s configured_client_id=%s data=%s",
+            EVENT_ACTIVE_COMMAND,
+            event_client_id,
+            configured_client_id,
+            data,
+        )
+
         if configured_client_id and event_client_id != configured_client_id:
+            _LOGGER.error(
+                "Coordinator ignored %s event because client_id=%s does not match configured_client_id=%s",
+                EVENT_ACTIVE_COMMAND,
+                event_client_id,
+                configured_client_id,
+            )
             return
 
         self.hass.async_create_task(
@@ -101,7 +116,7 @@ class DialogCommandCoordinator:
             scenario = match_scenario(payload, options["scenarios"])
 
             if not scenario:
-                _LOGGER.debug("No scenario match for payload: %s", payload)
+                _LOGGER.error("No scenario match for active command payload: %s", payload)
                 self._append_log("idle", "no match")
                 continue
 
@@ -152,12 +167,18 @@ class DialogCommandCoordinator:
             for key, value in payload.items()
             if key not in {"clientId"}
         }
-        self.hass.bus.async_fire(
+        _LOGGER.error(
+            "Coordinator firing %s client_id=%s device_id=%s payload=%s",
             EVENT_DIALOG_MESSAGE,
-            {
-                "client_id": client_id,
-                "device_id": payload.get("deviceId"),
-                **message,
-            },
+            client_id,
+            payload.get("deviceId"),
+            payload,
         )
+        event_data = {
+            "client_id": client_id,
+            "device_id": payload.get("deviceId"),
+            **message,
+        }
+        cache_dialog_message_response(event_data)
+        self.hass.bus.async_fire(EVENT_DIALOG_MESSAGE, event_data)
         self._append_log("request", f"FIRE {EVENT_DIALOG_MESSAGE}:{client_id}:{payload.get('deviceId')}")

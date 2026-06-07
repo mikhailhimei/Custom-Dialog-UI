@@ -1,6 +1,9 @@
+import logging
 from typing import Any
 from homeassistant.core import HomeAssistant
 from .const import ATTR_CHILDREN_DIRECT_TYPE
+
+_LOGGER = logging.getLogger(__name__)
 
 def build_service(script_entity_id: str, payload: dict) -> dict:
     return {
@@ -18,10 +21,16 @@ def build_service(script_entity_id: str, payload: dict) -> dict:
 
 
 async def run_script(hass: HomeAssistant, entity_id: str, payload: dict) -> None:
+    if not entity_id:
+        _LOGGER.error("Dialog script is not configured for payload: %s", payload)
+        return
+
     if not hass.states.get(entity_id):
+        _LOGGER.error("Dialog script %s was not found for payload: %s", entity_id, payload)
         return
 
     service_data = build_service(entity_id, payload)
+    _LOGGER.error("Calling dialog script %s with service_data=%s", entity_id, service_data)
 
     await hass.services.async_call(
         "script",

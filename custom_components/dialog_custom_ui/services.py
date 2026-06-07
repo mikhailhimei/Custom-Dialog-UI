@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -19,6 +20,8 @@ from .normalize import (
     _normalize_value
 )
 
+from .src.service.dialog_runtime import cache_dialog_message_response
+
 from .const import (
     CONF_CLIENT_ID,
     DOMAIN,
@@ -31,6 +34,7 @@ ATTR_CLIENT_ID = "clientId"
 ATTR_DEVICE_ID = "deviceId"
 ATTR_ACTION_TYPE = "actionType"
 ATTR_VARIABLES = "variables"
+_LOGGER = logging.getLogger(__name__)
 
 _SEND_COMMAND_SCHEMA = vol.Schema(
     {
@@ -79,15 +83,28 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
         ATTR_VARIABLES: variables,
     }
 
-    hass.bus.async_fire(
+    event_data = {
+        "client_id": payload[ATTR_CLIENT_ID],
+        "device_id": payload[ATTR_DEVICE_ID],
+        ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
+        ATTR_VARIABLES: payload[ATTR_VARIABLES],
+    }
+    _LOGGER.error(
+        "services.py firing %s with client_id=%s device_id=%s actionType=%s variables=%s",
         EVENT_DIALOG_MESSAGE,
-        {
-            "client_id": payload[ATTR_CLIENT_ID],
-            "device_id": payload[ATTR_DEVICE_ID],
-            ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
-            ATTR_VARIABLES: payload[ATTR_VARIABLES],
-        },
+        event_data["client_id"],
+        event_data["device_id"],
+        event_data[ATTR_ACTION_TYPE],
+        event_data[ATTR_VARIABLES],
     )
+    cache_dialog_message_response(event_data)
+    _LOGGER.error(
+        "services.py cached %s before async_fire for client_id=%s device_id=%s",
+        EVENT_DIALOG_MESSAGE,
+        event_data["client_id"],
+        event_data["device_id"],
+    )
+    hass.bus.async_fire(EVENT_DIALOG_MESSAGE, event_data)
     _append_log(
         hass,
         "request",

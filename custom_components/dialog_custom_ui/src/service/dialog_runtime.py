@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import logging
+import time
 
 from homeassistant.core import callback
 from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
@@ -13,6 +14,8 @@ from ..utils.text_normalize import fix_text
 
 r = get_redis()
 logger = logging.getLogger(__name__)
+DIALOG_RESPONSE_CACHE_TTL = 30
+_dialog_response_cache = {}
 REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 VOICE_RESPONSE_TYPE_ALIASES = {
     "default": "default",
@@ -103,8 +106,15 @@ def build_command_data(
 
 def store_command_data(hass, client_id, command_data):
     if hass is None:
+        logger.error("store_command_data skipped: hass is None")
         return
 
+    logger.error(
+        "store_command_data firing %s client_id=%s command_data=%s",
+        EVENT_ACTIVE_COMMAND,
+        client_id,
+        command_data,
+    )
     hass.bus.async_fire(
         EVENT_ACTIVE_COMMAND,
         {
@@ -114,47 +124,182 @@ def store_command_data(hass, client_id, command_data):
     )
 
 
+
+def _dialog_response_cache_key(client_id, device_id):
+    return (_normalize_dialog_id(client_id), _normalize_dialog_id(device_id))
+
+
+def _purge_expired_dialog_responses(now=None):
+    now = now or time.monotonic()
+    expired_keys = []
+    for key, items in _dialog_response_cache.items():
+        fresh_items = [
+            item
+            for item in items
+            if now - item[0] <= DIALOG_RESPONSE_CACHE_TTL
+        ]
+        if fresh_items:
+            _dialog_response_cache[key] = fresh_items
+        else:
+            expired_keys.append(key)
+
+    for key in expired_keys:
+        _dialog_response_cache.pop(key, None)
+
+
+def cache_dialog_message_response(data):
+    if not isinstance(data, dict):
+        return
+
+    client_id = _get_dialog_event_value(data, "client_id", "clientId")
+    device_id = _get_dialog_event_value(data, "device_id", "deviceId")
+    key = _dialog_response_cache_key(client_id, device_id)
+    if not key[0] or not key[1]:
+        logger.error("dialog_message response cache skipped event without ids: %s", data)
+        return
+
+    now = time.monotonic()
+    _purge_expired_dialog_responses(now)
+    _dialog_response_cache.setdefault(key, []).append((now, data))
+    logger.error("dialog_message response cached for client_id=%s device_id=%s data=%s", key[0], key[1], data)
+
+
+def _pop_cached_dialog_message_response(client_id, device_id):
+    _purge_expired_dialog_responses()
+    key = _dialog_response_cache_key(client_id, device_id)
+    items = _dialog_response_cache.get(key)
+    if not items:
+        return None
+
+    _, data = items.pop(0)
+    if not items:
+        _dialog_response_cache.pop(key, None)
+    logger.error("dialogs_wait using cached dialog_message for client_id=%s device_id=%s data=%s", key[0], key[1], data)
+    return data
+
 def should_store_current_node(has_children, end_status, uuid=None):
     return (has_children and not end_status) or (uuid and not end_status)
 
 
-async def dialogs_wait(hass, client_id, device_id, timeout=8):
-    future = hass.loop.create_future()
-    logger.error("dialogs_wait listener got event data: %s", future)
+def _normalize_dialog_id(value):
+    if value is None:
+        return ""
+    return str(value).strip()
 
+
+def _get_dialog_event_value(data, snake_key, camel_key):
+    return data.get(snake_key, data.get(camel_key))
+
+
+async def dialogs_wait(hass, client_id, device_id, timeout=8, on_listening=None):
+    expected_client_id = _normalize_dialog_id(client_id)
+    expected_device_id = _normalize_dialog_id(device_id)
+
+    cached_response = _pop_cached_dialog_message_response(expected_client_id, expected_device_id)
+    if cached_response is not None:
+        return cached_response
+
+    future = hass.loop.create_future()
+    logger.error(
+        "dialogs_wait created future: %s client_id=%s device_id=%s timeout=%s",
+        future,
+        expected_client_id,
+        expected_device_id,
+        timeout,
+    )
+    seen_events = 0
 
     @callback
     def listener(event):
-        data = event.data
+        nonlocal seen_events
+        seen_events += 1
+        data = event.data if isinstance(event.data, dict) else {}
+        event_client_id = _normalize_dialog_id(
+            _get_dialog_event_value(data, "client_id", "clientId")
+        )
+        event_device_id = _normalize_dialog_id(
+            _get_dialog_event_value(data, "device_id", "deviceId")
+        )
 
         logger.error("dialogs_wait listener got event data: %s", data)
 
-        if (
-            data.get("client_id") == client_id
-            and data.get("device_id") == device_id
-        ):
+        if event_client_id == expected_client_id and event_device_id == expected_device_id:
+            _pop_cached_dialog_message_response(expected_client_id, expected_device_id)
             if not future.done():
                 future.set_result(data)
+            return
+
+        logger.error(
+            "dialogs_wait listener ignored %s event for client_id=%s device_id=%s; expected client_id=%s device_id=%s",
+            EVENT_DIALOG_MESSAGE,
+            event_client_id,
+            event_device_id,
+            expected_client_id,
+            expected_device_id,
+        )
 
     unsub = hass.bus.async_listen(
         str(EVENT_DIALOG_MESSAGE),
         listener,
     )
+    logger.error(
+        "dialogs_wait listener registered for %s client_id=%s device_id=%s",
+        EVENT_DIALOG_MESSAGE,
+        expected_client_id,
+        expected_device_id,
+    )
 
     try:
+        cached_response = _pop_cached_dialog_message_response(expected_client_id, expected_device_id)
+        if cached_response is not None:
+            return cached_response
+
+        if on_listening is not None:
+            logger.error(
+                "dialogs_wait firing active command after listener registration for client_id=%s device_id=%s",
+                expected_client_id,
+                expected_device_id,
+            )
+            on_listening()
+
+        cached_response = _pop_cached_dialog_message_response(expected_client_id, expected_device_id)
+        if cached_response is not None:
+            return cached_response
+
         return await asyncio.wait_for(future, timeout)
     except asyncio.TimeoutError:
-        logger.error("dialogs_wait timed out")
+        if seen_events == 0:
+            logger.error(
+                "dialogs_wait timed out: listener did not receive any %s events for client_id=%s device_id=%s after %s seconds",
+                EVENT_DIALOG_MESSAGE,
+                expected_client_id,
+                expected_device_id,
+                timeout,
+            )
+        else:
+            logger.error(
+                "dialogs_wait timed out: listener received %s %s event(s), but none matched client_id=%s device_id=%s after %s seconds",
+                seen_events,
+                EVENT_DIALOG_MESSAGE,
+                expected_client_id,
+                expected_device_id,
+                timeout,
+            )
         return None
     finally:
         unsub()
 
+
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
-        store_command_data(hass, client_id, command_data)
         if hass is None:
             return None
-        return await dialogs_wait(hass, client_id, device_id)
+        return await dialogs_wait(
+            hass,
+            client_id,
+            device_id,
+            on_listening=lambda: store_command_data(hass, client_id, command_data),
+        )
     return None
 
 
