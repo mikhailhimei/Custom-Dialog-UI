@@ -119,8 +119,9 @@ def should_store_current_node(has_children, end_status, uuid=None):
 
 
 async def dialogs_wait(hass, client_id, device_id, timeout=8):
-    future = hass.loop.create_future()
-    logger.error("dialogs_wait listener got event data: %s", future)
+    loop = getattr(hass, "loop", None) or asyncio.get_running_loop()
+    future = loop.create_future()
+    logger.error("dialogs_wait created future: %s client_id=%s device_id=%s timeout=%s", future, client_id, device_id, timeout)
 
 
     @callback
