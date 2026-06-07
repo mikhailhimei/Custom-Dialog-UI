@@ -3,14 +3,14 @@ import json
 import re
 
 from homeassistant.core import callback
-from ..config import CURRENT_NODE_KEY, DIALOG_MESSAGE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
+from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
+from ...const import EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
 from ..handler.commands_mapper import generate_ai_response
 from ..utils.dialog_response import build_dialog_response
-from ..utils.redis_init import get_redis, get_redis_async
+from ..utils.redis_init import get_redis
 from ..utils.text_normalize import fix_text
 
 r = get_redis()
-r_as = get_redis_async()
 REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 VOICE_RESPONSE_TYPE_ALIASES = {
     "default": "default",
@@ -99,9 +99,17 @@ def build_command_data(
         "mainCommand": mainCommand
     }
 
-def store_command_data(client_id, command_data):
-    r.set(f'ACTIVE_COMMAND:{client_id}', json.dumps(command_data), ex=30)
-    r.publish(f'ACTIVE_COMMAND:{client_id}', json.dumps(command_data))
+def store_command_data(hass, client_id, command_data):
+    if hass is None:
+        return
+
+    hass.bus.async_fire(
+        EVENT_ACTIVE_COMMAND,
+        {
+            "client_id": client_id,
+            "command_data": command_data,
+        },
+    )
 
 
 def should_store_current_node(has_children, end_status, uuid=None):
@@ -123,7 +131,7 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
                 future.set_result(data)
 
     unsub = hass.bus.async_listen(
-        "dialog_message",
+        EVENT_DIALOG_MESSAGE,
         listener,
     )
 
@@ -136,7 +144,7 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
 
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
         if hass is None:
             return None
         return await dialogs_wait(hass, client_id, device_id)

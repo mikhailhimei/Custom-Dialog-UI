@@ -9,6 +9,8 @@ PANEL_MODULE_BASENAME = "dialog-custom-ui-panel.js"
 PANEL_MODULE_PATH = f"/dialog_custom_ui_static/{PANEL_MODULE_BASENAME}"
 UPDATE_INTERVAL_SECONDS = 1
 MAX_LOG_ENTRIES = 10
+EVENT_ACTIVE_COMMAND = "dialog_custom_ui_active_command"
+EVENT_DIALOG_MESSAGE = "dialog_message"
 
 DEFAULT_BASE_URL = "http://127.0.0.1:8000"
 DEFAULT_TIMEOUT = 10

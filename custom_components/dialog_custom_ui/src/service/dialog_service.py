@@ -259,13 +259,13 @@ def get_dialog_settings_list():
     return (settings_text.get("body") or {}).get("dialogSettings", [])
 
 
-def handle_stop_command(top_level_nodes, client_text, client_id, device_id):
+def handle_stop_command(hass, top_level_nodes, client_text, client_id, device_id):
     stop_node = next((node for node in top_level_nodes if node.get("actionType") == "stop"), None)
     if not stop_node or not any(command.lower() in client_text.lower() for command in stop_node.get("voiceCommands", [])):
         return None
 
     r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-    store_command_data(client_id, {"parent_type": "stop", "client_id": client_id, "device_id": device_id})
+    store_command_data(hass, client_id, {"parent_type": "stop", "client_id": client_id, "device_id": device_id})
     return build_text_response(get_voice_response(stop_node, "default", {"commands": client_text, "client_id": client_id}), True)
 
 def handle_new_session(top_level_nodes, client_new_dialog, client_text, client_id, device_id):
@@ -550,7 +550,7 @@ async def words_scripts(client_command, hass=None):
 
     dialog_settings = get_dialog_settings_list()
 
-    stop_response = handle_stop_command(top_level_nodes, client_text, client_id, device_id)
+    stop_response = handle_stop_command(hass, top_level_nodes, client_text, client_id, device_id)
     if stop_response:
         return stop_response
 

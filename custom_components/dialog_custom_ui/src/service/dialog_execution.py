@@ -257,7 +257,7 @@ async def execute_top_level_command(hass, node, client_id, device_id, client_tex
                 response_text = get_voice_response(node, 'miss', {"commands": client_text, "client_id": client_id})
                 end_status = True
     else:
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
 
         if has_children and not end_status and uuid:
             set_current_node_state(client_id, uuid, device_id, parent_type=node.get('actionType'))
@@ -313,7 +313,7 @@ async def execute_top_level_template(
                 end_status = False
                 set_current_node_state(client_id, node.get('uuid'), device_id, error_branch=True, parent_type=node.get('actionType'))
     else:
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
 
     return build_text_response(response_text, end_status, use_declension)
 
@@ -504,7 +504,7 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
                 response_text = get_voice_response(active_node, 'miss', {"commands": client_text, "client_id": client_id})
                 end_status = True
     else:
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
         r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
         if has_children and not end_status:
             set_current_node_state(client_id, uuid, device_id, parent_type=found.get('actionType'))

@@ -36,7 +36,7 @@ export const renderSettings = (ctx) => {
           <label>
             <span>Base URL</span>
             <input data-config-field="base_url" value="${escapeHtml(ctx._config.base_url)}" placeholder="http://127.0.0.1:8000" />
-            <small>Интеграция подключается к Redis и слушает SUBSCRIBE-канал ACTIVE_COMMAND:{clientId}.</small>
+            <small>Интеграция передаёт активные команды через внутреннюю шину событий Home Assistant.</small>
           </label>
           <label>
             <span>Client ID</span>
@@ -47,7 +47,7 @@ export const renderSettings = (ctx) => {
           <label>
             <span>Redis URL</span>
             <input data-config-field="redis_url" value="${escapeHtml(ctx._config.redis_url)}" placeholder="redis://127.0.0.1:6379/0" />
-            <small>Используется только в режиме Redis SUBSCRIBE.</small>
+            <small>Используется только для хранения таймеров и будильников.</small>
           </label>
           ${renderSecretField(ctx, 'redis_password', 'Redis password', ctx._config.redis_password, '••••••')}
           <label class="field-narrow">

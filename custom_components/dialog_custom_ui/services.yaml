@@ -1,6 +1,6 @@
 send_command:
   name: Send dialog command
-  description: Send a custom command payload. Publishes to Redis channel DIALOG_MESSAGE:{clientId}:{deviceId} with JSON payload {actionType, variables}.
+  description: Send a custom command payload through the Home Assistant event bus with payload {actionType, variables}.
   fields:
     clientId:
       name: Client ID
