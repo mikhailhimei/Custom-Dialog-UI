@@ -88,11 +88,11 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
             ATTR_VARIABLES: payload[ATTR_VARIABLES],
         },
     )
-    _append_log(
-        hass,
-        "request",
-        f"FIRE {EVENT_DIALOG_MESSAGE}:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}",
-    )
+    # _append_log(
+    #     hass,
+    #     "request",
+    #     f"FIRE {EVENT_DIALOG_MESSAGE}:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}",
+    # )
 
 
 def _parse_variables(value: Any) -> dict[str, Any]:

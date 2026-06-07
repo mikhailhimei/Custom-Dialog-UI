@@ -125,6 +125,8 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
 
     @callback
     def listener(event):
+        logger.error(event)
+
         data = event.data
 
         logger.error("dialogs_wait listener got event data: %s", data)
@@ -137,7 +139,7 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
                 future.set_result(data)
 
     unsub = hass.bus.async_listen(
-        str(EVENT_DIALOG_MESSAGE),
+        EVENT_DIALOG_MESSAGE,
         listener,
     )
 
