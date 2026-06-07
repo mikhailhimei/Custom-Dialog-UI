@@ -186,9 +186,8 @@ async def get_service_response(hass, answer_type, command_data, client_id, devic
         if hass is None:
             return None
 
-        wait_task = asyncio.create_task(dialogs_wait(hass, client_id, device_id))
-        await asyncio.sleep(0)
         store_command_data(hass, client_id, command_data)
+        wait_task = asyncio.create_task(dialogs_wait(hass, client_id, device_id))
         return await wait_task
     return None
 
