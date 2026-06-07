@@ -77,7 +77,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                         "version": "1.0",
                     }
             set_current_hass(self._hass)
-            data = await dialog_service.words_scripts(json, self._hass)
+            data = await dialog_service.words_scripts(json)
             _LOGGER.error(data)
             # async with aiohttp.ClientSession() as session:
                 # async with session.post(
