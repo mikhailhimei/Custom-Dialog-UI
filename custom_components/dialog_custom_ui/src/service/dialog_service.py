@@ -19,6 +19,7 @@ from ..service.dialog_matching import (
 from ..service.dialog_runtime import (
     build_text_response,
     build_command_data,
+    get_current_hass,
     get_voice_response,
     r,
     store_command_data,
@@ -537,6 +538,8 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
 
 
 async def words_scripts(client_command, hass=None):
+    hass = get_current_hass(hass)
+
     client_text = normalize_numbers(client_command['request']['command'].strip().lower())
     client_new_dialog = client_command['session']['new']
     client_id = client_command['session']['user']['user_id']

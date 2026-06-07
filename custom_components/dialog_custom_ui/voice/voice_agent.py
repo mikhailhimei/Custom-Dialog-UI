@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import uuid
 from typing import Any
 
@@ -10,14 +10,12 @@ from homeassistant.components.conversation import (
     ConversationResult,
     HomeAssistantError
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import intent
 
 from ..src.service import dialog_service
 
-from ..utils import (
-    _get_entry,
-    _get_options
-)
+from ..utils import _get_options
 
 from ..normalize import _normalize_value
 from ..const import (
@@ -35,10 +33,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
     def __init__(
         self,
-        hass,
+        entry: ConfigEntry,
         fallback_application_id: str,
     ) -> None:
-        self.hass = hass
+        self._entry = entry
         self._fallback_application_id = fallback_application_id
      
     @property
@@ -47,11 +45,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     
     async def async_process(self, user_input: ConversationInput) -> ConversationResult:
         session_id = user_input.conversation_id or str(uuid.uuid4())
-        entry = _get_entry(self.hass)
-        if entry is None:
+        if self._entry is None:
             raise HomeAssistantError("Dialog Custom UI integration entry not found")
 
-        options = _get_options(entry)
+        options = _get_options(self._entry)
         base_url = _normalize_value(options.get(CONF_BASE_URL))
         clinet_id = _normalize_value(options.get(CONF_CLIENT_ID))
         authorization_token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
@@ -75,7 +72,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                         },
                         "version": "1.0",
                     }
-            data = await dialog_service.words_scripts(json, hass=self.hass)
+            data = await dialog_service.words_scripts(json)
             _LOGGER.error(data)
             # async with aiohttp.ClientSession() as session:
                 # async with session.post(
