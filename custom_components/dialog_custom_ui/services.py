@@ -79,7 +79,6 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
         ATTR_VARIABLES: variables,
     }
 
-    LOGGER.error("services firing %s hass id=%s bus id=%s client_id=%s device_id=%s", EVENT_DIALOG_MESSAGE, id(hass), id(getattr(hass, 'bus', None)), payload[ATTR_CLIENT_ID], payload[ATTR_DEVICE_ID])
     hass.bus.async_fire(
         EVENT_DIALOG_MESSAGE,
         {
