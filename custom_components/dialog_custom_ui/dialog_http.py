@@ -156,20 +156,26 @@ def _build_words_scripts_payload(
 
 
 class DialogEventBroker:
-    """Fan out local active-command events to HTTP stream subscribers."""
+    """Fan out local active-command and dialog-message events to HTTP stream subscribers."""
 
     def __init__(self, hass: HomeAssistant) -> None:
         self.hass = hass
         self._queues: set[asyncio.Queue[dict[str, Any]]] = set()
-        self._unsub: Callable[[], None] | None = None
+        self._unsubs: list[Callable[[], None]] = []
 
     def async_start(self) -> None:
-        if self._unsub:
+        if self._unsubs:
             return
-        self._unsub = self.hass.bus.async_listen(
-            EVENT_ACTIVE_COMMAND,
-            self._handle_active_command,
-        )
+        self._unsubs = [
+            self.hass.bus.async_listen(
+                EVENT_ACTIVE_COMMAND,
+                self._handle_event,
+            ),
+            self.hass.bus.async_listen(
+                EVENT_DIALOG_MESSAGE,
+                self._handle_event,
+            ),
+        ]
 
     def async_add_queue(self) -> asyncio.Queue[dict[str, Any]]:
         queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=100)
@@ -180,8 +186,8 @@ class DialogEventBroker:
         self._queues.discard(queue)
 
     @callback
-    def _handle_active_command(self, event: Event) -> None:
-        payload = {"event": EVENT_ACTIVE_COMMAND, "data": event.data or {}}
+    def _handle_event(self, event: Event) -> None:
+        payload = {"event": event.event_type, "data": event.data or {}}
         stale_queues: list[asyncio.Queue[dict[str, Any]]] = []
         for queue in self._queues:
             try:

@@ -145,23 +145,38 @@ class ExternalEventBridge:
         self._unsubs: list[Any] = []
         self._stopping = False
 
-    async def async_start(self) -> None:
-        if self._listen_task:
+    async def async_start(
+        self,
+        *,
+        listen_external_active_commands: bool = True,
+        forward_dialog_messages: bool = True,
+    ) -> None:
+        if self._listen_task or self._unsubs:
             return
 
         options = _get_options(self.entry)
         base_url = _normalize_base_url(options.get(CONF_BASE_URL))
-        if not base_url:
-            self._append_log("error", "external bridge skipped: base_url is empty")
+        if listen_external_active_commands and not base_url:
+            self._append_log("error", "external bridge listen skipped: base_url is empty")
+            listen_external_active_commands = False
+
+        if not listen_external_active_commands and not forward_dialog_messages:
             return
 
         self._session = async_get_clientsession(self.hass)
         self._stopping = False
-        self._unsubs = [
-            self.hass.bus.async_listen(EVENT_DIALOG_MESSAGE, self._handle_outbound_event),
-        ]
-        self._listen_task = self.hass.async_create_task(self._listen_loop())
-        self._append_log("info", "external bridge started")
+        self._unsubs = []
+        if forward_dialog_messages:
+            self._unsubs.append(
+                self.hass.bus.async_listen(EVENT_DIALOG_MESSAGE, self._handle_outbound_event),
+            )
+        if listen_external_active_commands:
+            self._listen_task = self.hass.async_create_task(self._listen_loop())
+
+        if listen_external_active_commands:
+            self._append_log("info", "external bridge started")
+        elif forward_dialog_messages:
+            self._append_log("info", "dialog message forwarding started")
 
     async def async_stop(self) -> None:
         had_state = bool(self._listen_task or self._unsubs)
@@ -290,10 +305,12 @@ class ExternalEventBridge:
         if not base_url:
             return
 
+        event_data = _normalize_event_data(data)
+        event_data["origin"] = _ORIGIN_EXTERNAL_BRIDGE
         payload = {
             "event": event_type,
             "clientId": _normalize_value(options.get(CONF_CLIENT_ID)),
-            "data": _normalize_event_data(data),
+            "data": event_data,
         }
         headers = {"Content-Type": "application/json"}
         if token:
