@@ -1,4 +1,4 @@
-from db.mongo import get_collection
+from ..db.mongo import get_collection
 from bson import ObjectId
 from fastapi.encoders import jsonable_encoder
 

@@ -161,10 +161,11 @@ def _client_text_has_digits(client_text):
 
 
 def _build_missing_number_response(node, dialog_settings):
+    default_main_response = build_dialog_response(dialog_settings, "default_main")
     response_text = (
         get_voice_response(node, "error")
         or get_voice_response(node, "miss")
-        or build_dialog_response(dialog_settings, "default_main")["message"]
+        or default_main_response.get("message", "Не хватает данных для выполнения команды.")
     )
     return build_text_response(response_text, False)
 

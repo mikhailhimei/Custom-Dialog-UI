@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "vite --config frontend2.0/vite.config.mjs",
-    "dev:ha": "node frontend2.0/scripts/build.mjs --watch --mode=development",
-    "build": "node frontend2.0/scripts/build.mjs --mode=production"
+    "dev:ha": "node frontend/scripts/build.mjs --watch --mode=development",
+    "build": "node frontend/scripts/build.mjs --mode=production"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -1,8 +1,8 @@
-﻿import calendar
+import calendar
 import re
 from datetime import date, datetime, timedelta
-from utils.reverse_map import get_section, get_subsection
-from utils.text_normalize import sanitize_location_text
+from .reverse_map import get_section, get_subsection
+from .text_normalize import sanitize_location_text
 
 
 _MONTH_DATA = get_section("months")
