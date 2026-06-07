@@ -11,9 +11,11 @@ from homeassistant.components.conversation import (
     HomeAssistantError
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
 
 from ..src.service import dialog_service
+from ..src.service.dialog_runtime import set_current_hass
 
 from ..utils import _get_options
 
@@ -33,9 +35,11 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
     def __init__(
         self,
+        hass: HomeAssistant,
         entry: ConfigEntry,
         fallback_application_id: str,
     ) -> None:
+        self._hass = hass
         self._entry = entry
         self._fallback_application_id = fallback_application_id
      
@@ -50,7 +54,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
         options = _get_options(self._entry)
         base_url = _normalize_value(options.get(CONF_BASE_URL))
-        clinet_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        client_id = _normalize_value(options.get(CONF_CLIENT_ID))
         authorization_token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
 
         
@@ -65,14 +69,15 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             json={
                         "request": {"command": user_input.text},
                         "session": {
-                            "user": {"user_id": clinet_id},
+                            "user": {"user_id": client_id},
                             "application": {"application_id": application_id},
                             "session_id": session_id,
                             "new": user_input.conversation_id is None,
                         },
                         "version": "1.0",
                     }
-            data = await dialog_service.words_scripts(json)
+            set_current_hass(self._hass)
+            data = await dialog_service.words_scripts(json, self._hass)
             _LOGGER.error(data)
             # async with aiohttp.ClientSession() as session:
                 # async with session.post(

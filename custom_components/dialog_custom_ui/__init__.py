@@ -58,6 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass,
             entry,
             DialogCustomUiVoiceAgent(
+                hass,
                 entry,
                 entry.entry_id,
             ),
