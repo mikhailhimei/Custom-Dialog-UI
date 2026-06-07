@@ -1,10 +1,9 @@
-
 import re
 import pymorphy3
 from words2numsrus import NumberExtractor
 from datetime import datetime
 from num2words import num2words
-from utils.reverse_map import get_section, get_subsection
+from .reverse_map import get_section, get_subsection
 
 morph = pymorphy3.MorphAnalyzer()
 extractor = NumberExtractor()

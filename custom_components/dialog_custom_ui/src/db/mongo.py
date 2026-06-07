@@ -1,4 +1,4 @@
-from db.init import get_db
+from .init import get_db
 
 
 def get_collection(name: str):
