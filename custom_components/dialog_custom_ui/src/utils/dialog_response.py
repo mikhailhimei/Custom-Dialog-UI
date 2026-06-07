@@ -1,4 +1,4 @@
-from utils.message_mapper import map_message_template
+from .message_mapper import map_message_template
 
 
 def find_dialog_setting(settings, setting_type):

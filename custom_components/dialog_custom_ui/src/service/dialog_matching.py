@@ -1,9 +1,9 @@
 import re
 import copy
 
-from utils.text_normalize import sanitize_location_text
-from utils.type_data_parser import sanitize_by_type_data
-from utils.reverse_map import get_section
+from ..utils.text_normalize import sanitize_location_text
+from ..utils.type_data_parser import sanitize_by_type_data
+from ..utils.reverse_map import get_section
 
 _NUMBER_TOKEN_WORDS = set()
 
