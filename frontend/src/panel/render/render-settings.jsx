@@ -55,7 +55,7 @@ export const renderSettings = (ctx) => {
               <span class="switch-slider" aria-hidden="true"></span>
               <span class="switch-label">${ctx._config.external_event_bridge_enabled ? 'Включено' : 'Выключено'}</span>
             </div>
-            <small>Когда включено, HA подписывается на события от Base URL и отправляет туда активные команды/ответы диалога.</small>
+            <small>Когда включено, HA использует Base URL для внешних active command/dialog message. Когда выключено, команды обрабатываются внутри интеграции без обращения к Base URL.</small>
           </label>
           ${renderSecretField(ctx, 'timer_alarm_token', 'Authorization token', ctx._config.timer_alarm_token, 'Bearer xxx')}
           <label>
