@@ -12,6 +12,8 @@ from homeassistant.components.conversation import (
 )
 from homeassistant.helpers import intent
 
+from ..src.service import dialog_service
+
 from ..utils import (
     _get_entry,
     _get_options
@@ -25,6 +27,7 @@ from ..const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
 
 
 class DialogCustomUiVoiceAgent(AbstractConversationAgent):
@@ -62,10 +65,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
         data: dict[str, Any] = {}
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url,
-                    json={
+            json={
                         "request": {"command": user_input.text},
                         "session": {
                             "user": {"user_id": clinet_id},
@@ -74,11 +74,25 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                             "new": user_input.conversation_id is None,
                         },
                         "version": "1.0",
-                    },
-                    headers=headers,
-                    timeout=60,
-                ) as resp:
-                    data = await resp.json(content_type=None)
+                    }
+            data = await dialog_service.words_scripts(json)
+            # async with aiohttp.ClientSession() as session:
+                # async with session.post(
+                #     url,
+                #     json={
+                #         "request": {"command": user_input.text},
+                #         "session": {
+                #             "user": {"user_id": clinet_id},
+                #             "application": {"application_id": application_id},
+                #             "session_id": session_id,
+                #             "new": user_input.conversation_id is None,
+                #         },
+                #         "version": "1.0",
+                #     },
+                #     headers=headers,
+                #     timeout=60,
+                # ) as resp:
+                #     data = await resp.json(content_type=None)
         except (aiohttp.ClientError, TimeoutError, ValueError) as err:
             _LOGGER.error("Voice agent request failed: %s", err)
 

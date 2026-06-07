@@ -10,7 +10,24 @@
   "integration_type": "service",
   "iot_class": "local_polling",
   "requirements": [
-    "redis==5.0.8"
+    "redis==5.0.8",
+    "beautifulsoup4",
+    "deep-translator",
+    "dateparser",
+    "fastapi",
+    "pydantic",
+    "requests",
+    "redis",
+    "uvicorn",
+    "astral",
+    "pytz",
+    "timezonefinder",
+    "httpx",
+    "pymongo",
+    "num2words",
+    "pymorphy3",
+    "python-dotenv",
+    "words2numsrus"
   ],
   "version": "0.3.3"
 }

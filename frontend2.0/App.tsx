@@ -1,5 +1,5 @@
 import React from "react";
-import ScenarioPage from "./src/page/ScenarioPage";
+import ScenarioPage from "./page/ScenarioPage";
 
 function App() {
   return <ScenarioPage />;

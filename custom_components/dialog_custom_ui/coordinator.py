@@ -163,6 +163,15 @@ class DialogCommandCoordinator:
             password=redis_password or None,
         )
         try:
+            self.hass.bus.async_fire(
+                "dialog_message",
+                {
+                    "client_id": client_id,
+                    "device_id": payload.get("deviceId"),
+                    **message,
+                },
+            )
+            return
             await client.publish(channel, json.dumps(message, ensure_ascii=False))
             self._append_log("request", f"PUBLISH {channel}")
         finally:
