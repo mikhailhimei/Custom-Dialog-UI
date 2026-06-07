@@ -147,11 +147,24 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
     )
 
     try:
-        return await asyncio.wait_for(future, timeout)
-    except asyncio.TimeoutError:
+        elapsed = 0
+        interval = 1
+        while elapsed < timeout:
+            try:
+                result = await asyncio.wait_for(future, timeout=interval)
+                return result
+            except asyncio.TimeoutError:
+                elapsed += interval
+                continue
+
+        if future.done():
+            return future.result()
         return None
     finally:
-        unsub()
+        try:
+            unsub()
+        except Exception:
+            pass
 
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
