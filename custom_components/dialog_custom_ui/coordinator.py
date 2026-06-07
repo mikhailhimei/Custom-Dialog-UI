@@ -148,7 +148,7 @@ class DialogCommandCoordinator:
 
     @callback
     def _handle_active_command_event(self, event: Event) -> None:
-        data = _normalize_active_command_event_data(event.data or {})
+        data = event.data or {}
         options = _get_options(self.entry)
         event_client_id = _normalize_value(data.get("client_id"))
         configured_client_id = _normalize_value(options.get("client_id"))
@@ -158,21 +158,7 @@ class DialogCommandCoordinator:
             return
 
         command_data = data.get("command_data")
-        if command_data in (None, ""):
-            self._append_log("error", "active command skipped: command_data missing")
-            return
-
-        configured_device_ids = {
-            _normalize_value(device_id)
-            for device_id in options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
-            if _normalize_value(device_id)
-        }
-        event_device_ids = _extract_payload_device_ids(data)
-        if configured_device_ids and event_device_ids and configured_device_ids.isdisjoint(event_device_ids):
-            self._append_log("idle", "active command skipped: device_id mismatch")
-            return
-
-        self._append_log("request", f"RECV {EVENT_ACTIVE_COMMAND}:{event_client_id or '<empty>'}")
+        
         self.hass.async_create_task(
             self._handle_payload(command_data),
         )
