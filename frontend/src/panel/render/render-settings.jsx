@@ -36,12 +36,40 @@ export const renderSettings = (ctx) => {
           <label>
             <span>Base URL</span>
             <input data-config-field="base_url" value="${escapeHtml(ctx._config.base_url)}" placeholder="http://127.0.0.1:8000" />
-            <small>Интеграция передаёт активные команды через внутреннюю шину событий Home Assistant.</small>
+            <small>По умолчанию команды идут через внутреннюю шину HA; при включенном внешнем мосте этот URL используется для подписки и отправки событий.</small>
           </label>
           <label>
             <span>Client ID</span>
             <input data-config-field="client_id" value="${escapeHtml(ctx._config.client_id)}" placeholder="user-123" />
             <small>Поле уходит в тело запроса как <code>{"clientId":"..."}</code>.</small>
+          </label>
+          <label class="field-narrow">
+            <span>Внешние active commands</span>
+            <div class="switch-control">
+              <input
+                type="checkbox"
+                data-config-field="external_event_bridge_enabled"
+                data-config-bool="true"
+                ${ctx._config.external_event_bridge_enabled ? 'checked' : ''}
+              />
+              <span class="switch-slider" aria-hidden="true"></span>
+              <span class="switch-label">${ctx._config.external_event_bridge_enabled ? 'Включено' : 'Выключено'}</span>
+            </div>
+            <small>Старый переключатель сохранён для совместимости с существующими настройками.</small>
+          </label>
+          <label class="field-narrow">
+            <span>Удалённый активный поиск</span>
+            <div class="switch-control">
+              <input
+                type="checkbox"
+                data-config-field="remote_active_search_enabled"
+                data-config-bool="true"
+                ${ctx._config.remote_active_search_enabled ? 'checked' : ''}
+              />
+              <span class="switch-slider" aria-hidden="true"></span>
+              <span class="switch-label">${ctx._config.remote_active_search_enabled ? 'Включено' : 'Выключено'}</span>
+            </div>
+            <small>Когда включено, HA берёт Base URL, подписывается на другой HA для active command и отправляет dialog message для финального ответа. Когда выключено, команды обрабатываются внутри интеграции.</small>
           </label>
           ${renderSecretField(ctx, 'timer_alarm_token', 'Authorization token', ctx._config.timer_alarm_token, 'Bearer xxx')}
           <label>

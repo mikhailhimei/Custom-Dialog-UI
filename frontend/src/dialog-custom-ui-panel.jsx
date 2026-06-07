@@ -841,6 +841,8 @@ class DialogCustomUiPanel extends HTMLElement {
     return {
       base_url: this._config.base_url,
       client_id: this._config.client_id,
+      external_event_bridge_enabled: Boolean(this._config.external_event_bridge_enabled),
+      remote_active_search_enabled: Boolean(this._config.remote_active_search_enabled),
       redis_url: this._config.redis_url,
       redis_password: this._config.redis_password,
       allow_non_admin_panel: Boolean(this._config.allow_non_admin_panel),
