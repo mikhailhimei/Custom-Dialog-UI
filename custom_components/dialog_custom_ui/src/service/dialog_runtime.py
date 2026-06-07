@@ -393,7 +393,12 @@ def miss_commands(client_id, device_id, response_text, dialog_settings):
         r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
         r.delete(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}')
         dialog_cms_response = build_dialog_response(dialog_settings, "finish_miss")
-        return build_text_response(dialog_cms_response["message"], dialog_cms_response["endStatus"])
+        return build_text_response(
+            dialog_cms_response.get("message", "Диалог завершен."),
+            dialog_cms_response.get("endStatus", True),
+        )
 
-    response_text = response_text if response_text else build_dialog_response(dialog_settings, "not_understand")["message"]
+    if not response_text:
+        not_understand_response = build_dialog_response(dialog_settings, "not_understand")
+        response_text = not_understand_response.get("message", "Не удалось распознать команду.")
     return build_text_response(response_text, False)

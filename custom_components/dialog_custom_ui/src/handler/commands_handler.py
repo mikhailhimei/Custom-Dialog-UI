@@ -1,4 +1,6 @@
+import copy
 import json
+import logging
 import requests
 from ..service.dialog_matching import attach_direct_controls
 from ..utils.redis_init import get_redis
@@ -6,6 +8,17 @@ from ..service.cms_service import *
 from ..config import COMMANDS_KEY
 
 r = get_redis()
+_LOGGER = logging.getLogger(__name__)
+
+EMPTY_COMMANDS_BODY = {
+    "componentDialog": [],
+    "subComponentDialog": [],
+    "subDirectControl": [],
+}
+
+
+def _empty_commands_body():
+    return copy.deepcopy(EMPTY_COMMANDS_BODY)
 
 # ---------------------------
 # Собрать все страницы
@@ -115,18 +128,18 @@ def get_commands():
     cached_sub_component = r.get(f'{COMMANDS_KEY}:sc')
     cached_sub_direct_control = r.get(f'{COMMANDS_KEY}:sdc')
 
-    if cached_component:
+    if cached_component and cached_sub_component and cached_sub_direct_control:
         try:
             return {
                 "source": "redis",
                 "body": {
                     "componentDialog": json.loads(cached_component),
                     "subComponentDialog": json.loads(cached_sub_component),
-                    "subDirectControl":json.loads(cached_sub_direct_control)
+                    "subDirectControl": json.loads(cached_sub_direct_control),
                 }
             }
-        except json.JSONDecodeError:
-            pass  # corrupted cache → ignore and rebuild
+        except (TypeError, json.JSONDecodeError):
+            _LOGGER.warning("Ignoring invalid dialog commands cache", exc_info=True)
 
     def fetch_and_normalize(collection, schema_name):
         raw = fetch_all(collection)
@@ -167,8 +180,8 @@ def get_commands():
         return {"source": "cms", "body": data}
 
     except Exception as e:
-        # optional fallback: return empty structure instead of crashing
-        return {"source": "error", "body": None, "detail": str(e)}
+        _LOGGER.exception("Failed to load dialog commands")
+        return {"source": "error", "body": _empty_commands_body(), "detail": str(e)}
 
 def get_dialog_settings():
     cached_settings = r.get(f'{COMMANDS_KEY}:settings')
@@ -181,8 +194,8 @@ def get_dialog_settings():
                     "dialogSettings": json.loads(cached_settings),
                 }
             }
-        except json.JSONDecodeError:
-            pass  # corrupted cache → ignore and rebuild
+        except (TypeError, json.JSONDecodeError):
+            _LOGGER.warning("Ignoring invalid dialog settings cache", exc_info=True)
 
     allowed_keys = {"actionType", "title", "message", "endStatus", "system", "LLM"}
 
@@ -232,4 +245,5 @@ def get_dialog_settings():
             }
         }
     except Exception as e:
-        return {"source": "error", "body": None, "detail": str(e)}
+        _LOGGER.exception("Failed to load dialog settings")
+        return {"source": "error", "body": {"dialogSettings": []}, "detail": str(e)}

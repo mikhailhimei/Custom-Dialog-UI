@@ -1,7 +1,7 @@
 import requests
 import time
 import base64
-from ..config import YANDEX_API_KEY, FOLDER_ID, LLM_HOST, LLM_PORT
+from ..config import YANDEX_API_KEY, FOLDER_ID, LLM_BASE_URL
 import xml.etree.ElementTree as ET
 import html
 import re
@@ -88,7 +88,7 @@ def generate_ai_response(prompt, system, model="llama3"):
     }
     
     response = requests.post(
-        f"http://{LLM_HOST}:{LLM_PORT}/api/generate",
+        f"{LLM_BASE_URL}/api/generate",
         json=json
     )
 

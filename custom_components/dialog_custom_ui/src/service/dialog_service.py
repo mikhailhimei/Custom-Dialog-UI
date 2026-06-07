@@ -237,15 +237,20 @@ async def _get_search_llm_response(client_text, dialog_settings):
     return build_text_response(raw_response, end_status)
 
 
+def _ensure_list(value):
+    return value if isinstance(value, list) else []
+
+
 def prepare_dialog_nodes():
-    level_nodes = commands_handler.get_commands().get('body')
-    top_level_nodes = level_nodes.get("componentDialog", [])
-    sub_level_nodes = (
-        level_nodes.get("subComponentDialog", [])
-        + top_level_nodes
-    )
-    sub_direct_control = level_nodes.get('subDirectControl', [])
-    
+    commands_result = commands_handler.get_commands() or {}
+    level_nodes = commands_result.get("body") if isinstance(commands_result, dict) else {}
+    if not isinstance(level_nodes, dict):
+        level_nodes = {}
+
+    top_level_nodes = _ensure_list(level_nodes.get("componentDialog"))
+    sub_level_nodes = _ensure_list(level_nodes.get("subComponentDialog")) + top_level_nodes
+    sub_direct_control = _ensure_list(level_nodes.get("subDirectControl"))
+
     return top_level_nodes, sub_level_nodes, sub_direct_control
 
 
@@ -476,8 +481,11 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
             search_result = await _get_search_llm_response(client_text, dialog_settings)
             if search_result:
                 return search_result
-            
-        return build_text_response(dialog_cms_response["message"], dialog_cms_response["endStatus"])
+
+        return build_text_response(
+            dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
+            dialog_cms_response.get("endStatus", True),
+        )
 
     if default_search_exists and not default_main_end_status:
         command_task = _resolve_llm_top_level_node(client_text, top_level_nodes, dialog_settings)
@@ -500,7 +508,10 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
 
         r.set(f'MISS_COMMAND:{client_id}', str({"parent_type": "miss", "client_text": client_text}), ex=120)
 
-        return build_text_response(dialog_cms_response["message"], dialog_cms_response["endStatus"])
+        return build_text_response(
+            dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
+            dialog_cms_response.get("endStatus", True),
+        )
 
     selected_node = await _resolve_llm_top_level_node(client_text, top_level_nodes, dialog_settings)
     
@@ -518,7 +529,10 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
 
     r.set(f'MISS_COMMAND:{client_id}', str({"parent_type": "miss", "client_text": client_text}), ex=120)
 
-    return build_text_response(dialog_cms_response["message"], dialog_cms_response["endStatus"])
+    return build_text_response(
+        dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
+        dialog_cms_response.get("endStatus", True),
+    )
 
 
 async def words_scripts(client_command):
