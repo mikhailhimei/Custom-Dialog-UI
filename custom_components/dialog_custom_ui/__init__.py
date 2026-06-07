@@ -17,6 +17,7 @@ from .const import (
     MAX_LOG_ENTRIES,
 )
 from .coordinator import DialogCommandCoordinator
+from .dialog_http import async_register_dialog_http
 from .src.api.scenarios_script_api import async_register_scenarios_websockets
 from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
@@ -34,6 +35,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async_register_websockets(hass)
     async_register_scenarios_websockets(hass)
     async_register_timer_alarm_websockets(hass)
+    async_register_dialog_http(hass)
     async_register_services(hass)
     await async_register_tts_service(hass)
     return True
@@ -44,6 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     set_current_hass(hass)
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
+    async_register_dialog_http(hass)
     async_register_services(hass)
     await async_register_tts_service(hass)
     await _async_migrate_legacy_voice_agent_options(hass, entry)

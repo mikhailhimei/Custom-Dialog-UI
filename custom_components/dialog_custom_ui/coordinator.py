@@ -9,9 +9,12 @@ from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
+from .external_event_bridge import ExternalEventBridge
 from .const import (
+    CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
+    CONF_TIMER_ALARM_DEVICE_IDS,
     DEFAULT_REDIS_URL,
     DOMAIN,
     EVENT_ACTIVE_COMMAND,
@@ -21,11 +24,34 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _extract_payload_device_ids(value) -> set[str]:
+    if isinstance(value, dict):
+        result = set()
+        for key in ("device_id", "deviceId", "application_id", "applicationId"):
+            device_id = _normalize_value(value.get(key))
+            if device_id:
+                result.add(device_id)
+        for nested_key in ("command_data", "commandData", "data"):
+            result.update(_extract_payload_device_ids(value.get(nested_key)))
+        return result
+    if isinstance(value, list):
+        result = set()
+        for item in value:
+            result.update(_extract_payload_device_ids(item))
+        return result
+    return set()
+
+
 class DialogCommandCoordinator:
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         self.hass = hass
         self.entry = entry
         self._unsub_active_command = None
+        self.external_event_bridge = ExternalEventBridge(
+            hass,
+            entry,
+            self._append_log,
+        )
         
         # Get Redis configuration for alarm persistence
         options = _get_options(entry)
@@ -66,6 +92,8 @@ class DialogCommandCoordinator:
             EVENT_ACTIVE_COMMAND,
             self._handle_active_command_event,
         )
+        if options.get(CONF_EXTERNAL_EVENT_BRIDGE_ENABLED):
+            await self.external_event_bridge.async_start()
 
     async def async_stop(self):
         if self._unsub_active_command:
@@ -73,6 +101,7 @@ class DialogCommandCoordinator:
             self._append_log("info", "coordinator stopping")
             self._unsub_active_command()
             self._unsub_active_command = None
+        await self.external_event_bridge.async_stop()
         await self.timer_alarm_manager.async_stop()
 
     @callback
@@ -83,6 +112,15 @@ class DialogCommandCoordinator:
         configured_client_id = _normalize_value(options.get("client_id"))
 
         if configured_client_id and event_client_id != configured_client_id:
+            return
+
+        configured_device_ids = {
+            _normalize_value(device_id)
+            for device_id in options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])
+            if _normalize_value(device_id)
+        }
+        event_device_ids = _extract_payload_device_ids(data)
+        if configured_device_ids and event_device_ids and configured_device_ids.isdisjoint(event_device_ids):
             return
 
         self.hass.async_create_task(
