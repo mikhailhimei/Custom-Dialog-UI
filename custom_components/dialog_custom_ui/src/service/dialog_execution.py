@@ -204,7 +204,7 @@ def resolve_next_active_direct_types(direct_items, client_text, template_vars=No
 
     return aggregated_entries
 
-async def execute_top_level_command(node, client_id, device_id, client_text, command_data):
+async def execute_top_level_command(hass, node, client_id, device_id, client_text, command_data):
     clear_dialog_state(client_id, device_id)
 
     next_action = node.get("nextAction", [])
@@ -218,7 +218,7 @@ async def execute_top_level_command(node, client_id, device_id, client_text, com
     use_declension = True
 
     if answer_type != 'default':
-        service = await get_service_response(answer_type, command_data, client_id, device_id)
+        service = await get_service_response(hass, answer_type, command_data, client_id, device_id)
 
         if service is not None:
             response_text, end_status, response_type, use_declension = apply_service_payload(
@@ -257,7 +257,7 @@ async def execute_top_level_command(node, client_id, device_id, client_text, com
                 response_text = get_voice_response(node, 'miss', {"commands": client_text, "client_id": client_id})
                 end_status = True
     else:
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
 
         if has_children and not end_status and uuid:
             set_current_node_state(client_id, uuid, device_id, parent_type=node.get('actionType'))
@@ -266,6 +266,7 @@ async def execute_top_level_command(node, client_id, device_id, client_text, com
 
 
 async def execute_top_level_template(
+    hass,
     node,
     client_id,
     device_id,
@@ -285,7 +286,7 @@ async def execute_top_level_template(
     use_declension = True
 
     if answer_type != 'default':
-        service = await get_service_response(answer_type, command_data, client_id, device_id)
+        service = await get_service_response(hass, answer_type, command_data, client_id, device_id)
         if service:
             response_text, end_status, response_type, use_declension = apply_service_payload(
                 service,
@@ -312,12 +313,12 @@ async def execute_top_level_template(
                 end_status = False
                 set_current_node_state(client_id, node.get('uuid'), device_id, error_branch=True, parent_type=node.get('actionType'))
     else:
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
 
     return build_text_response(response_text, end_status, use_declension)
 
 
-async def execute_active_node(sub_level_nodes, client_new_dialog, client_text, client_id, device_id, dialog_settings):
+async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_text, client_id, device_id, dialog_settings):
     current_node_state = r.get(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
     error_branch = r.get(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
 
@@ -437,7 +438,7 @@ async def execute_active_node(sub_level_nodes, client_new_dialog, client_text, c
     answer_type = found.get("answerType", 'default')
     use_declension = True
     if answer_type != 'default':
-        service = await get_service_response(answer_type, command_data, client_id, device_id)
+        service = await get_service_response(hass, answer_type, command_data, client_id, device_id)
         if service is not None:
             response_text, end_status, response_type, use_declension = apply_service_payload(
                 service,
@@ -503,7 +504,7 @@ async def execute_active_node(sub_level_nodes, client_new_dialog, client_text, c
                 response_text = get_voice_response(active_node, 'miss', {"commands": client_text, "client_id": client_id})
                 end_status = True
     else:
-        store_command_data(client_id, command_data)
+        store_command_data(hass, client_id, command_data)
         r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
         if has_children and not end_status:
             set_current_node_state(client_id, uuid, device_id, parent_type=found.get('actionType'))

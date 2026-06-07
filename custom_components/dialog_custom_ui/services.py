@@ -3,20 +3,13 @@
 from __future__ import annotations
 
 import json
-import logging
 from datetime import datetime
 from typing import Any
 
-import aiohttp
-import async_timeout
 import voluptuous as vol
-import redis.asyncio as redis
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import aiohttp_client
-
 from .utils import (
     _get_entry,
     _get_options
@@ -27,13 +20,9 @@ from .normalize import (
 )
 
 from .const import (
-    CONF_BASE_URL,
     CONF_CLIENT_ID,
-    CONF_REDIS_PASSWORD,
-    CONF_REDIS_URL,
-    CONF_TIMEOUT,
-    DEFAULT_TIMEOUT,
     DOMAIN,
+    EVENT_DIALOG_MESSAGE,
 )
 
 SERVICE_SEND_COMMAND = "send_command"
@@ -76,16 +65,12 @@ def async_unregister_services(hass: HomeAssistant) -> None:
 
 
 async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> None:
-    """Publish a command payload to Redis channel."""
+    """Send a command payload through the Home Assistant event bus."""
     entry = _get_entry(hass)
     if entry is None:
         raise HomeAssistantError("Dialog Custom UI integration entry not found")
 
     options = _get_options(entry)
-    base_url = _normalize_value(options.get(CONF_BASE_URL)).rstrip("/")
-    if not base_url:
-        raise HomeAssistantError("Dialog Custom UI Base URL is empty")
-
     variables = _parse_variables(call.data.get(ATTR_VARIABLES))
     payload = {
         ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get(CONF_CLIENT_ID)),
@@ -94,34 +79,20 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
         ATTR_VARIABLES: variables,
     }
 
-
-    channel = f"DIALOG_MESSAGE:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}"
-    redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or "redis://127.0.0.1:6379/0"
-    redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
-    redis_payload = {
-        ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
-        ATTR_VARIABLES: payload[ATTR_VARIABLES],
-    }
-    client = redis.Redis.from_url(
-        redis_url,
-        decode_responses=True,
-        password=redis_password or None,
+    hass.bus.async_fire(
+        EVENT_DIALOG_MESSAGE,
+        {
+            "client_id": payload[ATTR_CLIENT_ID],
+            "device_id": payload[ATTR_DEVICE_ID],
+            ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
+            ATTR_VARIABLES: payload[ATTR_VARIABLES],
+        },
     )
-    timeout = max(1, int(options.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)))
-    try:
-        async with async_timeout.timeout(timeout):
-            await client.publish(channel, json.dumps(redis_payload, ensure_ascii=False))
-        _append_log(hass, "request", f"PUBLISH {channel}")
-        return
-    except (redis.RedisError, TimeoutError) as err:
-        _append_log(hass, "error", f"send_command redis publish failed: {err}")
-        raise HomeAssistantError(f"Failed to publish dialog command to Redis: {err}") from err
-    finally:
-        close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
-        if close_client:
-            result = close_client()
-            if hasattr(result, "__await__"):
-                await result
+    _append_log(
+        hass,
+        "request",
+        f"FIRE {EVENT_DIALOG_MESSAGE}:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}",
+    )
 
 
 def _parse_variables(value: Any) -> dict[str, Any]:

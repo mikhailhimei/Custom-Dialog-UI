@@ -259,13 +259,13 @@ def get_dialog_settings_list():
     return (settings_text.get("body") or {}).get("dialogSettings", [])
 
 
-def handle_stop_command(top_level_nodes, client_text, client_id, device_id):
+def handle_stop_command(hass, top_level_nodes, client_text, client_id, device_id):
     stop_node = next((node for node in top_level_nodes if node.get("actionType") == "stop"), None)
     if not stop_node or not any(command.lower() in client_text.lower() for command in stop_node.get("voiceCommands", [])):
         return None
 
     r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-    store_command_data(client_id, {"parent_type": "stop", "client_id": client_id, "device_id": device_id})
+    store_command_data(hass, client_id, {"parent_type": "stop", "client_id": client_id, "device_id": device_id})
     return build_text_response(get_voice_response(stop_node, "default", {"commands": client_text, "client_id": client_id}), True)
 
 def handle_new_session(top_level_nodes, client_new_dialog, client_text, client_id, device_id):
@@ -411,7 +411,7 @@ def resolve_sub_direct(outlier_words, direct_blocks):
 
     return results
 
-async def handle_top_level_command(top_level_nodes, client_text, client_id, device_id, dialog_settings, sub_direct_control, llm, llm_search):
+async def handle_top_level_command(hass, top_level_nodes, client_text, client_id, device_id, dialog_settings, sub_direct_control, llm, llm_search):
     exact_candidates = find_top_level_candidates(
         top_level_nodes,
         client_text,
@@ -448,6 +448,7 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
 
     if main_node and main_node.get('template_var'):    
         return await execute_top_level_template(
+                        hass,
                         main_node,
                         client_id,
                         device_id,
@@ -456,7 +457,7 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
                     )
 
     if main_node:
-        return await execute_top_level_command(main_node, client_id, device_id, client_text, command_data)
+        return await execute_top_level_command(hass, main_node, client_id, device_id, client_text, command_data)
 
     dialog_cms_response = build_dialog_response(dialog_settings, "default_main")
     if llm is None:
@@ -501,7 +502,7 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
                 [],
                 True,
             )]
-            return await execute_top_level_command(selected_node, client_id, device_id, client_text, command_data) 
+            return await execute_top_level_command(hass, selected_node, client_id, device_id, client_text, command_data) 
 
         if search_result:
             return search_result
@@ -525,7 +526,7 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
                 [],
                 True,
             )]
-        return await execute_top_level_command(selected_node, client_id, device_id, client_text, command_data)
+        return await execute_top_level_command(hass, selected_node, client_id, device_id, client_text, command_data)
 
     r.set(f'MISS_COMMAND:{client_id}', str({"parent_type": "miss", "client_text": client_text}), ex=120)
 
@@ -535,7 +536,7 @@ async def handle_top_level_command(top_level_nodes, client_text, client_id, devi
     )
 
 
-async def words_scripts(client_command):
+async def words_scripts(client_command, hass=None):
     client_text = normalize_numbers(client_command['request']['command'].strip().lower())
     client_new_dialog = client_command['session']['new']
     client_id = client_command['session']['user']['user_id']
@@ -549,7 +550,7 @@ async def words_scripts(client_command):
 
     dialog_settings = get_dialog_settings_list()
 
-    stop_response = handle_stop_command(top_level_nodes, client_text, client_id, device_id)
+    stop_response = handle_stop_command(hass, top_level_nodes, client_text, client_id, device_id)
     if stop_response:
         return stop_response
 
@@ -558,6 +559,7 @@ async def words_scripts(client_command):
         return new_session_response
 
     active_node_response = await execute_active_node(
+        hass,
         sub_level_nodes,
         client_new_dialog,
         client_text,
@@ -569,6 +571,7 @@ async def words_scripts(client_command):
         return active_node_response
 
     return await handle_top_level_command(
+        hass,
         top_level_nodes,
         client_text,
         client_id,

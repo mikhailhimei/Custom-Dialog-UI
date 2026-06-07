@@ -1,19 +1,22 @@
-import asyncio
-import json
 import logging
 from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, HomeAssistant, callback
 
 from .utils import _get_options, _normalize_value
 from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
-from .redis_transport import RedisTransport
 from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
-from .const import CONF_REDIS_PASSWORD, CONF_REDIS_URL, DEFAULT_REDIS_URL, DOMAIN
-import redis.asyncio as redis
+from .const import (
+    CONF_REDIS_PASSWORD,
+    CONF_REDIS_URL,
+    DEFAULT_REDIS_URL,
+    DOMAIN,
+    EVENT_ACTIVE_COMMAND,
+    EVENT_DIALOG_MESSAGE,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,8 +25,7 @@ class DialogCommandCoordinator:
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
         self.hass = hass
         self.entry = entry
-        self._task = None
-        self.redis = RedisTransport(self._append_log)
+        self._unsub_active_command = None
         
         # Get Redis configuration for alarm persistence
         options = _get_options(entry)
@@ -53,43 +55,39 @@ class DialogCommandCoordinator:
         await self.async_start()
 
     async def async_start(self):
-        if self._task:
+        if self._unsub_active_command:
             _LOGGER.debug("Coordinator already started for entry %s", self.entry.entry_id)
             return
         _LOGGER.info("Starting DialogCommandCoordinator for entry %s", self.entry.entry_id)
         options = _get_options(self.entry)
         await self.timer_alarm_manager.async_restore_from_options(options)
         self._append_log("info", "coordinator started")
-        self._task = self.hass.async_create_task(self._run())
+        self._unsub_active_command = self.hass.bus.async_listen(
+            EVENT_ACTIVE_COMMAND,
+            self._handle_active_command_event,
+        )
 
     async def async_stop(self):
-        if self._task:
+        if self._unsub_active_command:
             _LOGGER.info("Stopping DialogCommandCoordinator for entry %s", self.entry.entry_id)
             self._append_log("info", "coordinator stopping")
-            self._task.cancel()
-            self._task = None
+            self._unsub_active_command()
+            self._unsub_active_command = None
         await self.timer_alarm_manager.async_stop()
 
-    async def _run(self):
-        while True:
-            try:
-                options = _get_options(self.entry)
-                _LOGGER.debug("Coordinator run loop options for entry %s: %s", self.entry.entry_id, options)
+    @callback
+    def _handle_active_command_event(self, event: Event) -> None:
+        data = event.data or {}
+        options = _get_options(self.entry)
+        event_client_id = _normalize_value(data.get("client_id"))
+        configured_client_id = _normalize_value(options.get("client_id"))
 
-                await self.redis.subscribe(
-                    options,
-                    self._handle_payload,
-                )
+        if configured_client_id and event_client_id != configured_client_id:
+            return
 
-            except asyncio.CancelledError:
-                _LOGGER.info("Coordinator task cancelled for entry %s", self.entry.entry_id)
-                raise
-
-            except Exception as e:
-                _LOGGER.exception("DialogCommandCoordinator run loop error for entry %s", self.entry.entry_id)
-                self._append_log("error", f"run error: {e}")
-
-            await asyncio.sleep(5)
+        self.hass.async_create_task(
+            self._handle_payload(data.get("command_data")),
+        )
 
     async def _handle_payload(self, raw):
         _LOGGER.debug("Received raw payload for entry %s: %s", self.entry.entry_id, raw)
@@ -149,34 +147,17 @@ class DialogCommandCoordinator:
             self._append_log("error", "post-save skipped: client_id or device_id missing")
             return
 
-        channel = f"DIALOG_MESSAGE:{client_id}"
-        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
-        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
         message = {
             key: value
             for key, value in payload.items()
             if key not in {"clientId"}
         }
-        client = redis.Redis.from_url(
-            redis_url,
-            decode_responses=True,
-            password=redis_password or None,
+        self.hass.bus.async_fire(
+            EVENT_DIALOG_MESSAGE,
+            {
+                "client_id": client_id,
+                "device_id": payload.get("deviceId"),
+                **message,
+            },
         )
-        try:
-            self.hass.bus.async_fire(
-                "dialog_message",
-                {
-                    "client_id": client_id,
-                    "device_id": payload.get("deviceId"),
-                    **message,
-                },
-            )
-            return
-            await client.publish(channel, json.dumps(message, ensure_ascii=False))
-            self._append_log("request", f"PUBLISH {channel}")
-        finally:
-            close_client = getattr(client, "aclose", None) or getattr(client, "close", None)
-            if close_client:
-                result = close_client()
-                if hasattr(result, "__await__"):
-                    await result
+        self._append_log("request", f"FIRE {EVENT_DIALOG_MESSAGE}:{client_id}:{payload.get('deviceId')}")
