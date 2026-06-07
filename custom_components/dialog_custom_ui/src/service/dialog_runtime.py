@@ -13,6 +13,8 @@ from ..utils.text_normalize import fix_text
 
 r = get_redis()
 logger = logging.getLogger(__name__)
+# Latest hass instance to avoid stale references
+CURRENT_HASS = None
 REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 VOICE_RESPONSE_TYPE_ALIASES = {
     "default": "default",
@@ -104,6 +106,8 @@ def build_command_data(
 def store_command_data(hass, client_id, command_data):
     if hass is None:
         return
+    global CURRENT_HASS
+    CURRENT_HASS = hass
 
     hass.bus.async_fire(
         EVENT_ACTIVE_COMMAND,
@@ -119,15 +123,16 @@ def should_store_current_node(has_children, end_status, uuid=None):
 
 
 async def dialogs_wait(hass, client_id, device_id, timeout=8):
-    future = hass.loop.create_future()
-    logger.error("dialogs_wait created future: %s client_id=%s device_id=%s timeout=%s", future, client_id, device_id, timeout)
-
+    # Prefer most-recently seen hass to avoid stale instances
+    eff_hass = CURRENT_HASS or hass
+    loop = getattr(eff_hass, "loop", None) or asyncio.get_running_loop()
+    future = loop.create_future()
 
     @callback
     def listener(event):
         data = event.data
 
-        logger.error("dialogs_wait listener called with event.data: %s", data)
+        logger.debug("dialogs_wait listener got event data: %s", data)
 
         if (
             data.get("client_id") == client_id
@@ -136,7 +141,7 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
             if not future.done():
                 future.set_result(data)
 
-    unsub = hass.bus.async_listen(
+    unsub = eff_hass.bus.async_listen(
         EVENT_DIALOG_MESSAGE,
         listener,
     )
@@ -144,7 +149,6 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
     try:
         return await asyncio.wait_for(future, timeout)
     except asyncio.TimeoutError:
-        logger.error("dialogs_wait timed out")
         return None
     finally:
         unsub()
@@ -154,7 +158,10 @@ async def get_service_response(hass, answer_type, command_data, client_id, devic
         if hass is None:
             return None
 
-        # Start waiting before emitting the active command so reply events are not missed.
+        # update module-level hass and start waiting before emitting
+        global CURRENT_HASS
+        CURRENT_HASS = hass
+
         wait_task = asyncio.create_task(dialogs_wait(hass, client_id, device_id))
         store_command_data(hass, client_id, command_data)
         return await wait_task

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from datetime import datetime
 from typing import Any
 
@@ -19,8 +18,6 @@ from .utils import (
 from .normalize import (
     _normalize_value
 )
-
-LOGGER = logging.getLogger(__name__)
 
 from .const import (
     CONF_CLIENT_ID,
@@ -82,14 +79,7 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
         ATTR_VARIABLES: variables,
     }
 
-    LOGGER.error(
-        "services.py firing %s with client_id=%s device_id=%s actionType=%s variables=%s",
-        EVENT_DIALOG_MESSAGE,
-        payload[ATTR_CLIENT_ID],
-        payload[ATTR_DEVICE_ID],
-        payload[ATTR_ACTION_TYPE],
-        payload[ATTR_VARIABLES],
-    )
+    LOGGER.error("services firing %s hass id=%s bus id=%s client_id=%s device_id=%s", EVENT_DIALOG_MESSAGE, id(hass), id(getattr(hass, 'bus', None)), payload[ATTR_CLIENT_ID], payload[ATTR_DEVICE_ID])
     hass.bus.async_fire(
         EVENT_DIALOG_MESSAGE,
         {
