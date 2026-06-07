@@ -119,18 +119,15 @@ def should_store_current_node(has_children, end_status, uuid=None):
 
 
 async def dialogs_wait(hass, client_id, device_id, timeout=8):
-    loop = getattr(hass, "loop", None) or asyncio.get_running_loop()
-    future = loop.create_future()
+    future = hass.loop.create_future()
     logger.error("dialogs_wait created future: %s client_id=%s device_id=%s timeout=%s", future, client_id, device_id, timeout)
 
 
     @callback
     def listener(event):
-        logger.error(event)
-
         data = event.data
 
-        logger.error("dialogs_wait listener got event data: %s", data)
+        logger.error("dialogs_wait listener called with event.data: %s", data)
 
         if (
             data.get("client_id") == client_id
@@ -154,10 +151,13 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
 
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
-        store_command_data(hass, client_id, command_data)
         if hass is None:
             return None
-        return await dialogs_wait(hass, client_id, device_id)
+
+        # Start waiting before emitting the active command so reply events are not missed.
+        wait_task = asyncio.create_task(dialogs_wait(hass, client_id, device_id))
+        store_command_data(hass, client_id, command_data)
+        return await wait_task
     return None
 
 
