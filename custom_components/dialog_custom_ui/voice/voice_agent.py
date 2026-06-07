@@ -97,9 +97,9 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         except (aiohttp.ClientError, TimeoutError, ValueError) as err:
             _LOGGER.error("Voice agent request failed: %s", err)
 
-        response_payload = data.get("response", {}) if isinstance(data, dict) else {}
-        text = str(response_payload.get("text") or "")
-        should_continue = not bool(response_payload.get("end_session", True))
+        #response_payload = data.get("response", {}) if isinstance(data, dict) else {}
+        text = str(data.get("text") or "")
+        should_continue = not bool(data.get("end_session", True))
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
