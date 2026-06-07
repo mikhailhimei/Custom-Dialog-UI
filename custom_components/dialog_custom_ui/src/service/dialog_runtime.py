@@ -15,6 +15,21 @@ r = get_redis()
 logger = logging.getLogger(__name__)
 # Latest hass instance to avoid stale references
 CURRENT_HASS = None
+
+
+def set_current_hass(hass):
+    """Store the most recent Home Assistant instance and return it."""
+    global CURRENT_HASS
+    if hass is not None:
+        CURRENT_HASS = hass
+    return CURRENT_HASS
+
+
+def get_current_hass(hass=None):
+    """Return a fresh Home Assistant instance, preferring the explicit value."""
+    return set_current_hass(hass) if hass is not None else CURRENT_HASS
+
+
 REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 VOICE_RESPONSE_TYPE_ALIASES = {
     "default": "default",
@@ -104,10 +119,9 @@ def build_command_data(
     }
 
 def store_command_data(hass, client_id, command_data):
+    hass = get_current_hass(hass)
     if hass is None:
         return
-    global CURRENT_HASS
-    CURRENT_HASS = hass
 
     hass.bus.async_fire(
         EVENT_ACTIVE_COMMAND,
@@ -123,59 +137,57 @@ def should_store_current_node(has_children, end_status, uuid=None):
 
 
 async def dialogs_wait(hass, client_id, device_id, timeout=8):
-    # Prefer most-recently seen hass to avoid stale instances
-    eff_hass = CURRENT_HASS or hass
-    loop = getattr(eff_hass, "loop", None) or asyncio.get_running_loop()
-    future = loop.create_future()
+    interval = 1
 
-    @callback
-    def listener(event):
-        data = event.data
+    for _ in range(timeout):
+        # Refresh hass every second so the listener is attached to the latest bus.
+        eff_hass = get_current_hass() or hass
+        if eff_hass is None:
+            await asyncio.sleep(interval)
+            continue
 
-        logger.debug("dialogs_wait listener got event data: %s", data)
+        loop = getattr(eff_hass, "loop", None) or asyncio.get_running_loop()
+        future = loop.create_future()
 
-        if (
-            data.get("client_id") == client_id
-            and data.get("device_id") == device_id
-        ):
-            if not future.done():
-                future.set_result(data)
+        @callback
+        def listener(event):
+            data = event.data
 
-    unsub = eff_hass.bus.async_listen(
-        EVENT_DIALOG_MESSAGE,
-        listener,
-    )
+            logger.debug("dialogs_wait listener got event data: %s", data)
 
-    try:
-        elapsed = 0
-        interval = 1
-        while elapsed < timeout:
-            try:
-                result = await asyncio.wait_for(future, timeout=interval)
-                return result
-            except asyncio.TimeoutError:
-                elapsed += interval
-                continue
+            if (
+                data.get("client_id") == client_id
+                and data.get("device_id") == device_id
+            ):
+                if not future.done():
+                    future.set_result(data)
 
-        if future.done():
-            return future.result()
-        return None
-    finally:
+        unsub = eff_hass.bus.async_listen(
+            EVENT_DIALOG_MESSAGE,
+            listener,
+        )
+
         try:
-            unsub()
-        except Exception:
-            pass
+            return await asyncio.wait_for(future, timeout=interval)
+        except asyncio.TimeoutError:
+            continue
+        finally:
+            try:
+                unsub()
+            except Exception:
+                pass
+
+    return None
 
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
+        # update module-level hass and start waiting before emitting
+        hass = get_current_hass(hass)
         if hass is None:
             return None
 
-        # update module-level hass and start waiting before emitting
-        global CURRENT_HASS
-        CURRENT_HASS = hass
-
         wait_task = asyncio.create_task(dialogs_wait(hass, client_id, device_id))
+        await asyncio.sleep(0)
         store_command_data(hass, client_id, command_data)
         return await wait_task
     return None

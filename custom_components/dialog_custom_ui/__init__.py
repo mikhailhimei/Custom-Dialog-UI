@@ -21,12 +21,14 @@ from .src.api.scenarios_script_api import async_register_scenarios_websockets
 from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
 from .services import async_register_services, async_unregister_services
+from .src.service.dialog_runtime import set_current_hass
 from .voice.voice_agent import DialogCustomUiVoiceAgent
 from .voice.yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration domain."""
+    set_current_hass(hass)
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
     async_register_websockets(hass)
@@ -39,6 +41,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Dialog Custom UI from a config entry."""
+    set_current_hass(hass)
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
     async_register_services(hass)
@@ -52,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass,
             entry,
             DialogCustomUiVoiceAgent(
-                hass,
+                entry,
                 entry.entry_id,
             ),
         )
