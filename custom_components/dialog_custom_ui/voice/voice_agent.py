@@ -58,7 +58,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         authorization_token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
 
         
-        application_id = getattr(user_input, "device_id", None) or self._fallback_application_id
+        application_id = _normalize_value(getattr(user_input, "device_id", None))
         url = self._build_commands_url(base_url)
         headers: dict[str, str] = {}
         if authorization_token:

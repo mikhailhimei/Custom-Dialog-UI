@@ -92,9 +92,10 @@ class DialogCommandCoordinator:
             EVENT_ACTIVE_COMMAND,
             self._handle_active_command_event,
         )
+        external_event_bridge_enabled = bool(options.get(CONF_EXTERNAL_EVENT_BRIDGE_ENABLED))
         await self.external_event_bridge.async_start(
-            listen_external_active_commands=bool(options.get(CONF_EXTERNAL_EVENT_BRIDGE_ENABLED)),
-            forward_dialog_messages=True,
+            listen_external_active_commands=external_event_bridge_enabled,
+            forward_dialog_messages=external_event_bridge_enabled,
         )
 
     async def async_stop(self):
