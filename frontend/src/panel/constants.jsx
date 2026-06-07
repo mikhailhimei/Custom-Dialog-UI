@@ -3,6 +3,7 @@ export const DEFAULT_CONFIG = {
   allow_non_admin_panel: true,
   client_id: '',
   external_event_bridge_enabled: false,
+  remote_active_search_enabled: false,
   redis_url: 'redis://127.0.0.1:6379/0',
   redis_password: '',
   timer_alarm_token: '',

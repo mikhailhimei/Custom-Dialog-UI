@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_BASE_URL,
     CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
+    CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
     CONF_CLIENT_ID,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
@@ -17,6 +18,7 @@ from .const import (
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
+    DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
     DEFAULT_REDIS_URL,
     DOMAIN,
     CONF_TIMEOUT,
@@ -64,6 +66,12 @@ def _get_options(entry: ConfigEntry) -> dict[str, Any]:
             stored.get(
                 CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
                 DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
+            )
+        ),
+        CONF_REMOTE_ACTIVE_SEARCH_ENABLED: bool(
+            stored.get(
+                CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
+                DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
             )
         ),
         CONF_REDIS_URL: stored.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),

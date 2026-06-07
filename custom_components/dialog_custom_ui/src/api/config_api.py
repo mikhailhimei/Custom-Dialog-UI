@@ -26,6 +26,7 @@ from ...const import (
     CONF_BASE_URL,
     CONF_CLIENT_ID,
     CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
+    CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
     CONF_REDIS_PASSWORD,
     CONF_REDIS_URL,
     CONF_SCENARIOS,
@@ -46,6 +47,7 @@ from ...const import (
     CONF_TIMER_ALARM_TOKEN,
     DEFAULT_BASE_URL,
     DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
+    DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
     DEFAULT_REDIS_URL,
     DEFAULT_THEME,
     DEFAULT_YANDEX_TTS_CODEC,
@@ -86,6 +88,7 @@ class IntegrationOptions(TypedDict):
     base_url: str
     client_id: str
     external_event_bridge_enabled: bool
+    remote_active_search_enabled: bool
     redis_url: str
     redis_password: str
     allow_non_admin_panel: bool
@@ -116,6 +119,7 @@ SAVE_CONFIG_SCHEMA = {
         CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
         default=DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
     ): bool,
+    vol.Optional(CONF_REMOTE_ACTIVE_SEARCH_ENABLED): bool,
     vol.Optional(CONF_REDIS_PASSWORD, default=""): vol.Any(str, None),
     vol.Optional(CONF_ALLOW_NON_ADMIN_PANEL, default=True): bool,
     vol.Optional(CONF_TIMER_ALARM_TOKEN, default=""): str,
@@ -195,6 +199,15 @@ def _build_config_response(entry) -> dict[str, Any]:
                 DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
             )
         ),
+        "remote_active_search_enabled": bool(
+            entry.options.get(
+                CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
+                entry.options.get(
+                    CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
+                    DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
+                ),
+            )
+        ),
         "redis_url": entry.options.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
         "redis_password": entry.options.get(CONF_REDIS_PASSWORD, ""),
         "voice_agent_ip": entry.options.get(CONF_VOICE_AGENT_IP, ""),
@@ -261,6 +274,18 @@ def _build_options(
                 previous.get(
                     CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
                     DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
+                ),
+            )
+        ),
+        CONF_REMOTE_ACTIVE_SEARCH_ENABLED: bool(
+            msg.get(
+                CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
+                previous.get(
+                    CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
+                    previous.get(
+                        CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
+                        DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
+                    ),
                 ),
             )
         ),
