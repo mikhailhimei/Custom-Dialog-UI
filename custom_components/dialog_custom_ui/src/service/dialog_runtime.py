@@ -162,10 +162,12 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
     #     await pubsub.unsubscribe(channel)
     #     await pubsub.close()
 
-async def get_service_response(answer_type, command_data, client_id, device_id):
+async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
         store_command_data(client_id, command_data)
-        return await dialogs_wait(client_id, device_id)
+        if hass is None:
+            return None
+        return await dialogs_wait(hass, client_id, device_id)
     return None
 
 
