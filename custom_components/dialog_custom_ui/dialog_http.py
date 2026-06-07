@@ -231,7 +231,7 @@ class DialogCommandsView(HomeAssistantView):
 
         try:
             set_current_hass(self.hass)
-            result = await dialog_service.words_scripts(dialog_payload, self.hass)
+            result = await dialog_service.words_scripts(dialog_payload)
         except Exception as err:
             _LOGGER.exception("Failed to process dialog command")
             return _json_response({"error": str(err)}, status=500)
