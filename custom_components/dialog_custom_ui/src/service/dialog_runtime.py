@@ -133,34 +133,6 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
         return None
     finally:
         unsub()
-    # channel = f"DIALOG_MESSAGE:{client_id}:{device_id}"
-
-    # pubsub = r_as.pubsub()
-    # await pubsub.subscribe(channel)
-
-    # try:
-    #     async def reader():
-    #         async for msg in pubsub.listen():
-    #             if msg["type"] == "message":
-    #                 return json.loads(msg["data"])
-
-    #     task = asyncio.create_task(reader())
-
-    #     done, _ = await asyncio.wait(
-    #         {task},
-    #         timeout=timeout,
-    #         return_when=asyncio.FIRST_COMPLETED,
-    #     )
-
-    #     if not done:
-    #         task.cancel()
-    #         return None
-
-    #     return task.result()
-
-    # finally:
-    #     await pubsub.unsubscribe(channel)
-    #     await pubsub.close()
 
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
     if answer_type == 'redis':
