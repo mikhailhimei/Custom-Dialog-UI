@@ -120,6 +120,8 @@ def should_store_current_node(has_children, end_status, uuid=None):
 
 async def dialogs_wait(hass, client_id, device_id, timeout=8):
     future = hass.loop.create_future()
+    logger.debug("dialogs_wait listener got event data: %s", future)
+
 
     @callback
     def listener(event):
@@ -135,13 +137,14 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
                 future.set_result(data)
 
     unsub = hass.bus.async_listen(
-        EVENT_DIALOG_MESSAGE,
+        str(EVENT_DIALOG_MESSAGE),
         listener,
     )
 
     try:
         return await asyncio.wait_for(future, timeout)
     except asyncio.TimeoutError:
+        logger.debug("dialogs_wait timed out")
         return None
     finally:
         unsub()
