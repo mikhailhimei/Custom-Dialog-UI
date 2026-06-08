@@ -3,7 +3,8 @@
   "name": "Dialog Custom UI",
   "codeowners": [],
   "dependencies": [
-    "conversation"
+    "conversation",
+    "tts"
   ],
   "config_flow": true,
   "documentation": "https://github.com/mikhailhimei/Custom-Dialog-UI",
