@@ -80,6 +80,37 @@ SERVICE_SCHEMA = vol.Schema(
 
 
 _SOUND_TAG_RE = re.compile(r"<([^>]+)>")
+_SPEAKER_AUDIO_RE = re.compile(r'audio\s*=\s*(["\'])(.*?)\1', re.IGNORECASE)
+_AUDIO_EXTENSIONS = {".mp3", ".ogg", ".opus", ".wav", ".m4a"}
+
+
+def _extract_sound_name(value: str) -> str:
+    """Return a sound id/path from ``<...>`` content.
+
+    Supports both the short form ``<ding.mp3>`` and an already expanded
+    Yandex-style form ``<speaker audio="ding.mp3">``.
+    """
+    value = _normalize_value(value)
+    if not value:
+        return ""
+
+    speaker_match = _SPEAKER_AUDIO_RE.search(value)
+    if speaker_match:
+        return _normalize_value(speaker_match.group(2))
+
+    return value.strip().strip('"\'')
+
+
+def _looks_like_sound(value: str) -> bool:
+    """Best-effort check that an angle-bracket token is an audio cue."""
+    sound_name = _extract_sound_name(value)
+    if not sound_name:
+        return False
+
+    lowered = sound_name.lower()
+    if lowered.startswith(("media-source://", "/local/", "http://", "https://")):
+        return True
+    return Path(lowered).suffix in _AUDIO_EXTENSIONS
 
 
 def _split_text_and_sounds(text: str) -> list[tuple[str, str]]:
@@ -91,9 +122,12 @@ def _split_text_and_sounds(text: str) -> list[tuple[str, str]]:
     parts: list[tuple[str, str]] = []
     last = 0
     for m in _SOUND_TAG_RE.finditer(text):
+        tag_value = m.group(1).strip()
+        if not _looks_like_sound(tag_value):
+            continue
         if m.start() > last:
             parts.append(("tts", text[last:m.start()]))
-        parts.append(("sound", m.group(1).strip()))
+        parts.append(("sound", _extract_sound_name(tag_value)))
         last = m.end()
     if last < len(text):
         parts.append(("tts", text[last:]))
@@ -127,6 +161,50 @@ def _resolve_sound_file(hass: HomeAssistant, name: str) -> Path | str | None:
     if cand2.exists():
         return cand2
     return None
+
+
+def _copy_sound_file(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, destination)
+
+
+def _relative_to(path: Path, parent: Path) -> Path | None:
+    try:
+        return path.relative_to(parent)
+    except ValueError:
+        return None
+
+
+def _media_url_from_resolved_sound(
+    hass: HomeAssistant,
+    sound_name: str,
+    resolved: Path | str | None,
+    rel_dir: Path,
+) -> tuple[str, Path | None]:
+    """Build a playable media URL for a sound segment.
+
+    ``media_player.play_media`` can play ``media-source://`` ids and URLs from
+    Home Assistant's ``/local`` static directory. Files bundled with this
+    integration are copied into the generated TTS directory first, because they
+    are not necessarily addressable as media-source items.
+    """
+    if sound_name.startswith(("/local/", "http://", "https://")):
+        return sound_name, None
+
+    if isinstance(resolved, str):
+        return resolved, None
+
+    if isinstance(resolved, Path):
+        www_dir = Path(hass.config.path("www"))
+        www_relative = _relative_to(resolved, www_dir)
+        if www_relative is not None:
+            return f"/local/{www_relative.as_posix()}", None
+
+        sound_rel_path = rel_dir / "sounds" / resolved.name
+        destination = Path(hass.config.path(str(sound_rel_path)))
+        return f"/local/{sound_rel_path.relative_to('www').as_posix()}", destination
+
+    return f"media-source://media_source/local/{sound_name}", None
 
 
 def _estimate_duration_bytes(audio_bytes: bytes) -> float:
@@ -320,22 +398,35 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
                         )
 
                 elif kind == "sound":
-                    sound_name = value.strip()
+                    sound_name = _extract_sound_name(value)
 
                     if not sound_name:
                         continue
 
-                    #
-                    # <ding.mp3>
-                    # ->
-                    # media-source://media_source/local/ding.mp3
-                    #
-                    media_url = (
-                        f"media-source://media_source/local/{sound_name}"
+                    resolved_sound = _resolve_sound_file(hass, sound_name)
+                    media_url, copy_destination = _media_url_from_resolved_sound(
+                        hass,
+                        sound_name,
+                        resolved_sound,
+                        rel_dir,
                     )
 
+                    if copy_destination and isinstance(resolved_sound, Path):
+                        await hass.async_add_executor_job(
+                            _copy_sound_file,
+                            resolved_sound,
+                            copy_destination,
+                        )
+
+                    if resolved_sound is None:
+                        _LOGGER.warning(
+                            "Sound file %s was not found in www, static, voice or absolute path; trying media-source fallback",
+                            sound_name,
+                        )
+
                     _LOGGER.debug(
-                        "Playing media-source sound: %s",
+                        "Playing sound segment %s as %s",
+                        sound_name,
                         media_url,
                     )
 
