@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -63,12 +61,10 @@ SUPPORTED_EMOTIONS = {"good", "evil", "neutral"}
 
 SERVICE_SPEAK = "yandex_tts_speak"
 _SYNTH_TIMEOUT_SECONDS = 20
-_SOUND_TAG_RE = re.compile(r"<([^>]+)>")
 
 SERVICE_SCHEMA = vol.Schema(
     {
-        vol.Required("tts"): cv.string,
-        vol.Optional("text"): cv.string,
+        vol.Required("text"): cv.string,
         vol.Optional("entity_id"): vol.Any(cv.entity_id, [cv.entity_id]),
         vol.Optional(CONF_YANDEX_TTS_LANG): cv.string,
         vol.Optional(CONF_YANDEX_TTS_CODEC): cv.string,
@@ -122,41 +118,6 @@ def _tts_options_from_entry(entry: ConfigEntry | None) -> dict[str, Any]:
 def _current_entry(hass: HomeAssistant) -> ConfigEntry | None:
     entries = hass.config_entries.async_entries(DOMAIN)
     return entries[0] if entries else None
-
-
-def _format_media_source_tag(tag: str) -> str:
-    normalized = _normalize_value(tag)
-    if not normalized:
-        return ""
-    if normalized.startswith("media-source://"):
-        return normalized
-    if normalized.startswith("/"):
-        return f"media-source://media_source/local{normalized}"
-    return f"media-source://media_source/local/{normalized}"
-
-
-def _split_text_and_sounds(text: str) -> list[tuple[str, str]]:
-    segments: list[tuple[str, str]] = []
-    last_end = 0
-    for match in _SOUND_TAG_RE.finditer(text):
-        if match.start() > last_end:
-            segments.append(("text", text[last_end:match.start()]))
-        segments.append(("sound", match.group(1)))
-        last_end = match.end()
-    if last_end < len(text):
-        segments.append(("text", text[last_end:]))
-    return segments
-
-
-def _estimate_duration_seconds(audio: bytes, extension: str) -> float:
-    # approximate audio duration: use bytes / bitrate conversion
-    if extension == "wav":
-        # WAV bitrate roughly 16kHz mono 16bit => 32000 bytes/sec
-        rate = 32000
-    else:
-        # OGG/OPUS has lower bitrate
-        rate = 24000
-    return max(0.5, len(audio) / rate)
 
 
 async def _async_synthesize(hass: HomeAssistant, text: str, options: dict[str, Any]) -> tuple[str, bytes]:
@@ -217,9 +178,9 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         return
 
     async def _async_handle_speak(call: ServiceCall) -> None:
-        tts_text = _normalize_value(call.data.get("tts") or call.data.get("text"))
-        if not tts_text:
-            raise HomeAssistantError("Поле tts обязательно.")
+        text = _normalize_value(call.data.get("text") or call.data.get("tts"))
+        if not text:
+            raise HomeAssistantError("Поле text обязательно.")
 
         options = _tts_options_from_entry(_current_entry(hass))
         for key in (
@@ -232,60 +193,37 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
             if key in call.data:
                 options[key] = call.data[key]
 
+        extension, audio = await _async_synthesize(hass, text, options)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"tts_{ts}_{uuid.uuid4().hex[:6]}.{extension}"
+        rel_dir = Path("www") / "dialog_custom_ui_tts"
+        abs_path = Path(hass.config.path(str(rel_dir / filename)))
+        await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
+
+        media_url = f"/local/dialog_custom_ui_tts/{filename}"
         targets = _entity_ids(call.data.get("entity_id"))
         volume_level = call.data.get("volume_level")
-        segments = _split_text_and_sounds(tts_text)
 
-        if volume_level is not None and targets:
+        if targets:
+            if volume_level is not None:
+                await hass.services.async_call(
+                    "media_player",
+                    "volume_set",
+                    {"entity_id": targets, "volume_level": float(volume_level)},
+                    blocking=True,
+                )
             await hass.services.async_call(
                 "media_player",
-                "volume_set",
-                {"entity_id": targets, "volume_level": float(volume_level)},
-                blocking=True,
+                "play_media",
+                {
+                    "entity_id": targets,
+                    "media_content_id": media_url,
+                    "media_content_type": "music",
+                },
+                blocking=False,
             )
 
-        for segment_type, segment_value in segments:
-            if segment_type == "text":
-                segment_text = segment_value.strip()
-                if not segment_text:
-                    continue
-
-                extension, audio = await _async_synthesize(hass, segment_text, options)
-                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"tts_{ts}_{uuid.uuid4().hex[:6]}.{extension}"
-                rel_dir = Path("www") / "dialog_custom_ui_tts"
-                abs_path = Path(hass.config.path(str(rel_dir / filename)))
-                await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
-
-                media_url = f"/local/dialog_custom_ui_tts/{filename}"
-                if targets:
-                    await hass.services.async_call(
-                        "media_player",
-                        "play_media",
-                        {
-                            "entity_id": targets,
-                            "media_content_id": media_url,
-                            "media_content_type": "music",
-                        },
-                        blocking=False,
-                    )
-                    await asyncio.sleep(_estimate_duration_seconds(audio, extension))
-                _LOGGER.info("Yandex TTS audio generated: %s", media_url)
-            else:
-                media_path = _format_media_source_tag(segment_value)
-                if targets:
-                    await hass.services.async_call(
-                        "media_player",
-                        "play_media",
-                        {
-                            "entity_id": targets,
-                            "media_content_id": media_path,
-                            "media_content_type": "music",
-                        },
-                        blocking=False,
-                    )
-                    await asyncio.sleep(1.0)
-                _LOGGER.info("Yandex sound tag played: %s", media_path)
+        _LOGGER.info("Yandex TTS audio generated: %s", media_url)
 
     hass.services.async_register(
         DOMAIN,
