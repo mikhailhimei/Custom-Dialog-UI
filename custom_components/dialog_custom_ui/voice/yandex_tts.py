@@ -278,11 +278,26 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
                     tts_text = value.strip()
                     if not tts_text:
                         continue
-                    extension, audio = await _async_synthesize(hass, tts_text, options)
+
+                    extension, audio = await _async_synthesize(
+                        hass,
+                        tts_text,
+                        options,
+                    )
+
                     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                     filename = f"tts_{ts}_{uuid.uuid4().hex[:6]}.{extension}"
-                    abs_path = Path(hass.config.path(str(rel_dir / filename)))
-                    await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
+
+                    abs_path = Path(
+                        hass.config.path(str(rel_dir / filename))
+                    )
+
+                    await hass.async_add_executor_job(
+                        _write_audio_file,
+                        abs_path,
+                        audio,
+                    )
+
                     media_url = f"/local/dialog_custom_ui_tts/{filename}"
 
                     if targets:
@@ -296,53 +311,34 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
                             },
                             blocking=False,
                         )
-                        await asyncio.sleep(_estimate_duration_bytes(audio) + 0.15)
+
+                        #
+                        # ждём завершения TTS
+                        #
+                        await asyncio.sleep(
+                            _estimate_duration_bytes(audio) + 0.3
+                        )
 
                 elif kind == "sound":
-                    name = value.strip()
-                    if not name:
-                        continue
-                    src = _resolve_sound_file(hass, name)
-                    if not src:
-                        _LOGGER.warning("Sound file not found: %s", name)
+                    sound_name = value.strip()
+
+                    if not sound_name:
                         continue
 
-                    # If media-source URI, play it directly
-                    if isinstance(src, str) and src.startswith("media-source://"):
-                        media_url = src
-                        if targets:
-                            await hass.services.async_call(
-                                "media_player",
-                                "play_media",
-                                {
-                                    "entity_id": targets,
-                                    "media_content_id": media_url,
-                                    "media_content_type": "music",
-                                },
-                                blocking=False,
-                            )
-                        # best-effort wait for media-source playback
-                        await asyncio.sleep(1.0)
-                        continue
+                    #
+                    # <ding.mp3>
+                    # ->
+                    # media-source://media_source/local/ding.mp3
+                    #
+                    media_url = (
+                        f"media-source://media_source/local/{sound_name}"
+                    )
 
-                    # destination in www folder for local Path
-                    dest_path = abs_dir / Path(name).name
-                    # if source already in www and same file, reuse
-                    try:
-                        www_root = Path(hass.config.path("www"))
-                        if src.resolve().is_relative_to(www_root.resolve()):
-                            dest_path = src
-                        else:
-                            # copy to www
-                            await hass.async_add_executor_job(shutil.copyfile, str(src), str(dest_path))
-                    except Exception:
-                        # python <3.9 Path.is_relative_to not available; fallback to copy
-                        if str(src).startswith(str(Path(hass.config.path("www")))):
-                            dest_path = src
-                        else:
-                            await hass.async_add_executor_job(shutil.copyfile, str(src), str(dest_path))
+                    _LOGGER.debug(
+                        "Playing media-source sound: %s",
+                        media_url,
+                    )
 
-                    media_url = f"/local/dialog_custom_ui_tts/{dest_path.name}"
                     if targets:
                         await hass.services.async_call(
                             "media_player",
@@ -355,15 +351,17 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
                             blocking=False,
                         )
 
-                    # estimate duration from file size
-                    try:
-                        file_bytes = await hass.async_add_executor_job(dest_path.read_bytes)
-                        await asyncio.sleep(_estimate_duration_bytes(file_bytes) + 0.05)
-                    except Exception:
-                        await asyncio.sleep(0.6)
+                    #
+                    # Пауза между звуком и следующим сегментом.
+                    # При необходимости увеличьте.
+                    #
+                    await asyncio.sleep(1.5)
 
-            except Exception as err:  # continue on per-segment errors
-                _LOGGER.exception("Error handling TTS/sound segment: %s", err)
+            except Exception as err:
+                _LOGGER.exception(
+                    "Error handling TTS/sound segment: %s",
+                    err,
+                )
 
         _LOGGER.info("Yandex TTS sequence completed for text: %s", text)
 
