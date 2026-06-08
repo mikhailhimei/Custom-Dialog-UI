@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback
@@ -148,7 +149,12 @@ class DialogCommandCoordinator:
 
     @callback
     def _handle_active_command_event(self, event: Event) -> None:
-        data = event.data or {}
+        data = _normalize_active_command_event_data(event.data or {})
+        _LOGGER.debug(
+            "Active command event received for entry %s: %s",
+            self.entry.entry_id,
+            data,
+        )
         options = _get_options(self.entry)
         event_client_id = _normalize_value(data.get("client_id"))
         configured_client_id = _normalize_value(options.get("client_id"))
@@ -158,7 +164,11 @@ class DialogCommandCoordinator:
             return
 
         command_data = data.get("command_data")
-        
+        _LOGGER.debug(
+            "Command data payload for entry %s: %s",
+            self.entry.entry_id,
+            command_data,
+        )
         self.hass.async_create_task(
             self._handle_payload(command_data),
         )
