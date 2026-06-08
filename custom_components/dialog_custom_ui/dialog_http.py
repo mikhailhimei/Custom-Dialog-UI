@@ -236,7 +236,12 @@ class DialogCommandsView(HomeAssistantView):
             _LOGGER.exception("Failed to process dialog command")
             return _json_response({"error": str(err)}, status=500)
 
-        return _json_response(result or {})
+        response = {
+            "response": result,
+            "version":"1.0"
+        }
+
+        return _json_response(response)
 
 
 class DialogEventsView(HomeAssistantView):
