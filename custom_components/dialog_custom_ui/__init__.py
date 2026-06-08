@@ -27,6 +27,8 @@ from .voice.voice_agent import DialogCustomUiVoiceAgent
 from .voice.yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
 
+PLATFORMS = ["voice.tts"]
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration domain."""
     set_current_hass(hass)
@@ -110,5 +112,3 @@ async def _async_migrate_legacy_voice_agent_options(
     options[CONF_VOICE_AGENT_IP] = migrated_ip
     options[CONF_VOICE_AGENT_USER_ID] = migrated_user_id
     hass.config_entries.async_update_entry(entry, options=options)
-
-PLATFORMS = ["tts"]
