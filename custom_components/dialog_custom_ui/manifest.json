@@ -21,7 +21,6 @@
     "uvicorn",
     "astral",
     "pytz",
-    "timezonefinder",
     "httpx",
     "pymongo",
     "num2words",
