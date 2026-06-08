@@ -150,7 +150,7 @@ class DialogCommandCoordinator:
     @callback
     def _handle_active_command_event(self, event: Event) -> None:
         data = _normalize_active_command_event_data(event.data or {})
-        _LOGGER.debug(
+        _LOGGER.error(
             "Active command event received for entry %s: %s",
             self.entry.entry_id,
             data,
@@ -164,7 +164,7 @@ class DialogCommandCoordinator:
             return
 
         command_data = data.get("command_data")
-        _LOGGER.debug(
+        _LOGGER.error(
             "Command data payload for entry %s: %s",
             self.entry.entry_id,
             command_data,
@@ -174,11 +174,11 @@ class DialogCommandCoordinator:
         )
 
     async def _handle_payload(self, raw):
-        _LOGGER.debug("Received raw payload for entry %s: %s", self.entry.entry_id, raw)
+        _LOGGER.error("Received raw payload for entry %s: %s", self.entry.entry_id, raw)
         raw = unwrap_payload(raw)
-        _LOGGER.debug("Unwrapped payload for entry %s: %s", self.entry.entry_id, raw)
+        _LOGGER.error("Unwrapped payload for entry %s: %s", self.entry.entry_id, raw)
         payloads = normalize_payload(raw)
-        _LOGGER.debug("Normalized payloads for entry %s: %s", self.entry.entry_id, payloads)
+        _LOGGER.error("Normalized payloads for entry %s: %s", self.entry.entry_id, payloads)
         if not payloads:
             self._append_log("idle", "active command empty")
             return
@@ -188,7 +188,7 @@ class DialogCommandCoordinator:
             scenario = match_scenario(payload, options["scenarios"])
 
             if not scenario:
-                _LOGGER.debug("No scenario match for payload: %s", payload)
+                _LOGGER.error("No scenario match for payload: %s", payload)
                 self._append_log("idle", "no match")
                 continue
 
@@ -223,7 +223,7 @@ class DialogCommandCoordinator:
 
     async def _post_save_commands(self, options: dict[str, str], payload: dict[str, str]) -> None:
 
-        _LOGGER.debug(
+        _LOGGER.error(
             "TimerAlarmManager post-save payload for entry %s: %s",
             self.entry.entry_id,
             payload,
