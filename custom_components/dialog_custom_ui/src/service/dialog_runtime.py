@@ -407,7 +407,7 @@ def build_text_response(response_text, end_status, use_declension= True):
     if use_declension:
         response_text = fix_text(response_text) or ''
     
-    return {"end_session": end_status, "text": re.sub(r'<.*?>', '', response_text), "tts": response_text}
+    return {"end_session": end_status, "text": response_text, "tts": response_text}
 
 def miss_commands(client_id, device_id, response_text, dialog_settings):
     miss = int(r.get(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}') or 0) + 1
