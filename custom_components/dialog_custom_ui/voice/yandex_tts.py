@@ -6,6 +6,9 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import re
+import asyncio
+import shutil
 import uuid
 
 import aiohttp
@@ -74,6 +77,61 @@ SERVICE_SCHEMA = vol.Schema(
         vol.Optional("volume_level"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
     }
 )
+
+
+_SOUND_TAG_RE = re.compile(r"<([^>]+)>")
+
+
+def _split_text_and_sounds(text: str) -> list[tuple[str, str]]:
+    """Split text into a list of (kind, value) tuples.
+
+    kind is either 'tts' or 'sound'. For example:
+    "hello <ping.mp3> bye" -> [('tts','hello '), ('sound','ping.mp3'), ('tts',' bye')]
+    """
+    parts: list[tuple[str, str]] = []
+    last = 0
+    for m in _SOUND_TAG_RE.finditer(text):
+        if m.start() > last:
+            parts.append(("tts", text[last:m.start()]))
+        parts.append(("sound", m.group(1).strip()))
+        last = m.end()
+    if last < len(text):
+        parts.append(("tts", text[last:]))
+    return parts
+
+
+def _resolve_sound_file(hass: HomeAssistant, name: str) -> Path | None:
+    """Try to find a sound file by name in several likely locations.
+
+    Returns absolute Path or None if not found.
+    """
+    p = Path(name)
+    # absolute or relative path provided by user
+    if p.is_absolute() and p.exists():
+        return p
+    # relative to HA config/www
+    www_path = Path(hass.config.path("www")) / name
+    if www_path.exists():
+        return www_path
+    # relative to integration folder (custom_components/dialog_custom_ui/static or voice folder)
+    base = Path(__file__).parent.parent
+    cand = base / "static" / name
+    if cand.exists():
+        return cand
+    # voice folder
+    cand2 = Path(__file__).parent / name
+    if cand2.exists():
+        return cand2
+    return None
+
+
+def _estimate_duration_bytes(audio_bytes: bytes) -> float:
+    """Rudimentary estimate of playback duration for an audio blob.
+
+    This is a best-effort heuristic used to schedule sequential playback.
+    """
+    # fallback heuristic: assume ~32000 bytes per second
+    return max(0.4, len(audio_bytes) / 32000.0)
 
 
 def _normalize_speed(value: Any) -> float:
@@ -193,37 +251,99 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
             if key in call.data:
                 options[key] = call.data[key]
 
-        extension, audio = await _async_synthesize(hass, text, options)
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"tts_{ts}_{uuid.uuid4().hex[:6]}.{extension}"
+        parts = _split_text_and_sounds(text)
         rel_dir = Path("www") / "dialog_custom_ui_tts"
-        abs_path = Path(hass.config.path(str(rel_dir / filename)))
-        await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
+        abs_dir = Path(hass.config.path(str(rel_dir)))
+        abs_dir.mkdir(parents=True, exist_ok=True)
 
-        media_url = f"/local/dialog_custom_ui_tts/{filename}"
         targets = _entity_ids(call.data.get("entity_id"))
         volume_level = call.data.get("volume_level")
 
-        if targets:
-            if volume_level is not None:
-                await hass.services.async_call(
-                    "media_player",
-                    "volume_set",
-                    {"entity_id": targets, "volume_level": float(volume_level)},
-                    blocking=True,
-                )
+        # set volume once if requested
+        if targets and volume_level is not None:
             await hass.services.async_call(
                 "media_player",
-                "play_media",
-                {
-                    "entity_id": targets,
-                    "media_content_id": media_url,
-                    "media_content_type": "music",
-                },
-                blocking=False,
+                "volume_set",
+                {"entity_id": targets, "volume_level": float(volume_level)},
+                blocking=True,
             )
 
-        _LOGGER.info("Yandex TTS audio generated: %s", media_url)
+        for kind, value in parts:
+            try:
+                if kind == "tts":
+                    tts_text = value.strip()
+                    if not tts_text:
+                        continue
+                    extension, audio = await _async_synthesize(hass, tts_text, options)
+                    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"tts_{ts}_{uuid.uuid4().hex[:6]}.{extension}"
+                    abs_path = Path(hass.config.path(str(rel_dir / filename)))
+                    await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
+                    media_url = f"/local/dialog_custom_ui_tts/{filename}"
+
+                    if targets:
+                        await hass.services.async_call(
+                            "media_player",
+                            "play_media",
+                            {
+                                "entity_id": targets,
+                                "media_content_id": media_url,
+                                "media_content_type": "music",
+                            },
+                            blocking=False,
+                        )
+                        await asyncio.sleep(_estimate_duration_bytes(audio) + 0.15)
+
+                elif kind == "sound":
+                    name = value.strip()
+                    if not name:
+                        continue
+                    src = _resolve_sound_file(hass, name)
+                    if not src:
+                        _LOGGER.warning("Sound file not found: %s", name)
+                        continue
+
+                    # destination in www folder
+                    dest_path = abs_dir / Path(name).name
+                    # if source already in www and same file, reuse
+                    try:
+                        www_root = Path(hass.config.path("www"))
+                        if src.resolve().is_relative_to(www_root.resolve()):
+                            dest_path = src
+                        else:
+                            # copy to www
+                            await hass.async_add_executor_job(shutil.copyfile, str(src), str(dest_path))
+                    except Exception:
+                        # python <3.9 Path.is_relative_to not available; fallback to copy
+                        if str(src).startswith(str(Path(hass.config.path("www")))):
+                            dest_path = src
+                        else:
+                            await hass.async_add_executor_job(shutil.copyfile, str(src), str(dest_path))
+
+                    media_url = f"/local/dialog_custom_ui_tts/{dest_path.name}"
+                    if targets:
+                        await hass.services.async_call(
+                            "media_player",
+                            "play_media",
+                            {
+                                "entity_id": targets,
+                                "media_content_id": media_url,
+                                "media_content_type": "music",
+                            },
+                            blocking=False,
+                        )
+
+                    # estimate duration from file size
+                    try:
+                        file_bytes = await hass.async_add_executor_job(dest_path.read_bytes)
+                        await asyncio.sleep(_estimate_duration_bytes(file_bytes) + 0.05)
+                    except Exception:
+                        await asyncio.sleep(0.6)
+
+            except Exception as err:  # continue on per-segment errors
+                _LOGGER.exception("Error handling TTS/sound segment: %s", err)
+
+        _LOGGER.info("Yandex TTS sequence completed for text: %s", text)
 
     hass.services.async_register(
         DOMAIN,
