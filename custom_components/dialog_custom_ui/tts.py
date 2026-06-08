@@ -54,10 +54,14 @@ class YandexTTSProvider(TextToSpeechEntity):
         try:
             tts_options = _tts_options_from_entry(self.config_entry)
             extension, audio_bytes = await _async_synthesize(self.hass, message, tts_options)
-            
-            # Return audio with correct MIME type
-            mime_type = "audio/ogg" if extension == "ogg" else f"audio/{extension}"
-            return mime_type, audio_bytes
+
+            codec = extension
+            if codec == "oggopus":
+                codec = "ogg"
+            elif codec == "lpcm":
+                codec = "wav"
+
+            return codec, audio_bytes
         except Exception as err:
             _LOGGER.error("Failed to synthesize speech: %s", err)
             raise HomeAssistantError(f"TTS synthesis failed: {err}") from err
