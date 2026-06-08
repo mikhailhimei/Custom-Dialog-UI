@@ -54,6 +54,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DialogCommandCoordinator(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator
     await coordinator.async_start()
+ 
+    await hass.config_entries.async_forward_entry_setups(
+        entry,
+        PLATFORMS,
+    )
+
     conversation.async_set_agent(
             hass,
             entry,
@@ -68,6 +74,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    
+    unload_ok = await hass.config_entries.async_unload_platforms(
+        entry,
+        PLATFORMS,
+    )
+
     coordinator: DialogCommandCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
     await coordinator.async_stop()
     if hass.services.has_service(DOMAIN, SERVICE_SPEAK):
@@ -98,3 +110,5 @@ async def _async_migrate_legacy_voice_agent_options(
     options[CONF_VOICE_AGENT_IP] = migrated_ip
     options[CONF_VOICE_AGENT_USER_ID] = migrated_user_id
     hass.config_entries.async_update_entry(entry, options=options)
+
+PLATFORMS = ["tts"]
