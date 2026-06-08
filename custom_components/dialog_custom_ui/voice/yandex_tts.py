@@ -100,11 +100,15 @@ def _split_text_and_sounds(text: str) -> list[tuple[str, str]]:
     return parts
 
 
-def _resolve_sound_file(hass: HomeAssistant, name: str) -> Path | None:
+def _resolve_sound_file(hass: HomeAssistant, name: str) -> Path | str | None:
     """Try to find a sound file by name in several likely locations.
 
     Returns absolute Path or None if not found.
     """
+    # handle media-source URIs directly
+    if isinstance(name, str) and name.startswith("media-source://"):
+        return name  # type: ignore[return-value]
+
     p = Path(name)
     # absolute or relative path provided by user
     if p.is_absolute() and p.exists():
@@ -303,7 +307,25 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
                         _LOGGER.warning("Sound file not found: %s", name)
                         continue
 
-                    # destination in www folder
+                    # If media-source URI, play it directly
+                    if isinstance(src, str) and src.startswith("media-source://"):
+                        media_url = src
+                        if targets:
+                            await hass.services.async_call(
+                                "media_player",
+                                "play_media",
+                                {
+                                    "entity_id": targets,
+                                    "media_content_id": media_url,
+                                    "media_content_type": "music",
+                                },
+                                blocking=False,
+                            )
+                        # best-effort wait for media-source playback
+                        await asyncio.sleep(1.0)
+                        continue
+
+                    # destination in www folder for local Path
                     dest_path = abs_dir / Path(name).name
                     # if source already in www and same file, reuse
                     try:
