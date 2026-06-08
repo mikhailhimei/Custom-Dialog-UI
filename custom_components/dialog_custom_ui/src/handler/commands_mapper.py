@@ -31,7 +31,7 @@ def clean_text(text: str) -> str:
     text = html.unescape(text)
 
     # убираем <hlword> и другие теги
-    text = re.sub(r"<.*?>", "", text)
+    # text = re.sub(r"<.*?>", "", text)
 
     # убираем лишние пробелы
     text = re.sub(r"\s+", " ", text).strip()
