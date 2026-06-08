@@ -10,7 +10,6 @@ from ..handler.commands_mapper import generate_ai_response
 from ..utils.dialog_response import build_dialog_response
 from ..utils.redis_init import get_redis
 from ..utils.text_normalize import fix_text
-from ..utils.yandex_tts_markup import build_yandex_display_text, build_yandex_tts_text
 
 r = get_redis()
 logger = logging.getLogger(__name__)
@@ -408,10 +407,7 @@ def build_text_response(response_text, end_status, use_declension= True):
     if use_declension:
         response_text = fix_text(response_text) or ''
     
-    display_text = build_yandex_display_text(response_text)
-    tts_text = build_yandex_tts_text(response_text)
-
-    return {"end_session": end_status, "text": display_text, "tts": tts_text}
+    return {"end_session": end_status, "text": response_text, "tts": response_text}
 
 def miss_commands(client_id, device_id, response_text, dialog_settings):
     miss = int(r.get(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}') or 0) + 1

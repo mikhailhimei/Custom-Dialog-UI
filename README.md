@@ -155,19 +155,3 @@ git commit -m "release: prepare v0.3.3 (react ui + localhost dev + scenario tab)
 git tag v0.3.3
 git push origin HEAD
 git push origin v0.3.3
-
-## Звуки в ответах Алисы
-
-В тексте сценария можно оставить короткую запись звука, например:
-
-```text
-Привет <alice-sounds-game-win-1.opus> как дела?
-```
-
-Для ответа навыка интеграция автоматически убирает такой тег из поля `response.text` и преобразует его в поле `response.tts` в формат Алисы:
-
-```text
-Привет <speaker audio="alice-sounds-game-win-1.opus"> как дела?
-```
-
-Важно: Алиса воспроизводит в `tts` только звуки из своей библиотеки (`alice-*.opus`) или заранее загруженное собственное аудио в формате `dialogs-upload/.../*.opus`. Локальный файл Home Assistant вида `<ding.mp3>` больше не будет проговариваться как текст, но для реального воспроизведения через навык его нужно заменить на код звука Алисы или загрузить в Яндекс Диалоги и использовать полученный `dialogs-upload/...opus` идентификатор. Локальные `mp3` по-прежнему можно использовать в сервисе Home Assistant `dialog_custom_ui.yandex_tts_speak`, где звук проигрывается через `media_player.play_media`.
