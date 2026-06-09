@@ -119,13 +119,13 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                     state = self._hass.states.get(target)
                     if state is not None:
                         old_volume = state.attributes.get("volume_level")
-                        _LOGGER.debug("Saved old volume for %s: %s", target, old_volume)
+                        _LOGGER.error("Saved old volume for %s: %s", target, old_volume)
                     try:
                         await self._hass.services.async_call(
                             "media_player",
                             "volume_set",
                             {
-                                "volume_level": 100,
+                                "volume_level": 1.0,
                             },
                             target={"entity_id": target},
                             blocking=False,
@@ -145,6 +145,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                             blocking=False,
                         )
                         if old_volume is not None:
+                            _LOGGER.error(old_volume)
                             self._hass.async_create_task(
                                 self._async_restore_volume(target, old_volume),
                             )
