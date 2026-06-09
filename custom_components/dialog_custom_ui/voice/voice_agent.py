@@ -16,6 +16,7 @@ from homeassistant.helpers import intent
 from homeassistant.helpers.network import get_url
 from ..src.service import dialog_service
 from ..src.service.dialog_runtime import set_current_hass
+from ..timer_alarm.timer_alarm_utils import _resolve_media_player_entity_id
 
 from ..utils import _get_options
 
@@ -108,16 +109,20 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             audio_url = f"{base}/local/notification-all-tasks-completed.mp3"
             if device:
                 try:
-                    await self._hass.services.async_call(
-                        "media_player",
-                        "play_media",
-                        {
-                            "entity_id": device,
-                            "media_content_id": audio_url,
-                            "media_content_type": "music",
-                        },
-                        blocking=True,
-                    )
+                    target = _resolve_media_player_entity_id(self._hass, device)
+                    if target:
+                        await self._hass.services.async_call(
+                            "media_player",
+                            "play_media",
+                            {
+                                "entity_id": target,
+                                "media_content_id": audio_url,
+                                "media_content_type": "music",
+                            },
+                            blocking=True,
+                        )
+                    else:
+                        _LOGGER.error("No media_player entity found for device_id: %s", device)
                 except Exception as err:
                     _LOGGER.error("Failed to play media on %s: %s", device, err)
 
