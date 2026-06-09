@@ -117,12 +117,6 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                     try:
                         await self._hass.services.async_call(
                             "media_player",
-                            "turn_on",
-                            target={"entity_id": target},
-                            blocking=False,
-                        )
-                        await self._hass.services.async_call(
-                            "media_player",
                             "play_media",
                             {
                                 "media_content_id": audio_url,
