@@ -13,6 +13,7 @@ from homeassistant.components.conversation import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
+from homeassistant.helpers.network import async_get_url
 
 from ..src.service import dialog_service
 from ..src.service.dialog_runtime import set_current_hass
@@ -99,12 +100,33 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         except (aiohttp.ClientError, TimeoutError, ValueError) as err:
             _LOGGER.error("Voice agent request failed: %s", err)
 
-        #response_payload = data.get("response", {}) if isinstance(data, dict) else {}
         text = str(data.get("text") or "")
         should_continue = not bool(data.get("end_session", True))
 
-        response = intent.IntentResponse(language=user_input.language)
-        response.async_set_speech(text)
+        if not text:
+            device = application_id
+            base = async_get_url(self._hass)
+            audio_url = f"{base}/local/notification-all-tasks-completed.mp3"
+            if device:
+                try:
+                    await self._hass.services.async_call(
+                        "media_player",
+                        "play_media",
+                        {
+                            "entity_id": device,
+                            "media_content_id": audio_url,
+                            "media_content_type": "music",
+                        },
+                        blocking=True,
+                    )
+                except Exception as err:
+                    _LOGGER.error("Failed to play media on %s: %s", device, err)
+
+            response = intent.IntentResponse(language=user_input.language)
+            response.async_set_speech("")
+        else:
+            response = intent.IntentResponse(language=user_input.language)
+            response.async_set_speech(text)
 
         return ConversationResult(
             response=response,
