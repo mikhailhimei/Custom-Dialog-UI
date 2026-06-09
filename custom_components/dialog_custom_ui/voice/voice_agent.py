@@ -13,7 +13,6 @@ from homeassistant.components.conversation import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
-from homeassistant.helpers.network import get_url
 from ..src.service import dialog_service
 from ..src.service.dialog_runtime import set_current_hass
 from ..timer_alarm.timer_alarm_utils import _resolve_media_player_entity_id
@@ -105,26 +104,40 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
         if not text:
             device = application_id
-            base = get_url(self._hass)
-            audio_url = f"{base}/local/notification-all-tasks-completed.mp3"
+            audio_url = "media-source://media_source/local/notification-all-tasks-completed.mp3"
             if device:
-                try:
-                    target = _resolve_media_player_entity_id(self._hass, device)
-                    if target:
+                target = _resolve_media_player_entity_id(self._hass, device)
+                _LOGGER.info(
+                    "Voice fallback playback: device=%s target=%s audio=%s",
+                    device,
+                    target,
+                    audio_url,
+                )
+                if target:
+                    try:
+                        await self._hass.services.async_call(
+                            "media_player",
+                            "turn_on",
+                            target={"entity_id": target},
+                            blocking=False,
+                        )
                         await self._hass.services.async_call(
                             "media_player",
                             "play_media",
                             {
-                                "entity_id": target,
                                 "media_content_id": audio_url,
                                 "media_content_type": "music",
+                                "enqueue": "replace",
                             },
-                            blocking=True,
+                            target={"entity_id": target},
+                            blocking=False,
                         )
-                    else:
-                        _LOGGER.error("No media_player entity found for device_id: %s", device)
-                except Exception as err:
-                    _LOGGER.error("Failed to play media on %s: %s", device, err)
+                    except Exception as err:
+                        _LOGGER.error("Failed to play media on %s: %s", target, err)
+                else:
+                    _LOGGER.error("No media_player entity found for device_id: %s", device)
+            else:
+                _LOGGER.error("No device_id provided for fallback playback")
 
             response = intent.IntentResponse(language=user_input.language)
             response.async_set_speech("")
