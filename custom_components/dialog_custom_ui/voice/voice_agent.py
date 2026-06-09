@@ -13,8 +13,7 @@ from homeassistant.components.conversation import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
-from homeassistant.helpers.network import async_get_url
-
+from homeassistant.helpers.network import get_url
 from ..src.service import dialog_service
 from ..src.service.dialog_runtime import set_current_hass
 
@@ -105,7 +104,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
         if not text:
             device = application_id
-            base = async_get_url(self._hass)
+            base = get_url(self._hass)
             audio_url = f"{base}/local/notification-all-tasks-completed.mp3"
             if device:
                 try:
