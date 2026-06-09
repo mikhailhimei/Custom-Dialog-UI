@@ -29,8 +29,6 @@ from ..const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-
-
 class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     """Minimal compatible voice agent moved from custom_voice_agent."""
 
@@ -54,18 +52,13 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             raise HomeAssistantError("Dialog Custom UI integration entry not found")
 
         options = _get_options(self._entry)
-        base_url = _normalize_value(options.get(CONF_BASE_URL))
+        
         client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-        authorization_token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
-
         
         application_id = getattr(user_input, "device_id", None) or self._fallback_application_id
-        url = self._build_commands_url(base_url)
-        headers: dict[str, str] = {}
-        if authorization_token:
-            headers["Authorization"] = authorization_token
-
+        
         data: dict[str, Any] = {}
+        
         try:
             json={
                         "request": {"command": user_input.text},
@@ -79,24 +72,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                     }
             
             data = await dialog_service.words_scripts(json)
-            _LOGGER.error(data)
-            # async with aiohttp.ClientSession() as session:
-                # async with session.post(
-                #     url,
-                #     json={
-                #         "request": {"command": user_input.text},
-                #         "session": {
-                #             "user": {"user_id": clinet_id},
-                #             "application": {"application_id": application_id},
-                #             "session_id": session_id,
-                #             "new": user_input.conversation_id is None,
-                #         },
-                #         "version": "1.0",
-                #     },
-                #     headers=headers,
-                #     timeout=60,
-                # ) as resp:
-                #     data = await resp.json(content_type=None)
+            
         except (aiohttp.ClientError, TimeoutError, ValueError) as err:
             _LOGGER.error("Voice agent request failed: %s", err)
 
@@ -104,22 +80,15 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         should_continue = not bool(data.get("end_session", True))
 
         if not text:
-            device = application_id
             audio_url = "media-source://media_source/local/notification-all-tasks-completed.mp3"
-            if device:
-                target = _resolve_media_player_entity_id(self._hass, device)
-                _LOGGER.info(
-                    "Voice fallback playback: device=%s target=%s audio=%s",
-                    device,
-                    target,
-                    audio_url,
-                )
+            if application_id:
+                target = _resolve_media_player_entity_id(self._hass, application_id)
+                
                 if target:
                     old_volume = None
                     state = self._hass.states.get(target)
                     if state is not None:
                         old_volume = state.attributes.get("volume_level")
-                        _LOGGER.error("Saved old volume for %s: %s", target, old_volume)
                     try:
                         await self._hass.services.async_call(
                             "media_player",
@@ -145,22 +114,18 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                             blocking=False,
                         )
                         if old_volume is not None:
-                            _LOGGER.error(old_volume)
                             self._hass.async_create_task(
                                 self._async_restore_volume(target, old_volume),
                             )
                     except Exception as err:
                         _LOGGER.error("Failed to play media on %s: %s", target, err)
                 else:
-                    _LOGGER.error("No media_player entity found for device_id: %s", device)
+                    _LOGGER.error("No media_player entity found for application_id: %s", application_id)
             else:
-                _LOGGER.error("No device_id provided for fallback playback")
+                _LOGGER.error("No application_id provided for fallback playback")
 
-            response = intent.IntentResponse(language=user_input.language)
-            response.async_set_speech("")
-        else:
-            response = intent.IntentResponse(language=user_input.language)
-            response.async_set_speech(text)
+        response = intent.IntentResponse(language=user_input.language)
+        response.async_set_speech(text)
 
         return ConversationResult(
             response=response,
@@ -178,7 +143,6 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                 target={"entity_id": target},
                 blocking=False,
             )
-            _LOGGER.debug("Restored volume for %s to %s", target, old_volume)
         except Exception as err:
             _LOGGER.error("Failed to restore volume on %s: %s", target, err)
 
