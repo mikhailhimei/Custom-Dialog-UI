@@ -125,7 +125,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                             "media_player",
                             "volume_set",
                             {
-                                "volume_level": 0.5,
+                                "volume_level": 100,
                             },
                             target={"entity_id": target},
                             blocking=False,
@@ -169,7 +169,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
     async def _async_restore_volume(self, target: str, old_volume: Any) -> None:
         try:
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             await self._hass.services.async_call(
                 "media_player",
                 "volume_set",
