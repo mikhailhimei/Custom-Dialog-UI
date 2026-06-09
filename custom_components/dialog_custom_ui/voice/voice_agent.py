@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import uuid
 from typing import Any
@@ -114,6 +115,23 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                     audio_url,
                 )
                 if target:
+                    old_volume = None
+                    state = self._hass.states.get(target)
+                    if state is not None:
+                        old_volume = state.attributes.get("volume_level")
+                        _LOGGER.debug("Saved old volume for %s: %s", target, old_volume)
+                    try:
+                        await self._hass.services.async_call(
+                            "media_player",
+                            "volume_set",
+                            {
+                                "volume_level": 0.5,
+                            },
+                            target={"entity_id": target},
+                            blocking=False,
+                        )
+                    except Exception as err:
+                        _LOGGER.error("Failed to set volume on %s: %s", target, err)
                     try:
                         await self._hass.services.async_call(
                             "media_player",
@@ -126,6 +144,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
                             target={"entity_id": target},
                             blocking=False,
                         )
+                        if old_volume is not None:
+                            self._hass.async_create_task(
+                                self._async_restore_volume(target, old_volume),
+                            )
                     except Exception as err:
                         _LOGGER.error("Failed to play media on %s: %s", target, err)
                 else:
@@ -144,6 +166,20 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             conversation_id=session_id if should_continue else None,
             continue_conversation=should_continue,
         )
+
+    async def _async_restore_volume(self, target: str, old_volume: Any) -> None:
+        try:
+            await asyncio.sleep(1)
+            await self._hass.services.async_call(
+                "media_player",
+                "volume_set",
+                {"volume_level": float(old_volume)},
+                target={"entity_id": target},
+                blocking=False,
+            )
+            _LOGGER.debug("Restored volume for %s to %s", target, old_volume)
+        except Exception as err:
+            _LOGGER.error("Failed to restore volume on %s: %s", target, err)
 
     @staticmethod
     def _build_commands_url(ip_address: str) -> str:
