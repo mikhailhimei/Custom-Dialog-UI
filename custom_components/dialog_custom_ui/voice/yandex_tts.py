@@ -209,6 +209,8 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         end_status = call.data.get("end_status")
         volume_level = call.data.get("volume_level") 
 
+        _LOGGER.error(f"info: {text}, {media_url}, devices: {devices}, end_status: {end_status}, volume_level: {volume_level}")
+
         volume_level= volume_level if volume_level is not None else 1.0
 
         if devices:
