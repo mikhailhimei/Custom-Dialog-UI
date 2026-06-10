@@ -19,16 +19,17 @@ from ..service.dialog_runtime import (
     build_command_data,
     build_text_response,
     clear_dialog_state,
-    decode_current_node_state,
+    delete_dialog_state_value,
+    get_dialog_state_value,
     get_service_response,
     store_command_data,
     get_voice_response,
     has_next_action_branch,
     miss_commands,
-    r,
     resolve_next_action_uuid,
     resolve_default_response_type,
     set_current_node_state,
+    set_dialog_state_value,
     should_store_current_node,
 )
 
@@ -319,8 +320,8 @@ async def execute_top_level_template(
 
 
 async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_text, client_id, device_id, dialog_settings):
-    current_node_state = r.get(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-    error_branch = r.get(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
+    current_node_state = get_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
+    error_branch = get_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
 
     if not current_node_state or client_new_dialog:
         return None
@@ -462,9 +463,9 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
                 return miss_commands(client_id, device_id, response_text, dialog_settings)
             if response_type == 'error':
                 if has_children_error:
-                    r.set(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}', '1', ex=120)
+                    set_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id, '1', ttl=120)
                 else:
-                    r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
+                    delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
 
             if (
                 (response_type == 'error' and has_children_error and not end_status)
@@ -474,8 +475,8 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
                 next_uuid = found.get('uuid') if response_type == 'error' and has_children_error else uuid
                 set_current_node_state(client_id, next_uuid, device_id, error_branch=(response_type == 'error'), parent_type=next_parent_type)
             else:
-                r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
-                r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
+                delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
+                delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
         else:
             if answer_type == 'redis':
                 response_text = (
@@ -492,20 +493,20 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
                     next_parent_type = found.get('actionType') if found is not active_node else parent_type
                     set_current_node_state(client_id, found.get('uuid'), device_id, error_branch=True, parent_type=next_parent_type)
                 else:
-                    r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-                    r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
+                    delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
+                    delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
                     end_status = True
             elif has_children_error:
                 end_status = False
-                r.set(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}', "1", ex=120)
+                set_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id, "1", ttl=120)
             else:
-                r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-                r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
+                delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
+                delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
                 response_text = get_voice_response(active_node, 'miss', {"commands": client_text, "client_id": client_id})
                 end_status = True
     else:
         store_command_data(hass, client_id, command_data)
-        r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
+        delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
         if has_children and not end_status:
             set_current_node_state(client_id, uuid, device_id, parent_type=found.get('actionType'))
         elif not end_status and found.get('nextAction'):
@@ -514,6 +515,6 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
             if next_active_node:
                 set_current_node_state(client_id, next_active_node.get('uuid'), device_id, parent_type=found.get('actionType'))
         if end_status or not has_children:
-            r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
+            delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
 
     return build_text_response(response_text, end_status, use_declension)

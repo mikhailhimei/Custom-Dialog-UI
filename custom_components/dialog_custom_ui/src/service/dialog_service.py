@@ -19,6 +19,7 @@ from ..service.dialog_matching import (
 from ..service.dialog_runtime import (
     build_text_response,
     build_command_data,
+    delete_dialog_state_value,
     get_current_hass,
     get_voice_response,
     r,
@@ -265,7 +266,7 @@ def handle_stop_command(hass, top_level_nodes, client_text, client_id, device_id
     if not stop_node or not any(command.lower() in client_text.lower() for command in stop_node.get("voiceCommands", [])):
         return None
 
-    r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
+    delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
     store_command_data(hass, client_id, {"parent_type": "stop", "client_id": client_id, "device_id": device_id})
     return build_text_response(get_voice_response(stop_node, "default", {"commands": client_text, "client_id": client_id}), True)
 
@@ -277,7 +278,7 @@ def handle_new_session(top_level_nodes, client_new_dialog, client_text, client_i
     if not default_node:
         return None
 
-    r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
+    delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
     return build_text_response(
         get_voice_response(default_node, "default", {"commands": client_text, "client_id": client_id}),
         default_node.get("endStatus", False),
