@@ -31,6 +31,7 @@ ATTR_CLIENT_ID = "clientId"
 ATTR_DEVICE_ID = "deviceId"
 ATTR_ACTION_TYPE = "actionType"
 ATTR_VARIABLES = "variables"
+ATTR_USE_DECLENSION = "useDeclension"
 
 _SEND_COMMAND_SCHEMA = vol.Schema(
     {
@@ -38,6 +39,7 @@ _SEND_COMMAND_SCHEMA = vol.Schema(
         vol.Required(ATTR_DEVICE_ID): vol.Coerce(str),
         vol.Required(ATTR_ACTION_TYPE): vol.Coerce(str),
         vol.Optional(ATTR_VARIABLES, default={}): vol.Any(str, dict),
+        vol.Optional(ATTR_USE_DECLENSION, default=True): vol.Boolean(),
     }
 )
 
@@ -77,6 +79,7 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
         ATTR_DEVICE_ID: _normalize_value(call.data.get(ATTR_DEVICE_ID)),
         ATTR_ACTION_TYPE: _normalize_value(call.data.get(ATTR_ACTION_TYPE)),
         ATTR_VARIABLES: variables,
+        ATTR_USE_DECLENSION: call.data.get(ATTR_USE_DECLENSION, True),
     }
 
     hass.bus.async_fire(
@@ -86,13 +89,9 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
             "device_id": payload[ATTR_DEVICE_ID],
             ATTR_ACTION_TYPE: payload[ATTR_ACTION_TYPE],
             ATTR_VARIABLES: payload[ATTR_VARIABLES],
+            ATTR_USE_DECLENSION: payload[ATTR_USE_DECLENSION],
         },
     )
-    # _append_log(
-    #     hass,
-    #     "request",
-    #     f"FIRE {EVENT_DIALOG_MESSAGE}:{payload[ATTR_CLIENT_ID]}:{payload[ATTR_DEVICE_ID]}",
-    # )
 
 
 def _parse_variables(value: Any) -> dict[str, Any]:

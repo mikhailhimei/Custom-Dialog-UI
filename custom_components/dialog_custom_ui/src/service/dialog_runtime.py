@@ -1,11 +1,12 @@
 import asyncio
 import json
 import re
+import time
 import logging
 
 from homeassistant.core import callback
 from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
-from ...const import EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
+from ...const import DOMAIN, EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
 from ..handler.commands_mapper import generate_ai_response
 from ..utils.dialog_response import build_dialog_response
 from ..utils.redis_init import get_redis
@@ -28,6 +29,42 @@ def set_current_hass(hass):
 def get_current_hass(hass=None):
     """Return a fresh Home Assistant instance, preferring the explicit value."""
     return set_current_hass(hass) if hass is not None else CURRENT_HASS
+
+
+def _get_dialog_state_store(hass=None):
+    hass = get_current_hass(hass)
+    if hass is None:
+        return {}
+    return hass.data.setdefault(DOMAIN, {}).setdefault("dialog_state", {})
+
+
+def _dialog_state_key(key: str, client_id: str, device_id: str) -> str:
+    return f"{key}:{client_id}:{device_id}"
+
+
+def get_dialog_state_value(key: str, client_id: str, device_id: str):
+    store = _get_dialog_state_store()
+    entry = store.get(_dialog_state_key(key, client_id, device_id))
+    if not entry:
+        return None
+    expires = entry.get("expires")
+    if expires is not None and time.time() > expires:
+        store.pop(_dialog_state_key(key, client_id, device_id), None)
+        return None
+    return entry.get("value")
+
+
+def set_dialog_state_value(key: str, client_id: str, device_id: str, value, ttl: int | None = None):
+    store = _get_dialog_state_store()
+    entry = {"value": value}
+    if ttl is not None:
+        entry["expires"] = time.time() + ttl
+    store[_dialog_state_key(key, client_id, device_id)] = entry
+
+
+def delete_dialog_state_value(key: str, client_id: str, device_id: str):
+    store = _get_dialog_state_store()
+    store.pop(_dialog_state_key(key, client_id, device_id), None)
 
 
 REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
@@ -67,9 +104,9 @@ def _is_feature_enabled(value, default=False):
 
 
 def clear_dialog_state(client_id, device_id):
-    r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-    r.delete(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}')
-    r.delete(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}')
+    delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
+    delete_dialog_state_value(MISS_COUNT_KEY, client_id, device_id)
+    delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
 
 
 def encode_current_node_state(uuid, parent_type=""):
@@ -93,10 +130,10 @@ def set_current_node_state(client_id, uuid, device_id, error_branch=False, custo
         "uuid": uuid,
         "parent_type": parent_type
     }
-    r.set(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}', json.dumps(command), ex=120)
-    r.set(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}', 0, ex=120)
+    set_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id, json.dumps(command), ex=120)
+    set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, 0, ex=120)
     if error_branch:
-        r.set(f'{str(ERR_BRANCH_KEY)}:{client_id}:{device_id}', "1", ex=120)
+        set_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id, "1", ex=120)
 
 
 def build_command_data(
@@ -410,12 +447,12 @@ def build_text_response(response_text, end_status, use_declension= True):
     return {"end_session": end_status, "text": re.sub(r'<.*?>', '', response_text), "tts": response_text}
 
 def miss_commands(client_id, device_id, response_text, dialog_settings):
-    miss = int(r.get(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}') or 0) + 1
-    r.set(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}', miss, ex=120)
+    miss = int(get_dialog_state_value(MISS_COUNT_KEY, client_id, device_id) or 0) + 1
+    set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, miss, ex=120)
 
     if miss >= 3:
-        r.delete(f'{str(CURRENT_NODE_KEY)}:{client_id}:{device_id}')
-        r.delete(f'{str(MISS_COUNT_KEY)}:{client_id}:{device_id}')
+        delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
+        delete_dialog_state_value(MISS_COUNT_KEY, client_id, device_id)
         dialog_cms_response = build_dialog_response(dialog_settings, "finish_miss")
         return build_text_response(
             dialog_cms_response.get("message", "Диалог завершен."),

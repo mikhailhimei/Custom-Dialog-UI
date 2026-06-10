@@ -31,3 +31,11 @@ send_command:
       selector:
         text:
           multiline: true
+    useDeclension:
+      name: Use declension
+      description: Whether to apply declension to the generated response text.
+      required: false
+      default: true
+      example: true
+      selector:
+        boolean: {}
