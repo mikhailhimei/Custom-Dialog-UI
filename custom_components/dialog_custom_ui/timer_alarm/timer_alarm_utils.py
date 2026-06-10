@@ -12,8 +12,7 @@ from homeassistant.util import dt as dt_util
 
 from ..normalize import _normalize_device_ids, _normalize_value
 
-_LOGGER = logging.getLogger(__name__)
-_DEFAULT_TIMER_MEDIA_CONTENT_ID = "morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "alarm-and-timer.mp3"
 _TIMER_PREFIX = "ha_timer:"
 _ALARM_PREFIX = "ha_alarm:"
 

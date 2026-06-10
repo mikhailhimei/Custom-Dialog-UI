@@ -30,7 +30,7 @@ from .normalize import (
     _normalize_device_ids
 )
 
-_DEFAULT_TIMER_MEDIA_CONTENT_ID = "morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "alarm-and-timer.mp3"
 
 
 def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:

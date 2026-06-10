@@ -205,19 +205,10 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
 
         media_url = f"dialog_custom_ui_tts/{filename}"
-        devices = call.data.get("device_id")
-        end_status = call.data.get("end_status")
-        volume_level = call.data.get("volume_level") 
-
-        _LOGGER.error(f"info: {text}, {media_url}, devices: {devices}, end_status: {end_status}, volume_level: {volume_level}")
-
-        volume_level= volume_level if volume_level is not None else 1.0
-
-        if devices:
-            await audio_notification(hass, devices, media_url, volume_level=volume_level)
-
-        if not end_status:
-            await audio_notification(hass, devices, "water-single-short-drop.mp3", volume_level=volume_level)
+        device_id = call.data.get("device_id")
+        
+        if device_id:
+            await audio_notification(hass, device_id, media_url)
 
         _LOGGER.info("Yandex TTS audio generated: %s", media_url)
 

@@ -34,7 +34,7 @@ async def _async_restore_volume(hass, target: str, old_volume: Any) -> None:
         _LOGGER.error("Failed to restore volume on %s: %s", target, err)
 
 
-async def audio_notification(hass, device_id, audio_file, volume_level=1.0):
+async def audio_notification(hass, device_id, audio_file, volume_level = None):
     audio_url = f"media-source://media_source/local/{audio_file}"
     if device_id:
                 target = _resolve_media_player_entity_id(hass, device_id)
@@ -44,12 +44,14 @@ async def audio_notification(hass, device_id, audio_file, volume_level=1.0):
                     state = hass.states.get(target)
                     if state is not None:
                         old_volume = state.attributes.get("volume_level")
+
+                    volume_to_set = volume_level if volume_level is not None else old_volume
                     try:
                         await hass.services.async_call(
                             "media_player",
                             "volume_set",
                             {
-                                "volume_level": volume_level,
+                                "volume_level": volume_to_set,
                             },
                             target={"entity_id": target},
                             blocking=False,
@@ -68,7 +70,7 @@ async def audio_notification(hass, device_id, audio_file, volume_level=1.0):
                             target={"entity_id": target},
                             blocking=False,
                         )
-                        if old_volume is not None:
+                        if old_volume is not None and volume_level is not None:
                             hass.async_create_task(
                                 _async_restore_volume(hass, target, old_volume),
                             )
