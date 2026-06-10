@@ -130,10 +130,10 @@ def set_current_node_state(client_id, uuid, device_id, error_branch=False, custo
         "uuid": uuid,
         "parent_type": parent_type
     }
-    set_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id, json.dumps(command), ex=120)
-    set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, 0, ex=120)
+    set_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id, json.dumps(command), ttl=120)
+    set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, 0, ttl=120)
     if error_branch:
-        set_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id, "1", ex=120)
+        set_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id, "1", ttl=120)
 
 
 def build_command_data(
@@ -448,7 +448,7 @@ def build_text_response(response_text, end_status, use_declension= True):
 
 def miss_commands(client_id, device_id, response_text, dialog_settings):
     miss = int(get_dialog_state_value(MISS_COUNT_KEY, client_id, device_id) or 0) + 1
-    set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, miss, ex=120)
+    set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, miss, ttl=120)
 
     if miss >= 3:
         delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
