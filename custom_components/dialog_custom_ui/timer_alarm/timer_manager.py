@@ -12,13 +12,12 @@ from .timer_alarm_utils import (
     _default_timezone_name,
     _duration_to_seconds,
     _format_datetime,
-    _resolve_media_player_entity_id,
     _safe_int,
     _seconds_to_duration,
     _seconds_to_minute_phrase,
     _TIMER_PREFIX,
 )
-
+from ..audio_notification import audio_notification
 
 class DialogTimerManager:
     def __init__(
@@ -344,29 +343,9 @@ class DialogTimerManager:
             timer_entry = self._timers.get(timer_id)
             if timer_entry is None:
                 return
-            media_player_entity_id = _resolve_media_player_entity_id(
-                self.hass,
-                _normalize_value(timer_entry.get("device_id")),
-            )
-            if not media_player_entity_id:
-                return
-            await self.hass.services.async_call(
-                "media_player",
-                "turn_on",
-                target={"entity_id": media_player_entity_id},
-                blocking=False,
-            )
-            await self.hass.services.async_call(
-                "media_player",
-                "play_media",
-                {
-                    "media_content_id": self._default_media_content_id(),
-                    "media_content_type": "music",
-                    "enqueue": "replace",
-                },
-                target={"entity_id": media_player_entity_id},
-                blocking=False,
-            )
+            device_ref = timer_entry.get("device_id")
+            await audio_notification(self.hass, device_ref, self._default_media_content_id())
+            
         except asyncio.CancelledError:
             return
         finally:

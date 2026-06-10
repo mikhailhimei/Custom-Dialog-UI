@@ -18,6 +18,8 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
+from ..audio_notification import audio_notification
+
 from ..const import (
     CONF_YANDEX_TTS_API_KEY,
     CONF_YANDEX_TTS_CODEC,
@@ -66,6 +68,8 @@ SERVICE_SCHEMA = vol.Schema(
     {
         vol.Required("text"): cv.string,
         vol.Optional("entity_id"): vol.Any(cv.entity_id, [cv.entity_id]),
+        vol.Optional("device_id"): vol.Any(cv.entity_id, [cv.entity_id]),
+        vol.Optional("end_status"): vol.Any(bool, cv.string),
         vol.Optional(CONF_YANDEX_TTS_LANG): cv.string,
         vol.Optional(CONF_YANDEX_TTS_CODEC): cv.string,
         vol.Optional(CONF_YANDEX_TTS_VOICE): cv.string,
@@ -200,28 +204,18 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         abs_path = Path(hass.config.path(str(rel_dir / filename)))
         await hass.async_add_executor_job(_write_audio_file, abs_path, audio)
 
-        media_url = f"/local/dialog_custom_ui_tts/{filename}"
-        targets = _entity_ids(call.data.get("entity_id"))
-        volume_level = call.data.get("volume_level")
+        media_url = f"dialog_custom_ui_tts/{filename}"
+        devices = call.data.get("device_id")
+        end_status = call.data.get("end_status")
+        volume_level = call.data.get("volume_level") 
 
-        if targets:
-            if volume_level is not None:
-                await hass.services.async_call(
-                    "media_player",
-                    "volume_set",
-                    {"entity_id": targets, "volume_level": float(volume_level)},
-                    blocking=True,
-                )
-            await hass.services.async_call(
-                "media_player",
-                "play_media",
-                {
-                    "entity_id": targets,
-                    "media_content_id": media_url,
-                    "media_content_type": "music",
-                },
-                blocking=False,
-            )
+        volume_level= volume_level if volume_level is not None else 1.0
+
+        if devices:
+            await audio_notification(hass, devices, media_url, volume_level=volume_level)
+
+        if not end_status:
+            await audio_notification(hass, devices, media_url, volume_level=volume_level)
 
         _LOGGER.info("Yandex TTS audio generated: %s", media_url)
 

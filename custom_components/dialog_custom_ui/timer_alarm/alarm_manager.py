@@ -10,9 +10,9 @@ from homeassistant.core import HomeAssistant
 
 from ..normalize import _normalize_value
 from .timer_alarm_utils import (
-    _resolve_media_player_entity_id,
     _safe_int,
 )
+from ..audio_notification import audio_notification
 from .alarm_persistence import AlarmPersistence
 
 _LOGGER = logging.getLogger(__name__)
@@ -321,26 +321,7 @@ class DialogAlarmManager:
 
     async def _run_alarm_action(self, alarm: dict[str, Any]) -> None:
         device_ref = _normalize_value(alarm.get("device_id"))
-        media_player_entity_id = _resolve_media_player_entity_id(self.hass, device_ref)
-        if not media_player_entity_id:
-            return
-        await self.hass.services.async_call(
-            "media_player",
-            "turn_on",
-            target={"entity_id": media_player_entity_id},
-            blocking=False,
-        )
-        await self.hass.services.async_call(
-            "media_player",
-            "play_media",
-            {
-                "media_content_id": self._default_media_content_id(),
-                "media_content_type": "music",
-                "enqueue": "replace",
-            },
-            target={"entity_id": media_player_entity_id},
-            blocking=False,
-        )
+        await audio_notification(self.hass, device_ref, self._default_media_content_id())
         alarm["status"] = "off"
         self._mark_updated()
 

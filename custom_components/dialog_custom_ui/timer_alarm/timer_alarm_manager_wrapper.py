@@ -233,6 +233,8 @@ class DialogTimerAlarmManager:
         if entry is None:
             return _DEFAULT_TIMER_MEDIA_CONTENT_ID
         configured = _normalize_value(entry.options.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID))
+        if configured.startswith("media-source://media_source/local/"):
+            configured = configured.split("media-source://media_source/local/", 1)[1]
         return configured or _DEFAULT_TIMER_MEDIA_CONTENT_ID
 
     def _persist_items_to_entry(self) -> None:

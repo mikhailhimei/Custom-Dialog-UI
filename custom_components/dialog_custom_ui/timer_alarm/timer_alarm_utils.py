@@ -13,7 +13,7 @@ from homeassistant.util import dt as dt_util
 from ..normalize import _normalize_device_ids, _normalize_value
 
 _LOGGER = logging.getLogger(__name__)
-_DEFAULT_TIMER_MEDIA_CONTENT_ID = "media-source://media_source/local/morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
+_DEFAULT_TIMER_MEDIA_CONTENT_ID = "morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
 _TIMER_PREFIX = "ha_timer:"
 _ALARM_PREFIX = "ha_alarm:"
 
@@ -88,23 +88,6 @@ def _parse_datetime(value: str, timezone_name: str) -> datetime | None:
         tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
         parsed = parsed.replace(tzinfo=tz)
     return dt_util.as_local(parsed)
-
-
-def _resolve_media_player_entity_id(hass: HomeAssistant, device_ref: str) -> str:
-    if not device_ref:
-        return ""
-    if hass.states.get(device_ref):
-        state = hass.states.get(device_ref)
-        if state is not None and state.entity_id.startswith("media_player."):
-            return device_ref
-    registry = er.async_get(hass)
-    entities = er.async_entries_for_device(registry, device_ref)
-    media_players = [entry.entity_id for entry in entities if entry.entity_id.startswith("media_player.")]
-    if media_players:
-        return media_players[0]
-    if hass.states.get(device_ref):
-        return device_ref
-    return ""
 
 
 def _extract_timer_parts(direct_values) -> dict[str, int] | None:

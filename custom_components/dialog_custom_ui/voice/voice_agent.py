@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
 from ..src.service import dialog_service
 from ..src.service.dialog_runtime import set_current_hass
-from ..timer_alarm.timer_alarm_utils import _resolve_media_player_entity_id
+from ..audio_notification import audio_notification
 
 from ..utils import _get_options
 
@@ -80,49 +80,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         should_continue = not bool(data.get("end_session", True))
 
         if not text:
-            audio_url = "media-source://media_source/local/notification-all-tasks-completed.mp3"
-            if application_id:
-                target = _resolve_media_player_entity_id(self._hass, application_id)
-                
-                if target:
-                    old_volume = None
-                    state = self._hass.states.get(target)
-                    if state is not None:
-                        old_volume = state.attributes.get("volume_level")
-                    try:
-                        await self._hass.services.async_call(
-                            "media_player",
-                            "volume_set",
-                            {
-                                "volume_level": 1.0,
-                            },
-                            target={"entity_id": target},
-                            blocking=False,
-                        )
-                    except Exception as err:
-                        _LOGGER.error("Failed to set volume on %s: %s", target, err)
-                    try:
-                        await self._hass.services.async_call(
-                            "media_player",
-                            "play_media",
-                            {
-                                "media_content_id": audio_url,
-                                "media_content_type": "music",
-                                "enqueue": "replace",
-                            },
-                            target={"entity_id": target},
-                            blocking=False,
-                        )
-                        if old_volume is not None:
-                            self._hass.async_create_task(
-                                self._async_restore_volume(target, old_volume),
-                            )
-                    except Exception as err:
-                        _LOGGER.error("Failed to play media on %s: %s", target, err)
-                else:
-                    _LOGGER.error("No media_player entity found for application_id: %s", application_id)
-            else:
-                _LOGGER.error("No application_id provided for fallback playback")
+            audio_notification(self._hass, application_id, "notification-all-tasks-completed.mp3")
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
@@ -133,18 +91,6 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             continue_conversation=should_continue,
         )
 
-    async def _async_restore_volume(self, target: str, old_volume: Any) -> None:
-        try:
-            await asyncio.sleep(2)
-            await self._hass.services.async_call(
-                "media_player",
-                "volume_set",
-                {"volume_level": float(old_volume)},
-                target={"entity_id": target},
-                blocking=False,
-            )
-        except Exception as err:
-            _LOGGER.error("Failed to restore volume on %s: %s", target, err)
 
     @staticmethod
     def _build_commands_url(ip_address: str) -> str:
