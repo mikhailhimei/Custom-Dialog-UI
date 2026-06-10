@@ -80,7 +80,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         should_continue = not bool(data.get("end_session", True))
 
         if not text:
-            await audio_notification(self._hass, application_id, "notification-all-tasks-completed.mp3")
+            await audio_notification(self._hass, application_id, "completed.mp3")
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
@@ -97,18 +97,15 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         )
 
     async def _async_play_drop_after_speech(self, application_id: str, text: str) -> None:
-        # Conversation TTS starts after the response is returned, so delay the
-        # prompt sound long enough for the spoken response to finish.
         speech_delay = self._estimate_speech_duration(text)
         await asyncio.sleep(speech_delay)
-        await audio_notification(self._hass, application_id, "water-single-short-drop.mp3")
+        await audio_notification(self._hass, application_id, "listen.mp3")
 
     @staticmethod
     def _estimate_speech_duration(text: str) -> float:
         words_count = len(text.split())
         chars_count = len(text)
-        # Russian speech is usually around 2-3 words per second. Use both word
-        # and character estimates so short phrases still leave enough time.
+        
         estimated_seconds = max(words_count / 2.4, chars_count / 14)
         return min(max(estimated_seconds + 0.5, 1.0), 12.0)
 
