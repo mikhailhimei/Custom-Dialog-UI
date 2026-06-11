@@ -48,6 +48,7 @@ class DialogTimerManager:
         if not client_id and execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "error",
                 "message": "Не удалось установить таймер: отсутствует client_id",
             }
@@ -55,6 +56,7 @@ class DialogTimerManager:
         if timer is None:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "error",
                 "message": "Не удалось установить таймер: некорректный формат времени",
             }
@@ -73,6 +75,7 @@ class DialogTimerManager:
         if execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "success",
                 "message": f"на {_seconds_to_minute_phrase(total_seconds)}",
             }
@@ -80,12 +83,14 @@ class DialogTimerManager:
     async def async_handle_timer_stop(
         self,
         client_id: str,
+        device_id: str,
         count: int,
         execution_command: bool,
     ) -> dict[str, Any] | None:
         if not client_id and execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "error",
                 "message": "Не удалось установить таймер: отсутствует client_id",
             }
@@ -94,6 +99,7 @@ class DialogTimerManager:
         if not timers and execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "not_timers",
             }
 
@@ -101,6 +107,7 @@ class DialogTimerManager:
             _, text_timer = self._timer_count_message(timers)
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "several",
                 "message": text_timer,
             }
@@ -119,12 +126,14 @@ class DialogTimerManager:
         if execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "success",
             }
 
     async def async_handle_timer_pause(
         self,
         client_id: str,
+        device_id: str,
         count: int,
         execution_command: bool,
     ) -> dict[str, Any] | None:
@@ -132,6 +141,7 @@ class DialogTimerManager:
         if not timers and execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "not_timers",
             }
 
@@ -141,10 +151,11 @@ class DialogTimerManager:
         if execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "success",
             }
 
-    async def async_handle_timer_resume(self, client_id: str, count: int) -> None:
+    async def async_handle_timer_resume(self, client_id: str, device_id: str, count: int) -> None:
         timers = self._timers_for_client(client_id)
         if not timers:
             return
@@ -154,6 +165,7 @@ class DialogTimerManager:
     async def async_handle_timer_info(
         self,
         client_id: str,
+        device_id: str,
         execution_command: bool,
     ) -> dict[str, Any] | None:
         if not client_id:
@@ -163,6 +175,7 @@ class DialogTimerManager:
         if execution_command:
             return {
                 "clientId": client_id,
+                "device_id": device_id,
                 "actionType": "several" if count_timer else "one",
                 "message": text_timer,
             }
