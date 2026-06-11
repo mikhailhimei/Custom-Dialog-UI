@@ -99,7 +99,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
     async def _async_play_drop_after_speech(self, application_id: str, text: str) -> None:
         speech_delay = self._estimate_speech_duration(text)
         await asyncio.sleep(speech_delay)
-        await audio_notification(self._hass, application_id, "listen.mp3")
+        await audio_notification(self._hass, application_id, "listen.mp3", 1.0)
 
     @staticmethod
     def _estimate_speech_duration(text: str) -> float:
