@@ -33,31 +33,33 @@ async def _async_restore_volume(hass, target: str, old_volume: Any, delay: float
     except Exception as err:
         _LOGGER.error("Failed to restore volume on %s: %s", target, err)
 
-
-async def _async_ramp_volume(hass, target: str, start: float, end: float, duration: float = 5.0) -> None:
+async def _async_ramp_volume(
+    hass,
+    target: str,
+    start: float,
+    end: float,
+    interval: float = 15.0,
+) -> None:
     try:
-        start = float(start)
+        curr = float(start)
         end = float(end)
-        if end <= start:
-            return
-        step = 0.1
-        steps = max(1, int(round((end - start) / step)))
-        delay = float(duration) / steps
-        curr = start
-        for _ in range(steps):
-            curr = round(curr + step, 3)
-            level = max(0.0, min(1.0, float(curr)))
-            try:
-                await hass.services.async_call(
-                    "media_player",
-                    "volume_set",
-                    {"volume_level": level},
-                    target={"entity_id": target},
-                    blocking=False,
-                )
-            except Exception as err:
-                _LOGGER.error("Failed to ramp volume on %s: %s", target, err)
-            await asyncio.sleep(delay)
+
+        while curr < end:
+            curr = min(curr + 0.1, end)
+
+            await hass.services.async_call(
+                "media_player",
+                "volume_set",
+                {"volume_level": curr},
+                target={"entity_id": target},
+                blocking=False,
+            )
+
+            if curr >= end:
+                break
+
+            await asyncio.sleep(interval)
+
     except Exception as err:
         _LOGGER.error("Volume ramp task failed for %s: %s", target, err)
 
@@ -128,11 +130,11 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                             try:
                                 if is_range:
                                     hass.async_create_task(
-                                        _async_ramp_volume(hass, target, float(range_start), float(range_end), duration=5.0)
+                                        _async_ramp_volume(hass, target, float(range_start), float(range_end), 5.0)
                                     )
                                 else:
                                     hass.async_create_task(
-                                        _async_ramp_volume(hass, target, float(old_volume), float(volume_level), duration=5.0)
+                                        _async_ramp_volume(hass, target, float(old_volume), float(volume_level), 5.0)
                                     )
                             except Exception as err:
                                 _LOGGER.error("Failed to start ramp task for %s: %s", target, err)
