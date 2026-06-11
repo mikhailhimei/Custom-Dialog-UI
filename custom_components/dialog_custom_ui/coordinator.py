@@ -219,23 +219,9 @@ class DialogCommandCoordinator:
             self.entry.entry_id,
             payload,
         )
-        client_id = _normalize_value(payload.get("clientId"))
-
-        if not client_id:
-            self._append_log("error", "post-save skipped: client_id or device_id missing")
-            return
-
-        message = {
-            key: value
-            for key, value in payload.items()
-            if key not in {"clientId"}
-        }
+        
         self.hass.bus.async_fire(
             EVENT_DIALOG_MESSAGE,
-            {
-                "client_id": client_id,
-                "device_id": payload.get("deviceId"),
-                **message,
-            },
+            payload
         )
-        self._append_log("request", f"FIRE {EVENT_DIALOG_MESSAGE}:{client_id}:{payload.get('deviceId')}")
+        
