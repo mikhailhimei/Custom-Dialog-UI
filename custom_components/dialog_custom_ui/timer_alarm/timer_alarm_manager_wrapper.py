@@ -123,7 +123,7 @@ class DialogTimerAlarmManager:
     ) -> bool:
         parent_type = _normalize_value(payload.get("parent_type")).lower()
         device_id = _normalize_value(payload.get("device_id"))
-        client_id = f"{_normalize_value(payload.get('client_id'))}:{device_id}"
+        client_id = _normalize_value(payload.get('client_id'))
         count = _extract_count(payload)
         execution_command = payload.get("execution_command")
 
@@ -132,20 +132,20 @@ class DialogTimerAlarmManager:
             timer = _extract_timer_parts(payload.get("children_direct_type"))
             commands = await self.timer_manager.async_handle_timer_start(timer, client_id, device_id, execution_command)
         elif parent_type == "timer_stop":
-            commands = await self.timer_manager.async_handle_timer_stop(client_id, count, execution_command)
+            commands = await self.timer_manager.async_handle_timer_stop(client_id, device_id, count, execution_command)
         elif parent_type == "timer_info":
-            commands = await self.timer_manager.async_handle_timer_info(client_id, execution_command)
+            commands = await self.timer_manager.async_handle_timer_info(client_id, device_id, execution_command)
         elif parent_type == "timer_pause":
-            commands = await self.timer_manager.async_handle_timer_pause(client_id, count, execution_command)
+            commands = await self.timer_manager.async_handle_timer_pause(client_id, device_id, count, execution_command)
         elif parent_type == "timer_resume":
-            commands = await self.timer_manager.async_handle_timer_resume(client_id, count)
+            commands = await self.timer_manager.async_handle_timer_resume(client_id, device_id, count)
         elif parent_type == "alarm_start":
             alarm_time = _extract_alarm_time(payload.get("children_direct_type"))
             commands = await self.alarm_manager.async_handle_alarm_start(alarm_time, client_id, device_id, execution_command)
         elif parent_type == "alarm_stop":
-            commands = await self.alarm_manager.async_handle_alarm_stop(client_id, count, execution_command)
+            commands = await self.alarm_manager.async_handle_alarm_stop(client_id, device_id, count, execution_command)
         elif parent_type == "alarm_info":
-            commands = await self.alarm_manager.async_handle_alarm_info(client_id, count, execution_command)
+            commands = await self.alarm_manager.async_handle_alarm_info(client_id, device_id, count, execution_command)
 
         return await self._post_save_commands(options, commands)
 
