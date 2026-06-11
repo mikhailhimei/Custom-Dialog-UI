@@ -120,12 +120,16 @@ def _extract_alarm_time(direct_values) -> str | None:
                 continue
 
             value = item.get("value")
+            if not isinstance(value, dict):
+                continue
+
             clock = _extract_alarm_clock(value)
             keep_raw_time = value.get("times_of_day")
             if keep_raw_time:
                 return clock
 
-            if value["hour"] == 0 or value["hour"] >= 12:
+            hour = _safe_int(value.get("hour"))
+            if hour == 0 or hour >= 12:
                 return clock
 
             return _resolve_alarm_time_for_today(value)
@@ -134,8 +138,10 @@ def _extract_alarm_time(direct_values) -> str | None:
 
 def _resolve_alarm_time_for_today(value: dict[str, Any]) -> str:
     now = dt_util.now()
-    morning_candidate = now.replace(hour=value["hour"], minute=value["minut"], second=0, microsecond=0)
-    evening_candidate = now.replace(hour=value["hour"] + 12, minute=value["minut"], second=0, microsecond=0)
+    hour = min(23, max(0, _safe_int(value.get("hour"))))
+    minute = min(59, max(0, _safe_int(value.get("minut"))))
+    morning_candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    evening_candidate = now.replace(hour=hour + 12, minute=minute, second=0, microsecond=0)
 
     if morning_candidate <= now:
         morning_candidate = morning_candidate + timedelta(days=1)
@@ -143,8 +149,8 @@ def _resolve_alarm_time_for_today(value: dict[str, Any]) -> str:
         evening_candidate = evening_candidate + timedelta(days=1)
 
     if evening_candidate < morning_candidate:
-        return f"{value['hour'] + 12:02d}:{value['minut']:02d}"
-    return f"{value['hour']:02d}:{value['minut']:02d}"
+        return f"{hour + 12:02d}:{minute:02d}"
+    return f"{hour:02d}:{minute:02d}"
 
 
 def _collect_device_labels(hass: HomeAssistant, items: list[dict[str, Any]], configured_device_ids: Any) -> dict[str, str]:
