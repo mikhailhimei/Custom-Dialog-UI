@@ -49,8 +49,8 @@ class DialogAlarmManager:
         self._alarms.clear()
 
     async def async_restore_from_persistence(self, client_id: str | None = None) -> None:
-        """Restore alarms from Redis persistence if available.
-        
+        """Restore alarms from Home Assistant storage if available.
+
         This is called when the coordinator starts to recover alarms that were
         active before a server restart.
         """
@@ -58,25 +58,29 @@ class DialogAlarmManager:
             return
         
         try:
+            loaded_presets = await self._persistence.load_alarm_presets(client_id)
+            if loaded_presets:
+                self.load_alarm_presets(list(loaded_presets))
+
             loaded_alarms = await self._persistence.load_alarms(client_id)
             if loaded_alarms:
-                _LOGGER.info("Restored %d alarms from Redis persistence", len(loaded_alarms))
+                _LOGGER.info("Restored %d alarms from Home Assistant storage", len(loaded_alarms))
                 self._alarms.update(loaded_alarms)
                 for alarm in loaded_alarms.values():
                     alarm_time = _normalize_value(alarm.get("time"))
                     if alarm_time:
-                        self._alarm_presets.add(alarm_time)
+                        self._remember_alarm_preset(alarm_time)
                 # Ensure tick task is running for restored alarms
                 for alarm in loaded_alarms.values():
                     if _normalize_value(alarm.get("status")).lower() == "on":
                         self._ensure_alarm_tick_task()
                         break
         except Exception as err:
-            _LOGGER.warning("Failed to restore alarms from persistence: %s", err)
+            _LOGGER.warning("Failed to restore alarms from Home Assistant storage: %s", err)
 
     async def async_handle_alarm_start(
         self,
-        alarm_time: str,
+        alarm_time: str | None,
         client_id: str,
         device_id: str,
         execution_command: bool,
@@ -87,6 +91,16 @@ class DialogAlarmManager:
                 "actionType": "error",
                 "message": "Не удалось установить будильник: отсутствует client_id",
             }
+
+        alarm_time = _normalize_value(alarm_time)
+        if not alarm_time:
+            if execution_command:
+                return {
+                    "clientId": client_id,
+                    "actionType": "error",
+                    "message": "Не удалось установить будильник: время не распознано",
+                }
+            return None
 
         for existing in self._alarms.values():
             existing_device_id = _normalize_value(existing.get("device_id"))
@@ -100,7 +114,7 @@ class DialogAlarmManager:
             existing["status"] = "on"
             existing["time"] = alarm_time
             existing["device_id"] = device_id
-            self._alarm_presets.add(alarm_time)
+            self._remember_alarm_preset(alarm_time)
             self._ensure_alarm_tick_task()
             self._mark_updated()
             if execution_command:
@@ -120,7 +134,7 @@ class DialogAlarmManager:
             "time": alarm_time,
             "created_at": datetime.now().timestamp(),
         }
-        self._alarm_presets.add(alarm_time)
+        self._remember_alarm_preset(alarm_time)
         self._ensure_alarm_tick_task()
         self._mark_updated()
         if execution_command:
@@ -220,10 +234,20 @@ class DialogAlarmManager:
         ]
 
     def load_alarm_presets(self, presets: list[str]) -> None:
-        self._alarm_presets.update(presets)
+        for preset in presets:
+            self._remember_alarm_preset(preset)
 
     def get_alarm_presets(self) -> list[str]:
-        return sorted(self._alarm_presets)
+        normalized = {_normalize_value(preset) for preset in self._alarm_presets if _normalize_value(preset)}
+        if len(normalized) != len(self._alarm_presets) or normalized != self._alarm_presets:
+            self._alarm_presets.clear()
+            self._alarm_presets.update(normalized)
+        return sorted(normalized)
+
+    def _remember_alarm_preset(self, alarm_time: Any) -> None:
+        normalized = _normalize_value(alarm_time)
+        if normalized:
+            self._alarm_presets.add(normalized)
 
     def serialize_alarm_persisted_items(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
@@ -262,7 +286,7 @@ class DialogAlarmManager:
                 alarm["device_id"] = device_id
                 alarm["status"] = status
                 alarm["time"] = alarm_time
-                self._alarm_presets.add(alarm_time)
+                self._remember_alarm_preset(alarm_time)
                 if status == "on":
                     self._ensure_alarm_tick_task()
                 changed = True
@@ -276,7 +300,7 @@ class DialogAlarmManager:
                 "time": alarm_time,
                 "created_at": datetime.now().timestamp(),
             }
-            self._alarm_presets.add(alarm_time)
+            self._remember_alarm_preset(alarm_time)
             if status == "on":
                 self._ensure_alarm_tick_task()
             changed = True
@@ -340,12 +364,12 @@ class DialogAlarmManager:
         return items
 
     async def _save_alarms_to_persistence(self, client_id: str | None = None) -> None:
-        """Save current alarms to Redis persistence."""
-        if not self._persistence or not self._alarms:
+        """Save current alarms to Home Assistant storage."""
+        if not self._persistence:
             return
-        
+
         try:
             await self._persistence.save_alarms(self._alarms, client_id)
-            await self._persistence.save_alarm_presets(self._alarm_presets, client_id)
+            await self._persistence.save_alarm_presets(set(self.get_alarm_presets()), client_id)
         except Exception as err:
             _LOGGER.warning("Failed to save alarms to persistence: %s", err)

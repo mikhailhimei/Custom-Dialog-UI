@@ -1,136 +1,77 @@
-# Сохранение Будильников - Документация
+# Персистентность будильников через Home Assistant storage
 
-## Проблема
-Будильники пропадали после перезагрузки сервера Home Assistant, так как хранились только в памяти и в конфиге без надежного резервного копирования.
+## Что изменилось
 
-## Решение
-Реализовано сохранение состояния будильников в Redis с автоматическим восстановлением при запуске.
+Состояние будильников больше не хранится в Redis. Интеграция использует штатный механизм Home Assistant `homeassistant.helpers.storage.Store`, поэтому активные будильники и пресеты сохраняются в `.storage` Home Assistant вместе с остальными данными интеграций.
 
-## Архитектура Решения
+## Задействованные компоненты
 
-### Компоненты
+### 1. `AlarmPersistence` (`custom_components/dialog_custom_ui/timer_alarm/alarm_persistence.py`)
 
-#### 1. AlarmPersistence (`alarm_persistence.py`)
-Новый класс для управления сохранением/восстановлением данных будильников в Redis:
+Класс отвечает за сохранение и восстановление runtime-состояния будильников:
 
 ```python
-persistence = AlarmPersistence(redis_url, redis_password)
-await persistence.connect()
-await persistence.save_alarms(alarms, client_id)
-loaded = await persistence.load_alarms(client_id)
+persistence = AlarmPersistence(hass, storage_key_suffix=entry.entry_id)
 ```
 
-**Ключи в Redis:**
-- `timer_alarm:active_alarms:{client_id}` - JSON список активных будильников
+Сохраняемые данные:
 
-**TTL:** 30 дней (автоматически обновляется при каждом сохранении)
+- `alarms` — активные/отключённые будильники менеджера;
+- `presets` — нормализованные строки времени будильников, например `"08:00"`.
 
-#### 2. DialogAlarmManager (обновлен)
-Интеграция с слоем персистентности:
+Ключ хранилища формируется на базе entry id:
 
-- `async_restore_from_persistence()` - восстановление из Redis при старте
-- `_save_alarms_to_persistence()` - сохранение в Redis после изменений
-- Конструктор принимает `AlarmPersistence` объект
-
-#### 3. DialogTimerAlarmManager (обновлен)
-Управление инициализацией и жизненным циклом:
-
-- Инициализирует `AlarmPersistence` с параметрами Redis
-- `async_restore_from_options()` - подключается к Redis и восстанавливает состояние
-- `_async_save_to_persistence()` - асинхронное сохранение (неблокирующее)
-- `async_stop()` - отключается от Redis перед остановкой
-
-#### 4. DialogCommandCoordinator (обновлен)
-Передает конфигурацию Redis:
-
-```python
-options = _get_options(entry)
-redis_url = options.get(CONF_REDIS_URL)
-redis_password = options.get(CONF_REDIS_PASSWORD)
-
-self.timer_alarm_manager = DialogTimerAlarmManager(
-    hass,
-    self._append_log,
-    self._post_save_commands,
-    redis_url=redis_url,
-    redis_password=redis_password,
-)
+```text
+dialog_custom_ui.timer_alarm.<entry_id>
 ```
 
-## Жизненный Цикл Данных
+### 2. `DialogAlarmManager`
 
-### При Старте Сервера
-1. Coordinator инициализирует `DialogTimerAlarmManager` с параметрами Redis
-2. `async_restore_from_options()` вызывает:
-   - `persistence.connect()` - подключение к Redis
-   - `alarm_manager.async_restore_from_persistence()` - загрузка из Redis
-   - Затем загрузка конфига (конфиг может переопределить Redis данные)
+- `async_restore_from_persistence()` восстанавливает пресеты и будильники из Home Assistant storage при старте координатора.
+- `_save_alarms_to_persistence()` сохраняет текущее состояние после изменений.
+- Перед сохранением и публикацией пресеты нормализуются, поэтому `None` и пустые строки не могут сломать сортировку.
 
-### Во Время Работы
-1. Пользователь устанавливает/изменяет будильник
-2. `async_handle_alarm_start()` или другие методы обновляют состояние
-3. `_mark_updated()` вызывается:
-   - Сохраняет в конфиг entry
-   - Опубликовывает runtime state
-   - Асинхронно (неблокирующе) сохраняет в Redis
+### 3. `DialogTimerAlarmManager`
 
-### При Остановке
-1. `async_stop()` вызывает:
-   - `alarm_manager._save_alarms_to_persistence()` - финальное сохранение
-   - `persistence.disconnect()` - отключение от Redis
+- Инициализирует `AlarmPersistence` через `hass` и `entry.entry_id`.
+- При старте сначала читает Home Assistant storage, затем использует старые данные из options только как fallback/миграционный источник.
+- После каждого изменения запускает неблокирующее сохранение в Home Assistant storage.
 
-### При Перезагрузке Сервера
-1. Redis сохранил все активные будильники с TTL
-2. При следующем запуске - восстановление из Redis
-3. Данные конфига используются как резервный источник
+### 4. `DialogCommandCoordinator`
 
-## Обработка Ошибок
+Координатор больше не передаёт Redis URL/пароль для персистентности будильников. Для будильников достаточно `hass` и `entry.entry_id`.
 
-- **Redis недоступен:** Система падает обратно на config-only хранилище
-- **Ошибка при сохранении:** Логируется warning, но система продолжает работать
-- **Ошибка при загрузке:** Логируется warning, используются данные конфига
+## Поток работы
 
-## Примеры Использования
+### При старте интеграции
 
-### Восстановление после перезагрузки
-```
-До:  Будильник на 08:00 установлен -> Перезагрузка -> Будильник ПОТЕРЯН ❌
-После: Будильник на 08:00 установлен -> Redis: сохранено -> Перезагрузка -> Будильник восстановлен ✅
-```
+1. `DialogCommandCoordinator` создаёт `DialogTimerAlarmManager`.
+2. `DialogTimerAlarmManager.async_restore_from_options()` загружает storage через `AlarmPersistence.connect()`.
+3. `DialogAlarmManager.async_restore_from_persistence()` восстанавливает будильники и пресеты.
+4. Если в storage ещё нет будильников, старые элементы из options применяются как fallback для миграции.
+5. Для активных будильников запускается tick loop.
 
-### Сохранение во время работы
-```
-Пользователь: "установи будильник на 08:00"
-1. DialogAlarmManager добавляет в _alarms
-2. _mark_updated() вызывает сохранение
-3. Config entry обновлена
-4. Redis обновлена асинхронно (в фоне)
-```
+### При изменении будильника
 
-## Конфигурация
+1. Пользователь/команда создаёт, удаляет или обновляет будильник.
+2. `DialogAlarmManager` меняет in-memory состояние.
+3. `_mark_updated()` публикует runtime state и сохраняет данные в options для совместимости.
+4. Параллельно запускается сохранение в Home Assistant storage.
 
-Параметры Redis должны быть установлены в config_flow/options:
-- `redis_url`: "redis://localhost:6379/0" (или из const.py DEFAULT_REDIS_URL)
-- `redis_password`: пароль (может быть пустым)
+### При остановке интеграции
 
-Если параметры не установлены - система продолжит работать без Redis.
+1. Менеджер сохраняет текущее состояние в Home Assistant storage.
+2. Tick loop останавливается.
+3. Внешних подключений закрывать не нужно.
 
-## Миграция
+## Почему это лучше Redis для будильников
 
-Для существующих установок:
-1. Нет требуемых действий - система автоматически перейдет на Redis сохранение
-2. При первом сохранении будильников - они будут сохранены в Redis
-3. Если Redis недоступен - система будет работать как раньше (config-only)
+- Не нужен отдельный Redis-сервер.
+- Нет зависимости от сетевого подключения и TTL.
+- Данные живут там же, где Home Assistant хранит состояние интеграций.
+- Перезапуск Home Assistant не теряет активные будильники.
+- Старые битые пресеты (`None`, пустые строки) автоматически отфильтровываются.
 
-## Тестирование
+## Совместимость
 
-### Вручную протестировать:
-1. Установить будильник: "установи будильник на 10:00"
-2. Проверить в Redis CLI: `redis-cli GET "timer_alarm:active_alarms:client_id"`
-3. Перезагрузить сервер Home Assistant
-4. Проверить, что будильник восстановился
-
-### Проверить логи:
-- "Restored X alarms from Redis persistence"
-- "Saved X alarms to Redis"
-- Любые ошибки при подключении к Redis
+Redis-настройки могут оставаться в интеграции для других сценариев/ответов, где явно используется `answerType = redis`, но персистентность таймеров и будильников от Redis больше не зависит.

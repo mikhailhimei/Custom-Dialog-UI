@@ -53,17 +53,13 @@ class DialogTimerAlarmManager:
         hass: HomeAssistant,
         append_log: Callable[[str, str], None],
         post_save_commands: Callable[[dict[str, Any], dict[str, Any]], Awaitable[None]],
-        redis_url: str | None = None,
-        redis_password: str | None = None,
+        storage_key_suffix: str = "global",
     ) -> None:
         self.hass = hass
         self._append_log = append_log
         self._post_save_commands = post_save_commands
 
-        # Initialize persistence layer
-        self._persistence: AlarmPersistence | None = None
-        if redis_url:
-            self._persistence = AlarmPersistence(redis_url, redis_password)
+        self._persistence = AlarmPersistence(hass, storage_key_suffix)
 
         self.timer_manager = DialogTimerManager(
             hass,
@@ -88,28 +84,36 @@ class DialogTimerAlarmManager:
         if self._restored:
             return
         
-        # Connect to Redis for persistence if configured
-        if self._persistence:
-            await self._persistence.connect()
-        
+        await self._persistence.connect()
+
         shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-        
-        # Try to restore alarms from Redis first
-        if self._persistence and shared_client_id:
-            await self.alarm_manager.async_restore_from_persistence(shared_client_id)
-        
-        # Then restore from config (will override if both exist)
+
+        await self.alarm_manager.async_restore_from_persistence(shared_client_id)
+
         self.alarm_manager.load_alarm_presets(_normalize_alarm_presets(options.get(CONF_TIMER_ALARM_PRESETS, [])))
         raw_items = options.get(CONF_TIMER_ALARM_ITEMS)
         items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
-        await self.async_apply_ui_items(items, shared_client_id)
+        normalized_items = [self._normalize_ui_item(item, shared_client_id) for item in items]
+        incoming_timers = {
+            _normalize_value(item.get("id")): item
+            for item in normalized_items
+            if _normalize_value(item.get("type")) == "timer"
+        }
+        incoming_alarms = {
+            _normalize_value(item.get("id")): item
+            for item in normalized_items
+            if _normalize_value(item.get("type")) == "alarm"
+        }
+
+        await self.timer_manager.apply_ui_items(incoming_timers)
+        if not self.alarm_manager._alarms:
+            await self.alarm_manager.apply_ui_items(incoming_alarms)
         self._restored = True
 
     async def async_stop(self) -> None:
         await self.timer_manager.async_stop()
         await self.alarm_manager.async_stop()
-        if self._persistence:
-            await self._persistence.disconnect()
+        await self._persistence.disconnect()
         self._remove_runtime_state()
 
     async def async_handle_builtin(
@@ -215,14 +219,11 @@ class DialogTimerAlarmManager:
         self._last_updated = dt_util.now().isoformat()
         self._persist_items_to_entry()
         self._publish_runtime_state()
-        # Also trigger async save to Redis (non-blocking)
-        if self._persistence:
-            self.hass.async_create_task(self._async_save_to_persistence())
+        # Also trigger async save to Home Assistant storage (non-blocking)
+        self.hass.async_create_task(self._async_save_to_persistence())
 
     async def _async_save_to_persistence(self) -> None:
-        """Async save alarms to Redis persistence."""
-        if not self._persistence:
-            return
+        """Async save alarms to Home Assistant storage."""
         try:
             await self.alarm_manager._save_alarms_to_persistence()
         except Exception as err:

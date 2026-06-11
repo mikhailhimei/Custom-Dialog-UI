@@ -14,10 +14,7 @@ from .external_event_bridge import ExternalEventBridge
 from .const import (
     CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
     CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
-    CONF_REDIS_PASSWORD,
-    CONF_REDIS_URL,
     CONF_TIMER_ALARM_DEVICE_IDS,
-    DEFAULT_REDIS_URL,
     DOMAIN,
     EVENT_ACTIVE_COMMAND,
     EVENT_DIALOG_MESSAGE,
@@ -89,18 +86,12 @@ class DialogCommandCoordinator:
             entry,
             self._append_log,
         )
-        
-        # Get Redis configuration for alarm persistence
-        options = _get_options(entry)
-        redis_url = _normalize_value(options.get(CONF_REDIS_URL)) or DEFAULT_REDIS_URL
-        redis_password = _normalize_value(options.get(CONF_REDIS_PASSWORD))
-        
+
         self.timer_alarm_manager = DialogTimerAlarmManager(
             hass,
             self._append_log,
             self._post_save_commands,
-            redis_url=redis_url,
-            redis_password=redis_password,
+            storage_key_suffix=entry.entry_id,
         )
         _LOGGER.debug("DialogCommandCoordinator initialized for entry %s", self.entry.entry_id)
 
