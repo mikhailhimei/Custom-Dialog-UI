@@ -362,15 +362,20 @@ class DialogAlarmManager:
 
     def _alarms_for_client(self, client_id: str) -> list[dict[str, Any]]:
         if client_id:
-            items = [
+             items = [
                 entry
                 for entry in self._alarms.values()
-                if _normalize_value(entry.get("client_id")) == client_id and entry.get("status") == "on"
-            ]
-            if not items:
-                items = list(self._alarms.values())
+                if (
+                     _normalize_value(entry.get("client_id")) == client_id
+                     and _normalize_value(entry.get("status")).lower() != "off"
+                )
+              ]
         else:
-            items = list(self._alarms.values())
+             items = [
+                entry
+                for entry in self._alarms.values()
+                if _normalize_value(entry.get("status")).lower() != "off"
+            ]
         items.sort(key=lambda item: float(item.get("created_at") or 0.0))
         return items
 
