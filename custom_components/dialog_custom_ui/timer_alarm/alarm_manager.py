@@ -365,7 +365,7 @@ class DialogAlarmManager:
             items = [
                 entry
                 for entry in self._alarms.values()
-                if _normalize_value(entry.get("client_id")) == client_id
+                if _normalize_value(entry.get("client_id")) == client_id and entry.get("status") == "on"
             ]
             if not items:
                 items = list(self._alarms.values())
