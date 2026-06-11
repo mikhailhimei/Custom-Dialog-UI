@@ -45,20 +45,22 @@ async def _async_ramp_volume(
         end = float(end)
 
         while curr < end:
-            curr = min(curr + 0.1, end)
+            await asyncio.sleep(interval)
+
+            curr = round(min(curr + 0.1, end), 1)
 
             await hass.services.async_call(
                 "media_player",
                 "volume_set",
                 {"volume_level": curr},
                 target={"entity_id": target},
-                blocking=False,
+                blocking=True,
             )
+
+            await asyncio.sleep(0.5)
 
             if curr >= end:
                 break
-
-            await asyncio.sleep(interval)
 
     except Exception as err:
         _LOGGER.error("Volume ramp task failed for %s: %s", target, err)
@@ -70,34 +72,25 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                 target = _resolve_media_player_entity_id(hass, device_id)
                 
                 if target:
-                    old_volume = None
-                    state = hass.states.get(target)
-                    if state is not None and volume_level is not None:
-                        old_volume = state.attributes.get("volume_level")
-
-                    # support range string like "0.5-1.0"
                     is_range = False
+                    old_volume = None
                     range_start = None
                     range_end = None
+                    state = hass.states.get(target)
+
                     if isinstance(volume_level, str) and "-" in volume_level:
-                        try:
-                            parts = volume_level.split("-", 1)
-                            range_start = float(parts[0])
-                            range_end = float(parts[1])
-                            is_range = True
-                        except Exception:
-                            is_range = False
-
-                    if is_range:
-                        # start at lower bound, ramp to upper bound
+                        parts = volume_level.split("-", 1)
+                        range_start = float(parts[0])
+                        range_end = float(parts[1])
                         volume = range_start
-                    else:
-                        volume = volume_level if volume_level is not None else old_volume
+                        is_range = True
 
-                    # Only ramp when a range string was provided. Numeric single values do not trigger interval ramping.
-                    ramp_condition = False
-                    if is_range:
-                        ramp_condition = old_volume is not None and float(range_end) > float(old_volume)
+                    elif state is not None and volume_level is not None and not is_range:
+                        old_volume = state.attributes.get("volume_level")
+                        volume = old_volume
+
+                    elif volume_level: 
+                        volume = volume_level
 
                     # set initial volume before playback: for ranges set to lower bound, otherwise set requested value or old
                     if volume is not None:
@@ -126,23 +119,18 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                         )
 
                         # start ramp in background if needed
-                        if ramp_condition:
+                        if is_range:
                             try:
-                                if is_range:
-                                    hass.async_create_task(
-                                        _async_ramp_volume(hass, target, float(range_start), float(range_end), 5.0)
-                                    )
-                                else:
-                                    hass.async_create_task(
-                                        _async_ramp_volume(hass, target, float(old_volume), float(volume_level), 5.0)
+                                hass.async_create_task(
+                                        _async_ramp_volume(hass, target, float(range_start), float(range_end), 10.0)
                                     )
                             except Exception as err:
                                 _LOGGER.error("Failed to start ramp task for %s: %s", target, err)
 
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
-                        if old_volume is not None and volume_level is not None:
+                        if old_volume is not None and volume_level is not None and not is_range:
                             try:
-                                if ramp_condition:
+                                if is_range:
                                     # ramp duration 5s + small buffer
                                     hass.async_create_task(
                                         _async_restore_volume(hass, target, old_volume, delay=7.0),
