@@ -145,7 +145,7 @@ class DialogTimerAlarmManager:
         elif parent_type == "alarm_stop":
             commands = await self.alarm_manager.async_handle_alarm_stop(client_id, device_id, count, execution_command)
         elif parent_type == "alarm_info":
-            commands = await self.alarm_manager.async_handle_alarm_info(client_id, device_id, count, execution_command)
+            commands = await self.alarm_manager.async_handle_alarm_info(client_id, device_id, execution_command)
 
         return await self._post_save_commands(options, commands)
 

@@ -87,7 +87,8 @@ class DialogAlarmManager:
     ) -> dict[str, Any] | None:
         if not client_id and execution_command:
             return {
-                "clientId": client_id,
+                "client_id": client_id,
+                "device_id": device_id,
                 "actionType": "error",
                 "message": "Не удалось установить будильник: отсутствует client_id",
             }
@@ -96,7 +97,8 @@ class DialogAlarmManager:
         if not alarm_time:
             if execution_command:
                 return {
-                    "clientId": client_id,
+                    "client_id": client_id,
+                    "device_id": device_id,    
                     "actionType": "error",
                     "message": "Не удалось установить будильник: время не распознано",
                 }
@@ -120,6 +122,8 @@ class DialogAlarmManager:
             if execution_command:
                 return {
                     "actionType": "success",
+                    "client_id": client_id,
+                    "device_id": device_id,
                     "message": f"{alarm_time}",
                 }
             
@@ -139,7 +143,8 @@ class DialogAlarmManager:
         self._mark_updated()
         if execution_command:
             return {
-                "clientId": client_id,
+                "client_id": client_id,
+                "device_id": device_id,
                 "actionType": "success",
                 "message": f"{alarm_time}",
             }
@@ -147,12 +152,14 @@ class DialogAlarmManager:
     async def async_handle_alarm_stop(
         self,
         client_id: str,
+        device_id: str,
         count: int,
         execution_command: bool,
     ) -> dict[str, Any] | None:
         if not client_id and execution_command:
             return {
-                "clientId": client_id,
+                "client_id": client_id,
+                "device_id": device_id,
                 "actionType": "error",
                 "message": "Не удалось установить будильник: отсутствует client_id",
             }
@@ -160,13 +167,15 @@ class DialogAlarmManager:
         alarms = self._alarms_for_client(client_id)
         if not alarms and execution_command:
             return {
-                "clientId": client_id,
+                "client_id": client_id,
+                "device_id": device_id,
                 "actionType": "not_alarm",
             }
 
         if count is None and execution_command and len(alarms) > 1:
             return {
-                "clientId": client_id,
+                "client_id": client_id,
+                "device_id": device_id,
                 "actionType": "several",
                 "message": "\n".join(
                     f"{i+1}. на {_normalize_value(item.get('time'))}" for i, item in enumerate(alarms)
@@ -179,7 +188,8 @@ class DialogAlarmManager:
         self._mark_updated()
 
         return {
-            "clientId": client_id,
+            "client_id": client_id,
+            "device_id": device_id,
             "actionType": "several",
             "message": f"{alarms[index].get('time')}",
         }
@@ -187,7 +197,7 @@ class DialogAlarmManager:
     async def async_handle_alarm_info(
         self,
         client_id: str,
-        count: int,
+        device_id: str,
         execution_command: bool,
     ) -> dict[str, Any] | None:
         alarms = self._alarms_for_client(client_id)
@@ -203,7 +213,8 @@ class DialogAlarmManager:
 
         if execution_command:
             return {
-                "clientId": client_id,
+                "client_id": client_id,
+                "device_id": device_id,
                 "actionType": count_type,
                 "message": text_alarms,
             }
