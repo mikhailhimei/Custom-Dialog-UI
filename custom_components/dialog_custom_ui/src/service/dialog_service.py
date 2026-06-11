@@ -425,7 +425,7 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
         template_var = node.get('template_var', False) or False
         direct_entries = node.get('direct_entries', []) or []
         
-        main_command = node.get('mainCommand')
+        main_command = node.get('execution_command')
 
         if template_var:
             if not direct_entries:
@@ -440,13 +440,13 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
             client_id,
             device_id,
             direct_entries,
-            node.get('mainCommand'),
+            node.get('execution_command'),
         ))
 
-        if node.get('mainCommand'):
+        if node.get('execution_command'):
             continue
 
-    main_node = next((n for n in exact_candidates if n.get('mainCommand')), None)
+    main_node = next((n for n in exact_candidates if n.get('execution_command')), None)
 
     if main_node and main_node.get('template_var'):    
         return await execute_top_level_template(

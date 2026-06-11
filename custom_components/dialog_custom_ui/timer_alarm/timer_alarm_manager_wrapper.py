@@ -147,7 +147,7 @@ class DialogTimerAlarmManager:
         elif parent_type == "alarm_info":
             commands = await self.alarm_manager.async_handle_alarm_info(client_id, count, execution_command)
 
-        return await self._post_save_commands(options, commands or {})
+        return await self._post_save_commands(options, commands)
 
     def get_timer_items(self) -> list[dict[str, Any]]:
         return self.timer_manager.get_timer_items()

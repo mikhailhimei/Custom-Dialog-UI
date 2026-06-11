@@ -143,7 +143,7 @@ def build_command_data(
     client_id,
     device_id,
     children_direct_type,
-    mainCommand
+    execution_command
 ):
     return {
         "children_type": command_type,
@@ -152,7 +152,7 @@ def build_command_data(
         "client_id": client_id,
         "device_id": device_id,
         "children_direct_type": children_direct_type,
-        "mainCommand": mainCommand
+        "execution_command": execution_command
     }
 
 def store_command_data(hass, client_id, command_data):

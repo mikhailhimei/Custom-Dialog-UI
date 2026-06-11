@@ -1270,9 +1270,9 @@ def apply_main_command(nodes):
     if default_priority_nodes:
         # первый default + nextAction = главный
         for n in nodes:
-            n["mainCommand"] = False
+            n["execution_command"] = False
 
-        default_priority_nodes[0]["mainCommand"] = True
+        default_priority_nodes[0]["execution_command"] = True
         return nodes
 
     # =========================
@@ -1285,9 +1285,9 @@ def apply_main_command(nodes):
     # =========================
     if not redis_nodes:
         for n in nodes:
-            n["mainCommand"] = False
+            n["execution_command"] = False
 
-        nodes[0]["mainCommand"] = True
+        nodes[0]["execution_command"] = True
         return nodes
 
     # =========================
@@ -1312,12 +1312,12 @@ def apply_main_command(nodes):
             best_node = node
 
     # =========================
-    # 5. назначаем mainCommand
+    # 5. назначаем execution_command
     # =========================
     for n in nodes:
-        n["mainCommand"] = False
+        n["execution_command"] = False
 
     if best_node:
-        best_node["mainCommand"] = True
+        best_node["execution_command"] = True
 
     return nodes
