@@ -80,7 +80,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         should_continue = not bool(data.get("end_session", True))
 
         if not text:
-            await audio_notification(self._hass, application_id, "completed.mp3")
+            await audio_notification(self._hass, application_id, "completed.mp3", 1.0)
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
