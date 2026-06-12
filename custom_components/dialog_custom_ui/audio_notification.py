@@ -46,6 +46,14 @@ async def _async_ramp_volume(
 
         while curr < end:
             await asyncio.sleep(interval)
+            
+            state = hass.states.get(target)
+            
+            if state is None:
+                break
+
+            if state.state in ("idle", "off", "paused"):
+                break
 
             curr = round(min(curr + 0.1, end), 1)
 
@@ -154,7 +162,7 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                         if old_volume is not None and volume_level is not None:
                             try:
                                 if is_range:
-                                    _async_wait_until_finished(hass, target)
+                                   await _async_wait_until_finished(hass, target)
                                 
                                 hass.async_create_task(
                                     _async_restore_volume(hass, target, old_volume),
