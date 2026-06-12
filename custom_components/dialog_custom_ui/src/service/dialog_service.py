@@ -538,8 +538,8 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
     )
 
 
-async def words_scripts(client_command, hass=None):
-    hass = get_current_hass(hass)
+async def words_scripts(client_command):
+    hass = get_current_hass()
 
     client_text = normalize_numbers(client_command['request']['command'].strip().lower())
     client_new_dialog = client_command['session']['new']
