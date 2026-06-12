@@ -46,6 +46,14 @@ async def _async_ramp_volume(
 
         while curr < end:
             await asyncio.sleep(interval)
+            
+            state = hass.states.get(target)
+            
+            if state is None:
+                break
+
+            if state.state in ("idle", "off", "paused"):
+                break
 
             curr = round(min(curr + 0.1, end), 1)
 
@@ -64,6 +72,27 @@ async def _async_ramp_volume(
 
     except Exception as err:
         _LOGGER.error("Volume ramp task failed for %s: %s", target, err)
+
+async def _async_wait_until_finished(
+    hass,
+    target: str,
+    check_interval: float = 1.0,
+) -> None:
+    """Wait until media player stops playing."""
+    try:
+        while True:
+            await asyncio.sleep(check_interval)
+
+            state = hass.states.get(target)
+
+            if state is None:
+                break
+
+            if state.state in ("idle", "off", "paused"):
+                break
+
+    except Exception as err:
+        _LOGGER.error("Failed while waiting for playback to finish on %s: %s", target, err)
 
 
 async def audio_notification(hass, device_id, audio_file, volume_level=None):
@@ -85,12 +114,14 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                         volume = range_start
                         is_range = True
 
-                    elif state is not None and volume_level is not None and not is_range:
-                        old_volume = state.attributes.get("volume_level")
-                        volume = old_volume
+                    old_volume = ( 
+                        state.attributes.get("volume_level")
+                        if state is not None
+                        else None
+                    )
 
-                    elif volume_level: 
-                        volume = volume_level
+                    if not is_range:
+                         volume = volume_level if volume_level is not None else old_volume
 
                     # set initial volume before playback: for ranges set to lower bound, otherwise set requested value or old
                     if volume is not None:
@@ -128,17 +159,14 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                                 _LOGGER.error("Failed to start ramp task for %s: %s", target, err)
 
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
-                        if old_volume is not None and volume_level is not None and not is_range:
+                        if old_volume is not None and volume_level is not None:
                             try:
                                 if is_range:
-                                    # ramp duration 5s + small buffer
-                                    hass.async_create_task(
-                                        _async_restore_volume(hass, target, old_volume, delay=7.0),
-                                    )
-                                else:
-                                    hass.async_create_task(
-                                        _async_restore_volume(hass, target, old_volume),
-                                    )
+                                   await _async_wait_until_finished(hass, target)
+                                
+                                hass.async_create_task(
+                                    _async_restore_volume(hass, target, old_volume),
+                                )
                             except Exception as err:
                                 _LOGGER.error("Failed to schedule restore for %s: %s", target, err)
                     except Exception as err:

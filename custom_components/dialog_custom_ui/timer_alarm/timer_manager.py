@@ -357,7 +357,7 @@ class DialogTimerManager:
             if timer_entry is None:
                 return
             device_ref = timer_entry.get("device_id")
-            await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-1.0")
+            await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-0.7")
             
         except asyncio.CancelledError:
             return
