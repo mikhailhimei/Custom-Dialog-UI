@@ -548,8 +548,6 @@ async def words_scripts(client_command, hass=None):
     llm = client_command.get("llm")
     llm_search = client_command.get("llm_search")
 
-    r.set(f'VOICE_COMMAND:{client_id}', str({"client_command":client_command, "normalize_numbers":client_text}), ex=60*60*1)
-
     top_level_nodes, sub_level_nodes, sub_direct_control = prepare_dialog_nodes()
 
     dialog_settings = get_dialog_settings_list()
