@@ -356,7 +356,7 @@ class DialogAlarmManager:
 
     async def _run_alarm_action(self, alarm: dict[str, Any]) -> None:
         device_ref = _normalize_value(alarm.get("device_id"))
-        await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-1.0")
+        await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-0.7")
         alarm["status"] = "off"
         self._mark_updated()
 
