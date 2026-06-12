@@ -85,12 +85,14 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                         volume = range_start
                         is_range = True
 
-                    elif state is not None and volume_level is not None and not is_range:
-                        old_volume = state.attributes.get("volume_level")
-                        volume = old_volume
+                    old_volume = ( 
+                        state.attributes.get("volume_level")
+                        if state is not None
+                        else None
+                    )
 
-                    elif volume_level: 
-                        volume = volume_level
+                    if not is_range:
+                         volume = volume_level if volume_level is not None else old_volume
 
                     # set initial volume before playback: for ranges set to lower bound, otherwise set requested value or old
                     if volume is not None:
@@ -128,7 +130,7 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                                 _LOGGER.error("Failed to start ramp task for %s: %s", target, err)
 
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
-                        if old_volume is not None and volume_level is not None and not is_range:
+                        if old_volume is not None and volume_level is not None:
                             try:
                                 if is_range:
                                     # ramp duration 5s + small buffer
