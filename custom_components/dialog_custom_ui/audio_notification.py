@@ -65,6 +65,27 @@ async def _async_ramp_volume(
     except Exception as err:
         _LOGGER.error("Volume ramp task failed for %s: %s", target, err)
 
+async def _async_wait_until_finished(
+    hass,
+    target: str,
+    check_interval: float = 1.0,
+) -> None:
+    """Wait until media player stops playing."""
+    try:
+        while True:
+            await asyncio.sleep(check_interval)
+
+            state = hass.states.get(target)
+
+            if state is None:
+                break
+
+            if state.state in ("idle", "off", "paused"):
+                break
+
+    except Exception as err:
+        _LOGGER.error("Failed while waiting for playback to finish on %s: %s", target, err)
+
 
 async def audio_notification(hass, device_id, audio_file, volume_level=None):
     audio_url = f"media-source://media_source/local/{audio_file}"
@@ -133,14 +154,11 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                         if old_volume is not None and volume_level is not None:
                             try:
                                 if is_range:
-                                    # ramp duration 5s + small buffer
-                                    hass.async_create_task(
-                                        _async_restore_volume(hass, target, old_volume, delay=7.0),
-                                    )
-                                else:
-                                    hass.async_create_task(
-                                        _async_restore_volume(hass, target, old_volume),
-                                    )
+                                    _async_wait_until_finished(hass, target)
+                                
+                                hass.async_create_task(
+                                    _async_restore_volume(hass, target, old_volume),
+                                )
                             except Exception as err:
                                 _LOGGER.error("Failed to schedule restore for %s: %s", target, err)
                     except Exception as err:
