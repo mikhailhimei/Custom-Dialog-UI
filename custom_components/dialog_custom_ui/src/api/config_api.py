@@ -67,7 +67,7 @@ from ...const import (
 from ...normalize import (
     _normalize_device_ids,
     _normalize_scenario,
-    _normalize_str_list,
+    _normalize_values,
 )
 
 from ...utils import (
@@ -691,7 +691,7 @@ def _read_yandex_scenarios(
                         "id": f"sv-{uuid.uuid4().hex[:8]}",
                         "text": text,
                     }
-                    for text in _normalize_str_list(
+                    for text in _normalize_values(
                         raw.get("extra_phrases")
                     )
                 ],
@@ -700,7 +700,7 @@ def _read_yandex_scenarios(
                         "id": f"sc-{uuid.uuid4().hex[:8]}",
                         "text": text,
                     }
-                    for text in _normalize_str_list(
+                    for text in _normalize_values(
                         raw.get("execute_command")
                     )
                 ],

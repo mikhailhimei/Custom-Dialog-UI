@@ -2,6 +2,8 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.components import websocket_api
+
 
 from .const import (
     CONF_BASE_URL,
@@ -22,7 +24,8 @@ from .const import (
     DEFAULT_REDIS_URL,
     DOMAIN,
     CONF_TIMEOUT,
-    DEFAULT_TIMEOUT
+    DEFAULT_TIMEOUT,
+    CONF_ALLOW_NON_ADMIN_PANEL
 )
 
 from .normalize import (
@@ -126,3 +129,33 @@ def _extract_count(payload: dict[str, Any]) -> int | None:
             if value > 0:
                 return value
     return None
+
+def _get_authorized_entry(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+) -> ConfigEntry | None:
+    entry = _get_entry(hass)
+
+    if entry is None:
+        connection.send_error(
+            msg["id"],
+            "not_configured",
+            "Integration entry not found",
+        )
+        return None
+
+    is_admin = bool(getattr(connection.user, "is_admin", False))
+
+    if (
+        not is_admin
+        and not entry.options.get(CONF_ALLOW_NON_ADMIN_PANEL, True)
+    ):
+        connection.send_error(
+            msg["id"],
+            "unauthorized",
+            "Access denied",
+        )
+        return None
+
+    return entry

@@ -17,8 +17,7 @@ def _normalize_value(value: Any) -> str:
 def _normalize_values(value: Any) -> list[str]:
     if value is None:
         return []
-
-    # если строка — НЕ считаем iterable
+    
     if isinstance(value, str):
         value = [value]
     elif not isinstance(value, Iterable):
@@ -34,15 +33,6 @@ def _normalize_values(value: Any) -> list[str]:
             result.append(normalized)
 
     return result
-
-def _normalize_str_list(value: Any) -> list[str]:
-    if isinstance(value, list):
-        values = value
-    elif value is None:
-        values = []
-    else:
-        values = [value]
-    return [str(item).strip() for item in values if str(item).strip()]
 
 def _normalize_children_direct_type_values(value: Any) -> list[str]:
     if value is None:
@@ -115,9 +105,9 @@ def _normalize_legacy_conditions(scenario: dict[str, Any]) -> list[dict[str, str
 
 def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
     scenario = {
-        ATTR_SCENARIO_ID: item[ATTR_SCENARIO_ID].strip(),
-        "name": item["name"].strip(),
-        ATTR_SCRIPT_ENTITY_ID: item[ATTR_SCRIPT_ENTITY_ID].strip(),
+        ATTR_SCENARIO_ID: _normalize_value(item.get(ATTR_SCENARIO_ID)),
+        "name": _normalize_value(item.get("name")),
+        ATTR_SCRIPT_ENTITY_ID: _normalize_value(item.get(ATTR_SCRIPT_ENTITY_ID)),
     }
 
     conditions = [
@@ -134,6 +124,56 @@ def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
         scenario["conditions"] = conditions
 
     return scenario
+
+def _normalize_script_action(item: dict[str, Any]) -> dict[str, Any]:
+    script_action = {
+        "id": _normalize_value(item.get("id")),
+        "name": _normalize_value(item.get("name")),
+        "script_entity_id": _normalize_value(item.get("script_entity_id")),
+    }
+
+    conditions = [
+        normalized
+        for condition in item.get("conditions", [])
+        if isinstance(condition, dict)
+        if (normalized := _normalize_condition(condition))
+    ]
+
+    if not conditions:
+        conditions = _normalize_legacy_conditions(item)
+
+    if conditions:
+        script_action["conditions"] = conditions
+
+    return script_action
+
+def _merge_script_action_payload(
+    msg: dict[str, Any],
+    existing: dict[str, Any] | None = None,
+    script_action_id: str | None = None,
+) -> dict[str, Any]:
+    script_action_payload = msg.get("script_action")
+    if not isinstance(script_action_payload, dict):
+        raise ValueError("Script action payload must be an object")
+
+    if existing is not None:
+        if (
+                "id" in script_action_payload
+                and _normalize_value(script_action_payload["id"])
+                != _normalize_value(script_action_id or "")
+            ):
+            raise ValueError("Script action id mismatch")
+        raw_script_action = dict(existing)
+        raw_script_action.update(script_action_payload)
+        if script_action_id:
+            raw_script_action["id"] = _normalize_value(script_action_id)
+    else:
+        raw_script_action = dict(script_action_payload)
+        if script_action_id:
+            raw_script_action["id"] = _normalize_value(script_action_id)
+
+    return _normalize_script_action(raw_script_action)
+
     
 def _normalize_device_ids(value: Any) -> list[str]:
     if isinstance(value, str):

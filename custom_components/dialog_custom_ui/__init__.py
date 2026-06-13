@@ -18,7 +18,7 @@ from .const import (
 )
 from .coordinator import DialogCommandCoordinator
 from .dialog_http import async_register_dialog_http
-from .src.api.scenarios_script_api import async_register_scenarios_websockets
+from .src.api.script_action.script_actions_api import async_register_script_actions_websockets
 from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
 from .services import async_register_services, async_unregister_services
@@ -35,7 +35,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
     async_register_websockets(hass)
-    async_register_scenarios_websockets(hass)
+    async_register_script_actions_websockets(hass)
     async_register_timer_alarm_websockets(hass)
     async_register_dialog_http(hass)
     async_register_services(hass)
