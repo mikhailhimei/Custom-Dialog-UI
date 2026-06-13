@@ -50,7 +50,7 @@ def _build_script_actions_short_response(
     return {
         "script_actions": [
             {
-                "id": script_action["uuid"],
+                "uuid": script_action["uuid"],
                 "title": script_action.get("name", ""),
             }
             for script_action in script_actions[start:end]
@@ -120,7 +120,7 @@ async def _ws_get_script_actions_short(
     page_size = msg.get("page_size", 10)
 
     connection.send_result(
-        msg["uuid"],
+        msg["id"],
         _build_script_actions_short_response(script_actions, page, page_size),
     )
 
