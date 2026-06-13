@@ -13,6 +13,7 @@ from ....utils import _get_authorized_entry
 from ....const import (
     DOMAIN
 )
+from .storage import async_load_script_actions, async_save_script_actions
 from .schemas import (
     GET_SCRIPT_ACTION_SCHEMA,
     GET_SCRIPT_ACTIONS_SHORT_SCHEMA,
@@ -73,18 +74,28 @@ def _find_script_action_by_uuid(
     return None
 
 
-async def _save_script_actions_options(
+async def _save_script_actions(
     hass: HomeAssistant,
     entry: Any,
     script_actions: list[dict[str, Any]],
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> bool:
-    
-    options = dict(entry.options)
-    options["script_actions"] = script_actions
+    try:
+        await async_save_script_actions(hass, script_actions)
+    except Exception:
+        _ws_error(
+            connection,
+            msg,
+            "save_failed",
+            "Failed to save script actions",
+        )
+        return False
 
-    hass.config_entries.async_update_entry(entry, options=options)
+    if "script_actions" in entry.options:
+        options = dict(entry.options)
+        options.pop("script_actions", None)
+        hass.config_entries.async_update_entry(entry, options=options)
 
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
@@ -114,7 +125,7 @@ async def _ws_get_script_actions_short(
     if entry is None:
         return
 
-    script_actions = list(entry.options.get("script_actions", []))
+    script_actions = await async_load_script_actions(hass)
 
     page = msg.get("page", 1)
     page_size = msg.get("page_size", 10)
@@ -137,7 +148,7 @@ async def _ws_get_script_action(
     if entry is None:
         return
     
-    script_actions = list(entry.options.get("script_actions", []))
+    script_actions = await async_load_script_actions(hass)
 
     script_action = _find_script_action_by_uuid(script_actions, msg["uuid"])
    
@@ -166,7 +177,7 @@ async def _ws_save_script_action(
     if entry is None:
         return
 
-    script_actions = list(entry.options.get("script_actions", []))
+    script_actions = await async_load_script_actions(hass)
 
     new_script_action = _merge_script_action_payload(msg)
 
@@ -181,7 +192,7 @@ async def _ws_save_script_action(
 
     script_actions.append(new_script_action)
 
-    if not await _save_script_actions_options(hass, entry, script_actions, connection, msg):
+    if not await _save_script_actions(hass, entry, script_actions, connection, msg):
         return
 
     connection.send_result(msg["id"], {"saved": True, "script_action": new_script_action})
@@ -200,7 +211,7 @@ async def _ws_update_script_action(
     if entry is None:
         return
     
-    script_actions = list(entry.options.get("script_actions", []))
+    script_actions = await async_load_script_actions(hass)
     script_action_uuid = msg["uuid"]
     existing = _find_script_action_by_uuid(script_actions, script_action_uuid)
 
@@ -223,7 +234,7 @@ async def _ws_update_script_action(
         else item for item in script_actions
         ]
 
-    if not await _save_script_actions_options(hass, entry, updated_list, connection, msg):
+    if not await _save_script_actions(hass, entry, updated_list, connection, msg):
         return
 
     connection.send_result(msg["id"], {"updated": True, "script_action": updated_script_action})
@@ -242,7 +253,7 @@ async def _ws_delete_script_action(
     if entry is None:
         return
 
-    script_actions = list(entry.options.get("script_actions", []))
+    script_actions = await async_load_script_actions(hass)
 
     script_action_uuid = msg["uuid"]
     target = _find_script_action_by_uuid(script_actions, script_action_uuid)
@@ -265,7 +276,7 @@ async def _ws_delete_script_action(
         != normalized_script_action_id
     ]
 
-    if not await _save_script_actions_options(hass, entry, updated_list, connection, msg):
+    if not await _save_script_actions(hass, entry, updated_list, connection, msg):
         return
 
     connection.send_result(msg["id"], {"deleted": True})
