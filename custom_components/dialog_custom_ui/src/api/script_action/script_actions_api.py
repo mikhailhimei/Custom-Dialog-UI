@@ -120,7 +120,7 @@ async def _ws_get_script_actions_short(
     page_size = msg.get("page_size", 10)
 
     connection.send_result(
-        msg["id"],
+        msg["uuid"],
         _build_script_actions_short_response(script_actions, page, page_size),
     )
 
