@@ -9,6 +9,7 @@ from .utils import _get_options, _normalize_value
 from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
+from .src.api.script_action.storage import async_load_script_actions
 from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
 from .external_event_bridge import ExternalEventBridge
 from .const import (
@@ -21,6 +22,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+USE_SCRIPT_ACTIONS_STORAGE = True
 
 
 def _normalize_active_command_event_data(data: dict) -> dict:
@@ -176,7 +178,12 @@ class DialogCommandCoordinator:
 
         for payload in payloads:
             options = _get_options(self.entry)
-            scenario = match_scenario(payload, options["scenarios"])
+            scenario_source = (
+                await async_load_script_actions(self.hass)
+                if USE_SCRIPT_ACTIONS_STORAGE
+                else options["scenarios"]
+            )
+            scenario = match_scenario(payload, scenario_source)
 
             if not scenario:
                 _LOGGER.error("No scenario match for payload: %s", payload)
