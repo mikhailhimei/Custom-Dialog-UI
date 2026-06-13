@@ -1,15 +1,20 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 
-import ScenarioPage from "./src/page/ScenarioPage";
+import { HashRouter } from "react-router-dom";
+
+import { App } from "./src/app/App";
+
 import { DialogProvider } from "./src/context/DialogProvider";
 
 ReactDOM.createRoot(
   document.getElementById("root")!
 ).render(
   <React.StrictMode>
-    <DialogProvider>
-      <ScenarioPage />
-    </DialogProvider>
+    <HashRouter>
+      <DialogProvider>
+        <App />
+      </DialogProvider>
+    </HashRouter>
   </React.StrictMode>
 );

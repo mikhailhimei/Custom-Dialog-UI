@@ -13,7 +13,7 @@ from ....utils import _get_authorized_entry
 from ....const import (
     DOMAIN
 )
-from .storage import async_load_script_actions, async_save_script_actions
+from ....storage.script_actions_storage import async_load_script_actions, async_save_script_actions
 from .schemas import (
     GET_SCRIPT_ACTION_SCHEMA,
     GET_SCRIPT_ACTIONS_SHORT_SCHEMA,

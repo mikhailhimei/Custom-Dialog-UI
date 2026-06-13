@@ -8,7 +8,7 @@ export interface HassLike {
 export class DialogApi {
   constructor(private hass: HassLike) {}
 
-  async getScenarios() {
+  async getScriptsAction() {
     console.log("WS => dialog/script_actions");
 
     const result =
@@ -18,14 +18,18 @@ export class DialogApi {
 
     console.log("WS script <=", result);
 
-    return result.scenarios;
+    return result.script_actions;
   }
 
-  async saveScenarios(scenarios: any[]) {
-    return this.hass.connection.sendMessagePromise({
-      type: "dialog/save_scenarios",
-      scenarios,
-    });
+  async getDetailedScriptAction(uuid: string) {
+    console.log("WS => dialog_custom_ui/get_script_action", uuid);
+    const result =
+      await this.hass.connection.sendMessagePromise({
+        type: "dialog_custom_ui/get_script_action",
+        uuid,
+      });
+    console.log("WS script <=", result);
+    return result.script_action;
   }
 
   async saveScriptAction(script_action: any) {
@@ -43,39 +47,7 @@ export class DialogApi {
     });
   }
 
-  async getConfig() {
-    console.log("WS => dialog_custom_ui/get_config");
-
-    const result =
-      await this.hass.connection.sendMessagePromise({
-        type: "dialog_custom_ui/get_config",
-      });
-
-    console.log("WS <=", result);
-
-    return result.scenarios;
-  }
-
-  async saveConfig(config: any[]) {
-    return this.hass.connection.sendMessagePromise({
-      type: "dialog/save_config",
-      config,
-    });
-  }
-
-  async getLogs(){
-    console.log("WS => dialog_custom_ui/get_logs");
-
-    const result =
-      await this.hass.connection.sendMessagePromise({
-        type: "dialog_custom_ui/get_logs",
-      });
-
-    console.log("WS <=", result);
-
-    return result.scenarios;
-  }
-
+  
   getScripts() {
     return Object.values(this.hass.states)
       .filter(

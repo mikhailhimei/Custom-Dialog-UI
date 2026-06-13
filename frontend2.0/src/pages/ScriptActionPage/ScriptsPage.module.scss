@@ -1,0 +1,33 @@
+.page {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+}
+
+.title {
+  font-size: 32px;
+
+  font-weight: 700;
+}
+
+.description {
+  color: #9ca3af;
+}
+
+.list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+}
