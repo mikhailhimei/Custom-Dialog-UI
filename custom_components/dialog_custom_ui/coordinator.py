@@ -22,7 +22,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-USE_SCRIPT_ACTIONS_STORAGE = True
+USE_SCRIPT_ACTIONS_STORAGE = False
 
 
 def _normalize_active_command_event_data(data: dict) -> dict:
