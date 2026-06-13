@@ -50,7 +50,7 @@ def _build_script_actions_short_response(
     return {
         "script_actions": [
             {
-                "id": script_action["id"],
+                "id": script_action["uuid"],
                 "title": script_action.get("name", ""),
             }
             for script_action in script_actions[start:end]
@@ -62,13 +62,13 @@ def _build_script_actions_short_response(
     }
 
 
-def _find_script_action_by_id(
+def _find_script_action_by_uuid(
     script_actions: list[dict[str, Any]],
-    script_action_id: str,
+    script_action_uuid: str,
 ) -> dict[str, Any] | None:
-    script_action_id = _normalize_value(script_action_id)
+    script_action_uuid = _normalize_value(script_action_uuid)
     for script_action in script_actions:
-        if _normalize_value(script_action.get("id")) == script_action_id:
+        if _normalize_value(script_action.get("uuid")) == script_action_uuid:
             return script_action
     return None
 
@@ -139,7 +139,7 @@ async def _ws_get_script_action(
     
     script_actions = list(entry.options.get("script_actions", []))
 
-    script_action = _find_script_action_by_id(script_actions, msg["id"])
+    script_action = _find_script_action_by_uuid(script_actions, msg["uuid"])
    
     if script_action is None:
         _ws_error(
@@ -170,7 +170,7 @@ async def _ws_save_script_action(
 
     new_script_action = _merge_script_action_payload(msg)
 
-    if _find_script_action_by_id(script_actions, new_script_action["id"]) is not None:
+    if _find_script_action_by_uuid(script_actions, new_script_action["uuid"]) is not None:
         _ws_error(
             connection,
             msg,
@@ -201,8 +201,8 @@ async def _ws_update_script_action(
         return
     
     script_actions = list(entry.options.get("script_actions", []))
-    script_action_id = msg["id"]
-    existing = _find_script_action_by_id(script_actions, script_action_id)
+    script_action_uuid = msg["uuid"]
+    existing = _find_script_action_by_uuid(script_actions, script_action_uuid)
 
     if existing is None:
         _ws_error(
@@ -213,13 +213,13 @@ async def _ws_update_script_action(
         )
         return
     
-    normalized_script_action_id = _normalize_value(script_action_id)
+    normalized_script_action_id = _normalize_value(script_action_uuid)
 
-    updated_script_action = _merge_script_action_payload(msg, existing, script_action_id)
+    updated_script_action = _merge_script_action_payload(msg, existing, script_action_uuid)
 
     updated_list = [
         updated_script_action 
-        if _normalize_value(item.get("id")) == normalized_script_action_id 
+        if _normalize_value(item.get("uuid")) == normalized_script_action_id 
         else item for item in script_actions
         ]
 
@@ -244,8 +244,8 @@ async def _ws_delete_script_action(
 
     script_actions = list(entry.options.get("script_actions", []))
 
-    script_action_id = msg["id"]
-    target = _find_script_action_by_id(script_actions, script_action_id)
+    script_action_uuid = msg["uuid"]
+    target = _find_script_action_by_uuid(script_actions, script_action_uuid)
 
     if target is None:
         _ws_error(
@@ -256,12 +256,12 @@ async def _ws_delete_script_action(
         )
         return
     
-    normalized_script_action_id = _normalize_value(script_action_id)
+    normalized_script_action_id = _normalize_value(script_action_uuid)
 
     updated_list = [
         item 
         for item in script_actions 
-        if _normalize_value(item.get("id")) 
+        if _normalize_value(item.get("uuid")) 
         != normalized_script_action_id
     ]
 

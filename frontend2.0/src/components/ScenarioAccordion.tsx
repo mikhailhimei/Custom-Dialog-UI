@@ -17,6 +17,13 @@ export function ScenarioAccordion({ scenario, index, onDelete, onChange }: any) 
     });
   };
 
+  const deleteCondition = (conditionId: string) => {
+    onChange({
+      ...scenario,
+      conditions: scenario.conditions.filter((c: any) => c.id !== conditionId),
+    });
+  };
+
   return (
     <Accordion>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -34,6 +41,12 @@ export function ScenarioAccordion({ scenario, index, onDelete, onChange }: any) 
 
       <AccordionDetails>
         <Stack spacing={2}>
+          <TextField
+            label="ID"
+            value={scenario.id}
+            onChange={(e) => onChange({ ...scenario, id: e.target.value })}
+          />
+
           <TextField
             label="Наименование"
             value={scenario.name}
@@ -57,7 +70,7 @@ export function ScenarioAccordion({ scenario, index, onDelete, onChange }: any) 
 
           {scenario.conditions.map((condition: any, idx: number) => (
             <ConditionAccordion
-              key={condition.id}
+              key={condition.id ?? idx}
               condition={condition}
               index={idx}
               onChange={(updated: any) => {
@@ -68,6 +81,7 @@ export function ScenarioAccordion({ scenario, index, onDelete, onChange }: any) 
                   ),
                 });
               }}
+              onDelete={() => deleteCondition(condition.id)}
             />
           ))}
         </Stack>

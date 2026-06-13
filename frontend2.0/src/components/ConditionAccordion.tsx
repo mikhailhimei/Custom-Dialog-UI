@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Accordion, AccordionSummary, AccordionDetails, Button, Stack, TextField } from "@mui/material";
+import { Accordion, AccordionSummary, AccordionDetails, Button, Stack, TextField, IconButton } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import DeleteIcon from "@mui/icons-material/Delete";
 
-export function ConditionAccordion({ condition, index, onChange }: any) {
+export function ConditionAccordion({ condition, index, onChange, onDelete }: any) {
   const [showChildrenType, setShowChildrenType] = useState(!!condition.children_type);
   const [showChildrenDirectType, setShowChildrenDirectType] = useState(!!condition.children_direct_type);
 
@@ -43,6 +44,10 @@ export function ConditionAccordion({ condition, index, onChange }: any) {
               onChange={(e) => onChange({ ...condition, children_direct_type: e.target.value })}
             />
           )}
+
+          <IconButton onClick={onDelete}>
+            <DeleteIcon />
+          </IconButton>
         </Stack>
       </AccordionDetails>
     </Accordion>

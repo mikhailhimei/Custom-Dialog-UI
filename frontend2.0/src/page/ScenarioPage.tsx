@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Box, Button, Stack } from "@mui/material";
+import { Box, Button, Stack, TextField } from "@mui/material";
 import { PageHeader } from "../components/PageHeader";
 import { ScenarioTabs } from "../components/ScenarioTabs";
 import { ScenarioAccordion } from "../components/ScenarioAccordion";
-import { useScenarios } from "../src/hooks/useScenarios";
+import { useScenarios } from "../hooks/useScenarios";
 
 
 export default function ScenarioPage() {
@@ -14,17 +14,14 @@ export default function ScenarioPage() {
     scenarios,
     setScenarios,
     save,
+    deleteScenario
   } = useScenarios();
 
-  const [scenarios2, setScenarios2] = useState([{
-    id: crypto.randomUUID(),
-    name: "Насыпать еды",
-    script_entity_id: "script.food_cat",
-    conditions: [
-      { id: crypto.randomUUID(), parent_type: "sprinkle_food", children_type: "all" },
-      { id: crypto.randomUUID(), parent_type: "sprinkle_food", children_direct_type: "count" },
-    ],
-  }]);
+  console.log("scenarios", scenarios);
+
+  const [saving, setSaving] = useState(false);
+
+  const [idForTest, setIdForTest] = useState("unique_id");
 
   const updateScenario = (updated: any) =>
     setScenarios((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -34,7 +31,14 @@ export default function ScenarioPage() {
       <PageHeader title="Сценарии" subtitle="Настройка сценариев Home Assistant" />
       <ScenarioTabs value={tab} onChange={setTab} />
 
-      <Stack direction="row" spacing={2} mb={3}>
+      <Stack direction="row" spacing={2} mb={3} alignItems="center">
+        <TextField
+          label="ID для теста"
+          value={idForTest}
+          onChange={(e) => setIdForTest(e.target.value)}
+          size="small"
+        />
+
         <Button
           variant="contained"
           onClick={() =>
@@ -47,23 +51,42 @@ export default function ScenarioPage() {
           Добавить сценарий
         </Button>
 
-        <Button variant="outlined" onClick={() => console.log(scenarios)}>
-          Сохранить
+        <Button
+          variant="outlined"
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await save(idForTest);
+            } finally {
+              setSaving(false);
+            }
+          }}
+          disabled={saving}
+        >
+          {saving ? "Сохранение..." : "Сохранить"}
+        </Button>
+
+        <Button
+          color="error"
+          variant="outlined"
+          onClick={() => deleteScenario(idForTest)}
+        >
+          Удалить все
         </Button>
       </Stack>
 
       <Stack spacing={2}>
-        {scenarios.map((scenario, index) => (
+        {scenarios ? scenarios.map((scenario, index) => (
           <ScenarioAccordion
             key={scenario.id}
             scenario={scenario}
             index={index}
             onDelete={() =>
-              setScenarios((prev) => prev.filter((s) => s.id !== scenario.id))
+              deleteScenario(scenario.id)
             }
             onChange={updateScenario}
           />
-        ))}
+        )) : "Нет сценариев"}
       </Stack>
     </Box>
   );

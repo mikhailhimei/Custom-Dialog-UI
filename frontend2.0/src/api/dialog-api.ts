@@ -9,14 +9,14 @@ export class DialogApi {
   constructor(private hass: HassLike) {}
 
   async getScenarios() {
-    console.log("WS => dialog/get_scenarios");
+    console.log("WS => dialog/script_actions");
 
     const result =
       await this.hass.connection.sendMessagePromise({
-        type: "dialog/get_scenarios",
+        type: "dialog_custom_ui/get_script_actions_short",
       });
 
-    console.log("WS <=", result);
+    console.log("WS script <=", result);
 
     return result.scenarios;
   }
@@ -25,6 +25,21 @@ export class DialogApi {
     return this.hass.connection.sendMessagePromise({
       type: "dialog/save_scenarios",
       scenarios,
+    });
+  }
+
+  async saveScriptAction(script_action: any) {
+    return this.hass.connection.sendMessagePromise({
+      type: "dialog_custom_ui/save_script_action",
+      script_action,
+    });
+  }
+
+  async deleteScriptAction(script_actionId: string) {
+    console.log("WS => dialog_custom_ui/delete_script_action", script_actionId);
+    return this.hass.connection.sendMessagePromise({
+      type: "dialog_custom_ui/delete_script_action",
+      uuid: script_actionId,
     });
   }
 

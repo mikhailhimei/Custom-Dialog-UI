@@ -11,7 +11,7 @@ from ....const import (
 SAVE_SCRIPT_ACTION_SCHEMA = {
     vol.Required("type"): WS_SAVE_SCRIPT_ACTION,
     vol.Required("script_action"): {
-        vol.Required("id"): str,
+        vol.Required("uuid"): str,
         vol.Required("name"): str,
         vol.Required("script_entity_id"): str,
         vol.Optional("conditions", default=[]): [
@@ -29,7 +29,7 @@ SAVE_SCRIPT_ACTION_SCHEMA = {
 
 UPDATE_SCRIPT_ACTION_SCHEMA = {
     vol.Required("type"): WS_UPDATE_SCRIPT_ACTION,
-    vol.Required("id"): str,
+    vol.Required("uuid"): str,
     vol.Required("script_action"): dict,
 }
 
@@ -41,10 +41,10 @@ GET_SCRIPT_ACTIONS_SHORT_SCHEMA = {
 
 GET_SCRIPT_ACTION_SCHEMA = {
     vol.Required("type"): WS_GET_SCRIPT_ACTION,
-    vol.Required("id"): str,
+    vol.Required("uuid"): str,
 }
 
 DELETE_SCRIPT_ACTION_SCHEMA = {
     vol.Required("type"): WS_DELETE_SCRIPT_ACTION,
-    vol.Required("id"): str,
+    vol.Required("uuid"): str,
 }

@@ -127,7 +127,7 @@ def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
 
 def _normalize_script_action(item: dict[str, Any]) -> dict[str, Any]:
     script_action = {
-        "id": _normalize_value(item.get("id")),
+        "uuid": _normalize_value(item.get("uuid")),
         "name": _normalize_value(item.get("name")),
         "script_entity_id": _normalize_value(item.get("script_entity_id")),
     }
@@ -158,19 +158,19 @@ def _merge_script_action_payload(
 
     if existing is not None:
         if (
-                "id" in script_action_payload
-                and _normalize_value(script_action_payload["id"])
+                "uuid" in script_action_payload
+                and _normalize_value(script_action_payload["uuid"])
                 != _normalize_value(script_action_id or "")
             ):
             raise ValueError("Script action id mismatch")
         raw_script_action = dict(existing)
         raw_script_action.update(script_action_payload)
         if script_action_id:
-            raw_script_action["id"] = _normalize_value(script_action_id)
+            raw_script_action["uuid"] = _normalize_value(script_action_id)
     else:
         raw_script_action = dict(script_action_payload)
         if script_action_id:
-            raw_script_action["id"] = _normalize_value(script_action_id)
+            raw_script_action["uuid"] = _normalize_value(script_action_id)
 
     return _normalize_script_action(raw_script_action)
 
