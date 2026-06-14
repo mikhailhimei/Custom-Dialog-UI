@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 
-import { NavigationTabs } from '../../../NavigationTabs';
+import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
 
 import { Modal } from '../../components/Modal/Modal';
 import { Pagination } from '../../components/Pagination/Pagination';
 import { ScriptForm } from '../../components/ScriptForm/ScriptForm';
+import { Card } from '../../components/Card/Card';
+import { Button } from '../../components/ui/Button/Button';
 
 import styles from "./ScriptsPage.module.scss";
 
@@ -16,6 +18,9 @@ import {
 import { useScenarios } from '../../hooks/useScenarios';
 
 export const ScriptsPage = () => {
+  const [formData, setFormData] =
+  useState<ScriptActionDetails>();
+  
   const [selectedScript, setSelectedScript] =
     useState<ScriptActionDetails>();
 
@@ -57,21 +62,33 @@ export const ScriptsPage = () => {
 
   return (
     <div className={styles.page}>
-      <NavigationTabs />
+  <NavigationTabs />
 
-      <div className={styles.header}>
-        <div>
-          <h1>Сценарии</h1>
-
-          <p>
-            Управление сценариями
-          </p>
-        </div>
-
-        <button onClick={openCreateModal}>
-          Добавить
-        </button>
+  <div className={styles.header}>
+    <div className={styles.heading}>
+      <div className={styles.label}>
+        Сценарии
       </div>
+
+      <h1 className={styles.title}>
+        Управление сценариями
+      </h1>
+
+      <p className={styles.description}>
+        Создавайте и редактируйте
+        автоматизации и условия
+      </p>
+    </div>
+
+    <div className={styles.actions}>
+      <Button
+        variant="primary"
+        onClick={openCreateModal}
+      >
+        Добавить сценарий
+      </Button>
+    </div>
+  </div>
 
       {loading && (
         <div>Загрузка...</div>
@@ -79,14 +96,13 @@ export const ScriptsPage = () => {
 
       <div className={styles.list}>
         {scripts?.map((script) => (
-          <button
+          <Card
             key={script.uuid}
+            title={script.title}
             onClick={() =>
               openEditModal(script)
             }
-          >
-            {script.title}
-          </button>
+          />
         ))}
       </div>
 
@@ -101,22 +117,54 @@ export const ScriptsPage = () => {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        title={
+          isEdit
+            ? "Редактировать сценарий"
+            : "Создать сценарий"
+        }
+        footer={
+          <>
+            {isEdit && (
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  if (!selectedScript?.uuid)
+                    return;
+
+                  await deleteScenario(
+                    selectedScript.uuid
+                  );
+
+                  setModalOpen(false);
+                }}
+              >
+                Удалить
+              </Button>
+            )}
+
+            <Button
+              variant="secondary"
+              onClick={() =>
+                setModalOpen(false)
+              }
+            >
+              Отмена
+            </Button>
+
+            <Button
+              onClick={() => {
+                console.log(formData);
+              }}
+            >
+              Сохранить
+            </Button>
+          </>
+        }
       >
         <ScriptForm
           initialData={selectedScript}
           isEdit={isEdit}
-          onSave={(data) => {
-            console.log(data);
-          }}
-          onDelete={async () => {
-            if (!selectedScript?.uuid) return;
-
-            await deleteScenario(
-              selectedScript.uuid
-            );
-
-            setModalOpen(false);
-          }}
+          onChange={setFormData}
         />
       </Modal>
     </div>

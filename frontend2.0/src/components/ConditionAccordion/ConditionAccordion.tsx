@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Accordion } from '../Accordion/Accordion';
 import { Condition } from '../../types/scripts';
+import { Input } from '../ui/Input/Input';
+import { Button } from '../ui/Button/Button';
 
 interface Props {
   condition: Condition;
@@ -28,9 +30,8 @@ export const ConditionAccordion = ({
       defaultOpen={defaultOpen}
     >
       <div>
-        <label>parent_type *</label>
-
-        <input
+        <Input
+          label="parent_type *"
           value={condition.parent_type}
           onChange={(e) =>
             onChange({
@@ -43,14 +44,14 @@ export const ConditionAccordion = ({
 
       <div>
         {!showChildrenType && (
-          <button onClick={() => setShowChildrenType(true)}>
+          <Button onClick={() => setShowChildrenType(true)}>
             Добавить children_type
-          </button>
+          </Button>
         )}
 
         {showChildrenType && (
-          <input
-            placeholder="children_type"
+          <Input
+            label="children_type"
             value={condition.children_type || ''}
             onChange={(e) =>
               onChange({
@@ -64,16 +65,14 @@ export const ConditionAccordion = ({
 
       <div>
         {!showChildrenDirectType && (
-          <button
-            onClick={() => setShowChildrenDirectType(true)}
-          >
+          <Button onClick={() => setShowChildrenDirectType(true)}>
             Добавить children_direct_type
-          </button>
+          </Button>
         )}
 
         {showChildrenDirectType && (
-          <input
-            placeholder="children_direct_type"
+          <Input
+            label="children_direct_type"
             value={condition.children_direct_type || ''}
             onChange={(e) =>
               onChange({

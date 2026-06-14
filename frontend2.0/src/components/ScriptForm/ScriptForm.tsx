@@ -1,46 +1,72 @@
 import React, { useState } from 'react';
+
 import {
   Condition,
   ScriptActionDetails,
 } from '../../types/scripts';
-import { ConditionAccordion } from './ConditionAccordion';
+
+import { ConditionAccordion } from '../ConditionAccordion/ConditionAccordion';
+
+import { Input } from '../ui/Input/Input';
+
+import { Button } from '../ui/Button/Button';
 
 import styles from "./ScriptForm.module.scss";
 
 interface Props {
   initialData?: ScriptActionDetails;
+
   isEdit?: boolean;
-  onDelete?: () => void;
-  onSave?: (data: ScriptActionDetails) => void;
+
+  onChange?: (
+    data: ScriptActionDetails
+  ) => void;
 }
 
 export const ScriptForm = ({
   initialData,
+
   isEdit,
-  onDelete,
-  onSave,
+
+  onChange,
 }: Props) => {
-  const [form, setForm] = useState<ScriptActionDetails>({
-    uuid: initialData?.uuid || '',
-    name: initialData?.name || '',
-    script_entity_id: initialData?.script_entity_id || '',
-    conditions: initialData?.conditions || [
-      {
-        parent_type: '',
-      },
-    ],
-  });
+  const [form, setForm] =
+    useState<ScriptActionDetails>({
+      uuid: initialData?.uuid || '',
+
+      name: initialData?.name || '',
+
+      script_entity_id:
+        initialData?.script_entity_id || '',
+
+      conditions:
+        initialData?.conditions || [
+          {
+            parent_type: '',
+          },
+        ],
+    });
+
+  const updateForm = (
+    data: ScriptActionDetails
+  ) => {
+    setForm(data);
+
+    onChange?.(data);
+  };
 
   const addCondition = () => {
-    setForm((prev) => ({
-      ...prev,
+    updateForm({
+      ...form,
+
       conditions: [
-        ...prev.conditions,
+        ...form.conditions,
+
         {
           parent_type: '',
         },
       ],
-    }));
+    });
   };
 
   const updateCondition = (
@@ -51,43 +77,54 @@ export const ScriptForm = ({
 
     updated[index] = value;
 
-    setForm((prev) => ({
-      ...prev,
+    updateForm({
+      ...form,
+
       conditions: updated,
-    }));
+    });
   };
 
   return (
     <div className={styles.form}>
-      <h2>
-        {isEdit ? 'Редактирование сценария' : 'Создание сценария'}
-      </h2>
+      <Input
+        label="Название"
 
-      {form.conditions.map((condition, index) => (
-        <ConditionAccordion
-          key={index}
-          index={index}
-          condition={condition}
-          defaultOpen={!isEdit}
-          onChange={(value) =>
-            updateCondition(index, value)
-          }
-        />
-      ))}
+        value={form.name}
 
-      <button onClick={addCondition}>
-        Создать ещё один аккордеон
-      </button>
+        onChange={(e) =>
+          updateForm({
+            ...form,
 
-      <button onClick={() => onSave?.(form)}>
-        Сохранить
-      </button>
+            name: e.target.value,
+          })
+        }
+      />
 
-      {isEdit && (
-        <button onClick={onDelete}>
-          Удалить
-        </button>
+      {form.conditions.map(
+        (condition, index) => (
+          <ConditionAccordion
+            key={index}
+
+            index={index}
+
+            condition={condition}
+
+            defaultOpen={!isEdit}
+
+            onChange={(value) =>
+              updateCondition(index, value)
+            }
+          />
+        )
       )}
+
+      <Button
+        type="button"
+        className={styles.addCondition}
+        onClick={addCondition}
+      >
+        + Добавить условие
+      </Button>
     </div>
   );
 };
