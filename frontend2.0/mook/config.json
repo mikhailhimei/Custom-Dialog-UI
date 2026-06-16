@@ -3,24 +3,21 @@
     "type": "result",
     "success": true,
     "result": {
-        "base_url": "http://192.168.31.83:9379",
-        "allow_non_admin_panel": true,
-        "client_id": "4CDC6871493B1FB5532185457BA7864FB65F366F93C431FD8D8F847894B9287D",
-        "redis_url": "redis://192.168.31.83:6980",
-        "redis_password": "132143154D",
-        "voice_agent_ip": "192.168.31.82:9379",
-        "voice_agent_user_id": "4CDC6871493B1FB5532185457BA7864FB65F366F93C431FD8D8F847894B9287D",
-        "yandex_tts_api_key": "",
-        "yandex_tts_folder_id": "b1gp059vb0ukreogbt0g",
-        "yandex_tts_lang": "ru-RU",
-        "yandex_tts_codec": "oggopus",
-        "yandex_tts_voice": "oksana",
-        "yandex_tts_emotion": "good",
-        "yandex_tts_speed": 1.1,
+        "remote": {
+            "base_url": "http://192.168.31.83:9379",
+            "client_id": "4CDC6871493B1FB5532185457BA7864FB65F366F93C431FD8D8F847894B9287D",
+            "authorization": ""
+        },
+        "yandex_tts": {
+            "yandex_tts_api_key": "",
+            "yandex_tts_folder_id": "b1gp059vb0ukreogbt0g",
+            "yandex_tts_lang": "ru-RU",
+            "yandex_tts_codec": "oggopus",
+            "yandex_tts_voice": "oksana",
+            "yandex_tts_emotion": "good",
+            "yandex_tts_speed": 1.1
+        },
         "theme": "dark",
-        "timer_alarm_token": "Bearer erqwlkrqelkjqweklqwjeqwlejkqwwww",
-        "timer_alarm_device_ids": [
-            "6cec81d664809defc5e610168dc49f9d"
-        ]
+        "isAdmin": true
     }
 }

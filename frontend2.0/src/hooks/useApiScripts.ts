@@ -8,7 +8,7 @@ import {
   ScriptsResponse,
 } from "../types/scripts";
 
-export function useScenarios() {
+export function useApiScripts() {
   const api = useDialogApi();
 
   const [loading, setLoading] = useState(true);
@@ -40,16 +40,28 @@ export function useScenarios() {
       uuid
     );
 
-    console.log("response2", response);
-
     return response;
   };
 
-  const deleteScenario = async (id: string) => {
-    await api.deleteScriptAction(id);
+  const deleteScriptAction = async (uuid: string) => {
+    await api.deleteScriptAction(uuid);
 
     await loadScripts();
   };
+
+  const saveScript = async (data: any) => {
+    await api.saveScriptAction(data)
+  }
+
+  const updateScript = async (uuid: string, data: any) => {
+    await api.updateScriptAction(uuid, data)
+    await loadScripts();
+  }
+
+  const scriptData = () =>{
+    const result = api.getScripts()
+    return result
+  }
 
   return {
     loading,
@@ -57,7 +69,12 @@ export function useScenarios() {
 
     loadScripts,
 
+    scriptData,
+
+    saveScript,
+    updateScript,
+    
     getScriptAction,
-    deleteScenario,
+    deleteScriptAction,
   };
 }

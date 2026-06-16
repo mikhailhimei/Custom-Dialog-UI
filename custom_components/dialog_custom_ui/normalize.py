@@ -125,6 +125,9 @@ def _normalize_scenario(item: dict[str, Any]) -> dict[str, Any]:
 
     return scenario
 
+from typing import Any
+
+
 def _normalize_script_action(item: dict[str, Any]) -> dict[str, Any]:
     script_action = {
         "uuid": _normalize_value(item.get("uuid")),
@@ -147,32 +150,50 @@ def _normalize_script_action(item: dict[str, Any]) -> dict[str, Any]:
 
     return script_action
 
+
 def _merge_script_action_payload(
     msg: dict[str, Any],
     existing: dict[str, Any] | None = None,
     script_action_id: str | None = None,
 ) -> dict[str, Any]:
-    script_action_payload = msg.get("script_action")
-    if not isinstance(script_action_payload, dict):
+    payload = msg.get("script_action")
+
+    if not isinstance(payload, dict):
         raise ValueError("Script action payload must be an object")
 
+    uuid_value = _normalize_value(script_action_id) if script_action_id else None
+
+    # =========================
+    # UPDATE EXISTING
+    # =========================
     if existing is not None:
         if (
-                "uuid" in script_action_payload
-                and _normalize_value(script_action_payload["uuid"])
-                != _normalize_value(script_action_id or "")
-            ):
+            "uuid" in payload
+            and _normalize_value(payload["uuid"]) != uuid_value
+        ):
             raise ValueError("Script action id mismatch")
-        raw_script_action = dict(existing)
-        raw_script_action.update(script_action_payload)
-        if script_action_id:
-            raw_script_action["uuid"] = _normalize_value(script_action_id)
-    else:
-        raw_script_action = dict(script_action_payload)
-        if script_action_id:
-            raw_script_action["uuid"] = _normalize_value(script_action_id)
 
-    return _normalize_script_action(raw_script_action)
+        merged = dict(existing)
+
+        # гарантируем контроль uuid
+        if uuid_value:
+            merged["uuid"] = uuid_value
+
+        # безопасный merge без перетирания uuid
+        for key, value in payload.items():
+            if key != "uuid":
+                merged[key] = value
+
+    # =========================
+    # CREATE NEW
+    # =========================
+    else:
+        merged = dict(payload)
+
+        if uuid_value:
+            merged["uuid"] = uuid_value
+
+    return _normalize_script_action(merged)
 
     
 def _normalize_device_ids(value: Any) -> list[str]:

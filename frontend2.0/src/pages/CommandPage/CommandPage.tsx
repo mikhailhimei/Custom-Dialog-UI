@@ -8,7 +8,7 @@ import { ScriptForm } from '../../components/ScriptForm/ScriptForm';
 import { Card } from '../../components/Card/Card';
 import { Button } from '../../components/ui/Button/Button';
 
-import styles from "./ScriptsPage.module.scss";
+import styles from "./CommandPage.module.scss";
 
 import {
   ScriptAction,
@@ -17,7 +17,7 @@ import {
 
 import { useApiScripts } from '../../hooks/useApiScripts';
 
-export const ScriptsPage = () => {
+export const CommandsPage = () => {
   const [formData, setFormData] =
   useState<ScriptActionDetails>();
   
@@ -65,16 +65,16 @@ export const ScriptsPage = () => {
     setModalOpen(true);
   };
 
-  const handlerUpdateSaveScript = async () =>{
+  const handlerUpdateSaveScript = async (scriptDetails: ScriptActionDetails) =>{
     if (isEdit){
-      const uuid  = formData?.uuid
+      const uuid = scriptDetails?.uuid
 
-      delete formData?.uuid
+      delete scriptDetails?.uuid
 
-      await updateScript(uuid, formData)
+      await updateScript(uuid, scriptDetails)
     }else{
 
-      await saveScript(formData)
+      await saveScript(scriptDetails)
       
     } 
 
@@ -89,7 +89,7 @@ export const ScriptsPage = () => {
     <div className={styles.heading}>
 
       <h1 className={styles.title}>
-        Создание запускающих скриптов
+        Комманды
       </h1>
 
       <p className={styles.description}>

@@ -39,15 +39,21 @@ export class DialogApi {
     });
   }
 
-  async deleteScriptAction(script_actionId: string) {
-    console.log("WS => dialog_custom_ui/delete_script_action", script_actionId);
+  async updateScriptAction(uuid: string, script_action: any){
     return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/delete_script_action",
-      uuid: script_actionId,
+      type: "dialog_custom_ui/update_script_action",
+      uuid: uuid,
+      script_action,
     });
   }
 
-  
+  async deleteScriptAction(uuid: string) {
+    return this.hass.connection.sendMessagePromise({
+      type: "dialog_custom_ui/delete_script_action",
+      uuid,
+    });
+  }
+
   getScripts() {
     return Object.values(this.hass.states)
       .filter(
@@ -67,7 +73,6 @@ export class DialogApi {
 
 
 
-  //запуск но зачем?
   async runScript(entityId: string) {
     return this.hass.connection.sendMessagePromise({
       type: "call_service",

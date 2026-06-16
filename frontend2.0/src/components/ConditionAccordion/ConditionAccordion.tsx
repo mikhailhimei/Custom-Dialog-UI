@@ -31,7 +31,7 @@ export const ConditionAccordion = ({
     >
       <div>
         <Input
-          label="parent_type *"
+          label="Parent_type"
           value={condition.parent_type}
           onChange={(e) =>
             onChange({

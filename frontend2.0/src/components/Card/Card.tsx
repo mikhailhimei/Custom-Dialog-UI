@@ -3,7 +3,6 @@ import styles from "./Card.module.scss";
 
 interface Props {
   title: string;
-
   onClick: () => void;
 }
 

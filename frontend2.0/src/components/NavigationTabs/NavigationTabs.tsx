@@ -6,11 +6,11 @@ import styles from "./NavigationTabs.module.scss";
 const tabs = [
   {
     to: "/scripts",
-    label: "Сценарии",
+    label: "Скрипты",
   },
   {
-    to: "/locations",
-    label: "Локи",
+    to: "/commands",
+    label: "Комманды",
   },
 ];
 

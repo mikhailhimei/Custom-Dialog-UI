@@ -7,6 +7,8 @@ import {
 
 import { ConditionAccordion } from '../ConditionAccordion/ConditionAccordion';
 
+import { Dropdown } from '../Dropdown/Dropdown'
+
 import { Input } from '../ui/Input/Input';
 
 import { Button } from '../ui/Button/Button';
@@ -15,6 +17,8 @@ import styles from "./ScriptForm.module.scss";
 
 interface Props {
   initialData?: ScriptActionDetails;
+  
+  isOptionData: any;
 
   isEdit?: boolean;
 
@@ -25,7 +29,7 @@ interface Props {
 
 export const ScriptForm = ({
   initialData,
-
+  isOptionData,
   isEdit,
 
   onChange,
@@ -100,6 +104,22 @@ export const ScriptForm = ({
         }
       />
 
+      <Dropdown
+        options={isOptionData.map((item: any) => ({
+          label: item.name,
+          value: item.entity_id,
+        }))}
+
+        value={form.script_entity_id}
+
+        onSelect={(value) =>
+          updateForm({
+            ...form,
+            script_entity_id: value,
+          })
+        }
+      />
+
       {form.conditions.map(
         (condition, index) => (
           <ConditionAccordion
@@ -125,6 +145,7 @@ export const ScriptForm = ({
       >
         + Добавить условие
       </Button>
+
     </div>
   );
 };

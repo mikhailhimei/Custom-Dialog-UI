@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 
 import { ScriptsPage } from "../pages/ScriptActionPage/ScriptsPage";
+import { CommandsPage } from "../pages/CommandPage/CommandPage"
 
 export const AppRoutes = () => {
   return (
@@ -26,8 +27,8 @@ export const AppRoutes = () => {
       />
 
       <Route
-        path="/locations"
-        element={<div>Locations</div>}
+        path="/commands"
+        element={<CommandsPage />}
       />
 
        <Route
