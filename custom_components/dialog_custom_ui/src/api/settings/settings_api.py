@@ -48,6 +48,7 @@ async def _ws_get_settings(
 @websocket_api.async_response
 async def _ws_save_settings(
     hass: HomeAssistant,
+    entry,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
@@ -79,7 +80,7 @@ async def _ws_save_settings(
         updated_settings,
     )
 
-    coordinator = hass.data[DOMAIN]
+    coordinator = hass.data[DOMAIN][entry.entry_id]
 
     await coordinator.async_reload()
 

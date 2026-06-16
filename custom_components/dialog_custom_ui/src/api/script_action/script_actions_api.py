@@ -67,14 +67,14 @@ def _find(script_actions, uuid_value: str):
     return None
 
 
-async def _save(hass, script_actions, connection, msg) -> bool:
+async def _save(hass, entry, script_actions, connection, msg) -> bool:
     try:
         await async_save_script_actions(hass, script_actions)
     except Exception:
         _ws_error(connection, msg, "save_failed", "Failed to save script actions")
         return False
 
-    coordinator = hass.data[DOMAIN]
+    coordinator = hass.data[DOMAIN][entry.entry_id]
 
     try:
         await coordinator.async_reload()
@@ -133,7 +133,7 @@ async def _ws_get_script_action(hass, connection, msg):
 @websocket_api.websocket_command(SAVE_SCRIPT_ACTION_SCHEMA)
 @websocket_api.require_admin
 @websocket_api.async_response
-async def _ws_save_script_action(hass, connection, msg):
+async def _ws_save_script_action(hass, entry, connection, msg):
     script_actions = await async_load_script_actions(hass)
 
     script_action = msg["script_action"]
@@ -141,7 +141,7 @@ async def _ws_save_script_action(hass, connection, msg):
 
     script_actions.append(script_action)
 
-    if not await _save(hass, script_actions, connection, msg):
+    if not await _save(hass, entry, script_actions, connection, msg):
         return
 
     connection.send_result(
@@ -174,7 +174,7 @@ async def _ws_update_script_action(hass, connection, msg):
         for i in script_actions
     ]
 
-    if not await _save(hass, script_actions, connection, msg):
+    if not await _save(hass, entry, script_actions, connection, msg):
         return
 
     connection.send_result(
@@ -204,7 +204,7 @@ async def _ws_delete_script_action(hass, connection, msg):
         if _normalize_value(i.get("uuid")) != uuid_value
     ]
 
-    if not await _save(hass, script_actions, connection, msg):
+    if not await _save(hass, entry, script_actions, connection, msg):
         return
 
     connection.send_result(msg["id"], {"deleted": True})
