@@ -8,48 +8,45 @@ export interface HassLike {
 export class DialogApi {
   constructor(private hass: HassLike) {}
 
-  async getScriptsAction() {
-    console.log("WS => dialog/script_actions");
+  async _getShort(type: string) {
 
     const result =
       await this.hass.connection.sendMessagePromise({
-        type: "dialog_custom_ui/get_script_actions_short",
+        type: `dialog_custom_ui/${type}`,
       });
 
-    console.log("WS script <=", result);
+    console.log("WS <=", result);
 
-    return result.script_actions;
+    return result;
   }
 
-  async getDetailedScriptAction(uuid: string) {
-    console.log("WS => dialog_custom_ui/get_script_action", uuid);
+  async _getDetail(uuid: string, type: string) {
     const result =
       await this.hass.connection.sendMessagePromise({
-        type: "dialog_custom_ui/get_script_action",
+        type: `dialog_custom_ui/${type}`,
         uuid,
       });
-    console.log("WS script <=", result);
-    return result.script_action;
+    return result;
   }
 
-  async saveScriptAction(script_action: any) {
+  async _save(data: any, type: string) {
     return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/save_script_action",
-      script_action,
+      type: `dialog_custom_ui/${type}`,
+      data,
     });
   }
 
-  async updateScriptAction(uuid: string, script_action: any){
+  async _update(uuid: string, type: string, data: any){
     return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/update_script_action",
+      type: `dialog_custom_ui/${type}`,
       uuid: uuid,
-      script_action,
+      data,
     });
   }
 
-  async deleteScriptAction(uuid: string) {
+  async _delete(uuid: string, type: string) {
     return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/delete_script_action",
+      type: `dialog_custom_ui/${type}`,
       uuid,
     });
   }

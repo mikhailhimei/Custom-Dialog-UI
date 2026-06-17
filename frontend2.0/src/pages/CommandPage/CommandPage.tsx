@@ -15,7 +15,7 @@ import {
   ScriptActionDetails,
 } from '../../types/scripts';
 
-import { useApiScripts } from '../../hooks/useApiScripts';
+import { useSettings } from '../../hooks/settings/useSettings';
 
 export const CommandsPage = () => {
   const [formData, setFormData] =
@@ -34,14 +34,7 @@ export const CommandsPage = () => {
     loading,
     scripts,
     
-    scriptData,
-
-    saveScript,
-    updateScript,
-
-    getScriptAction,
-    deleteScriptAction,
-  } = useApiScripts();
+  } = useSettings();
 
   const openCreateModal = () => {
     setSelectedScript(undefined);
@@ -65,21 +58,7 @@ export const CommandsPage = () => {
     setModalOpen(true);
   };
 
-  const handlerUpdateSaveScript = async (scriptDetails: ScriptActionDetails) =>{
-    if (isEdit){
-      const uuid = scriptDetails?.uuid
-
-      delete scriptDetails?.uuid
-
-      await updateScript(uuid, scriptDetails)
-    }else{
-
-      await saveScript(scriptDetails)
-      
-    } 
-
-    setModalOpen(false)
-  }
+  
 
   return (
     <div className={styles.page}>
@@ -97,84 +76,7 @@ export const CommandsPage = () => {
         автоматизации и условия
       </p>
     </div>
-
-    <div className={styles.actions}>
-      <Button
-        variant="primary"
-        onClick={openCreateModal}
-      >
-        Добавить сценарий
-      </Button>
     </div>
-  </div>
-
-      {loading && (
-        <div>Загрузка...</div>
-      )}
-
-      <div className={styles.list}>
-        {scripts?.map((script) => (
-          <Card
-            key={script.uuid}
-            title={script.title}
-            onClick={() =>
-              openEditModal(script)
-            }
-          />
-        ))}
-      </div>
-
-      <Pagination
-        page={scripts?.page || 1}
-        totalPages={scripts?.total_pages || 1}
-        onChange={(page) => {
-          console.log(page);
-        }}
-      />
-
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={
-          isEdit
-            ? "Редактировать сценарий"
-            : "Создать сценарий"
-        }
-        footer={
-          <>
-            {isEdit && (
-              <Button
-                variant="ghost"
-                onClick={async () => {
-                  if (!selectedScript?.uuid)
-                    return;
-
-                  await deleteScriptAction(
-                    selectedScript.uuid
-                  );
-
-                  setModalOpen(false);
-                }}
-              >
-                Удалить
-              </Button>
-            )}
-
-            <Button
-              onClick={handlerUpdateSaveScript}
-            >
-              Сохранить
-            </Button>
-          </>
-        }
-      >
-        <ScriptForm
-          initialData={selectedScript}
-          isEdit={isEdit}
-          isOptionData = {scriptData()}
-          onChange={setFormData}
-        />
-      </Modal>
     </div>
   );
 };

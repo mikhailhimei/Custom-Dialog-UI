@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { useDialogApi } from "../context/DialogContext";
+import { useDialogApi } from "../../context/DialogContext";
 
 import {
   ApiResponse,
   ScriptActionDetails,
   ScriptsResponse,
-} from "../types/scripts";
+} from "../../types/scripts";
 
 export function useApiScripts() {
   const api = useDialogApi();
@@ -21,9 +21,11 @@ export function useApiScripts() {
 
     try {
       const response: ApiResponse<ScriptsResponse> =
-        await api.getScriptsAction();
+        await api._getShort("get_script_actions_short");
 
-      setScripts(response);
+      console.log(response)
+
+      setScripts(response.script_actions);
     } finally {
       setLoading(false);
     }
@@ -36,25 +38,26 @@ export function useApiScripts() {
   const getScriptAction = async (
     uuid: string
   ): Promise<ScriptActionDetails> => {
-    const response = await api.getDetailedScriptAction(
-      uuid
+    const response = await api._getDetail(
+      uuid,
+      "get_script_action"
     );
 
-    return response;
+    return response.script_action;
   };
 
   const deleteScriptAction = async (uuid: string) => {
-    await api.deleteScriptAction(uuid);
+    await api._delete(uuid, "delete_script_action");
 
     await loadScripts();
   };
 
   const saveScript = async (data: any) => {
-    await api.saveScriptAction(data)
+    await api._save(data, "save_script_action")
   }
 
   const updateScript = async (uuid: string, data: any) => {
-    await api.updateScriptAction(uuid, data)
+    await api._update(uuid, "update_script_action", data)
     await loadScripts();
   }
 

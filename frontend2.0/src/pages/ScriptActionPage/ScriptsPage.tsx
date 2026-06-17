@@ -15,7 +15,7 @@ import {
   ScriptActionDetails,
 } from '../../types/scripts';
 
-import { useApiScripts } from '../../hooks/useApiScripts';
+import { useApiScripts } from '../../hooks/scriptActions/useApiScripts';
 
 export const ScriptsPage = () => {
   const [formData, setFormData] =

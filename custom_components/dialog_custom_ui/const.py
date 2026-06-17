@@ -87,3 +87,7 @@ WS_GET_YANDEX_SCENARIOS = "dialog_custom_ui/get_yandex_scenarios"
 WS_SAVE_YANDEX_SCENARIOS = "dialog_custom_ui/save_yandex_scenarios"
 WS_EXPORT_YANDEX_TTS_FILES = "dialog_custom_ui/export_yandex_tts_files"
 WS_IMPORT_YANDEX_TTS_FILES = "dialog_custom_ui/import_yandex_tts_files"
+
+
+WS_GET_SETTINGS = "dialog_custom_ui/get_settings"
+WS_SAVE_SETTINGS = "dialog_custom_ui/save_settings"

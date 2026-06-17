@@ -10,6 +10,7 @@ from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .storage.script_actions_storage import async_load_script_actions
+from .storage.settings_storage import async_load_settings
 from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
 from .external_event_bridge import ExternalEventBridge
 from .const import (

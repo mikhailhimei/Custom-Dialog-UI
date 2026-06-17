@@ -29,6 +29,5 @@ SAVE_SETTINGS_SCHEMA = {
 
 
 GET_SETTINGS_SCHEMA = {
-    vol.Required("type"): WS_GET_SETTINGS,
-    vol.Required("settings"): dict
+    vol.Required("type"): WS_GET_SETTINGS
 }
