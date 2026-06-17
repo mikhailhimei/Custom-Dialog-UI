@@ -30,7 +30,7 @@ SAVE_SCRIPT_ACTION_SCHEMA = {
 UPDATE_SCRIPT_ACTION_SCHEMA = {
     vol.Required("type"): WS_UPDATE_SCRIPT_ACTION,
     vol.Required("uuid"): str,
-    vol.Required("script_action"): dict,
+    vol.Required("data"): dict,
 }
 
 GET_SCRIPT_ACTIONS_SHORT_SCHEMA = {
