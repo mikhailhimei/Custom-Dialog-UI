@@ -58,7 +58,7 @@ async def _ws_save_settings(
         return
 
     current_settings = await async_load_settings(hass)
-    new_settings = msg["settings"]
+    new_settings = msg["data"]
 
     updated_settings = current_settings.copy()
 

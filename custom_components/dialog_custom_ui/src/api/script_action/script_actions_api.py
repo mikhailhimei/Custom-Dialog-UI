@@ -43,7 +43,7 @@ def _build_short(script_actions: list[dict[str, Any]], page: int, page_size: int
     end = start + page_size
 
     return {
-        "script_actions": [
+        "data": [
             {
                 "uuid": item["uuid"],
                 "title": item.get("name", ""),
@@ -123,7 +123,7 @@ async def _ws_get_script_action(hass, connection, msg):
         _ws_error(connection, msg, "not_found", "Script action not found")
         return
 
-    connection.send_result(msg["id"], {"script_action": item})
+    connection.send_result(msg["id"], {"data": item})
 
 
 # =========================
@@ -136,7 +136,7 @@ async def _ws_get_script_action(hass, connection, msg):
 async def _ws_save_script_action(hass, entry, connection, msg):
     script_actions = await async_load_script_actions(hass)
 
-    script_action = msg["script_action"]
+    script_action = msg["data"]
     script_action["uuid"] = str(uuid.uuid4())
 
     script_actions.append(script_action)
@@ -179,7 +179,7 @@ async def _ws_update_script_action(hass, connection, msg):
 
     connection.send_result(
         msg["id"],
-        {"updated": True, "script_action": updated},
+        {"updated": True, "data": updated},
     )
 
 
@@ -190,7 +190,7 @@ async def _ws_update_script_action(hass, connection, msg):
 @websocket_api.websocket_command(DELETE_SCRIPT_ACTION_SCHEMA)
 @websocket_api.require_admin
 @websocket_api.async_response
-async def _ws_delete_script_action(hass, connection, msg):
+async def _ws_delete_script_action(hass, entry, connection, msg):
     script_actions = await async_load_script_actions(hass)
 
     uuid_value = _normalize_value(msg["uuid"])

@@ -156,7 +156,7 @@ def _merge_script_action_payload(
     existing: dict[str, Any] | None = None,
     script_action_id: str | None = None,
 ) -> dict[str, Any]:
-    payload = msg.get("script_action")
+    payload = msg.get("data")
 
     if not isinstance(payload, dict):
         raise ValueError("Script action payload must be an object")
