@@ -25,7 +25,7 @@ export function useApiScripts() {
 
       console.log(response)
 
-      setScripts(response.script_actions);
+      setScripts(response.data);
     } finally {
       setLoading(false);
     }
@@ -43,7 +43,7 @@ export function useApiScripts() {
       "get_script_action"
     );
 
-    return response.script_action;
+    return response.data;
   };
 
   const deleteScriptAction = async (uuid: string) => {

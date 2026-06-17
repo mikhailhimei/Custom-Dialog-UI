@@ -146,7 +146,7 @@ async def _ws_save_script_action(hass, entry, connection, msg):
 
     connection.send_result(
         msg["id"],
-        {"saved": True, "script_action": script_action},
+        {"saved": True, "data": script_action},
     )
 
 
@@ -157,7 +157,7 @@ async def _ws_save_script_action(hass, entry, connection, msg):
 @websocket_api.websocket_command(UPDATE_SCRIPT_ACTION_SCHEMA)
 @websocket_api.require_admin
 @websocket_api.async_response
-async def _ws_update_script_action(hass, connection, msg):
+async def _ws_update_script_action(hass, entry, connection, msg):
     script_actions = await async_load_script_actions(hass)
 
     existing = _find(script_actions, msg["uuid"])

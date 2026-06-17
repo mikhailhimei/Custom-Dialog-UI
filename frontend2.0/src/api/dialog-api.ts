@@ -30,6 +30,7 @@ export class DialogApi {
   }
 
   async _save(data: any, type: string) {
+    console.log(data)
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,
       data,
@@ -37,10 +38,11 @@ export class DialogApi {
   }
 
   async _update(uuid: string, type: string, data: any){
+    console.log(data)
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,
       uuid: uuid,
-      data,
+      data: data,
     });
   }
 

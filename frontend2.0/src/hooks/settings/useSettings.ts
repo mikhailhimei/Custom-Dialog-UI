@@ -39,7 +39,7 @@ export function useSettings() {
 
 
   const saveSettings = async () => {
-    await api._save({"settings":{"yandex_tts":{"api_key":123}}}, "save_settings")
+    await api._save({"yandex_tts":{"api_key":123}}, "save_settings")
   }
 
   return {

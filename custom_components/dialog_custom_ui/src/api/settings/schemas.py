@@ -8,10 +8,10 @@ from ....const import (
 SAVE_SETTINGS_SCHEMA = {
     vol.Required("type"): WS_SAVE_SETTINGS,
     vol.Required("data"): {
-        vol.Required("result"): {
-            vol.Required("base_url"): str,
-            vol.Required("client_id"): str,
-            vol.Required("authorization"): str,
+        vol.Required("remote"): {
+            vol.Required("base_url", default=""): str,
+            vol.Required("client_id", default=""): str,
+            vol.Required("authorization", default=""): str,
         },
         vol.Optional("yandex_tts"): {
             vol.Required("api_key", default=""): str,
