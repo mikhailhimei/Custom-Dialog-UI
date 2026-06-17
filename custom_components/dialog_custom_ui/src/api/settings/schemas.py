@@ -7,7 +7,7 @@ from ....const import (
 
 SAVE_SETTINGS_SCHEMA = {
     vol.Required("type"): WS_SAVE_SETTINGS,
-    vol.Required("settings"): {
+    vol.Required("data"): {
         vol.Required("result"): {
             vol.Required("base_url"): str,
             vol.Required("client_id"): str,

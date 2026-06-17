@@ -10,7 +10,7 @@ from ....const import (
 
 SAVE_SCRIPT_ACTION_SCHEMA = {
     vol.Required("type"): WS_SAVE_SCRIPT_ACTION,
-    vol.Required("script_action"): {
+    vol.Required("data"): {
         vol.Required("uuid"): str,
         vol.Required("name"): str,
         vol.Required("script_entity_id"): str,

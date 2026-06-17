@@ -26,6 +26,8 @@ export function useSettings() {
       console.log(response)
 
       setSettings(response);
+
+      saveSettings()
     } finally {
       setLoading(false);
     }
@@ -35,6 +37,10 @@ export function useSettings() {
     loadScripts();
   }, [loadScripts]);
 
+
+  const saveSettings = async () => {
+    await api._save({"settings":{"yandex_tts":{"api_key":123}}}, "save_settings")
+  }
 
   return {
     loading,
