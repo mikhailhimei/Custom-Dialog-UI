@@ -1,7 +1,7 @@
 """Websocket API for script_action-specific config operations."""
-import uuid
-
 from __future__ import annotations
+
+import uuid
 
 from typing import Any
 
