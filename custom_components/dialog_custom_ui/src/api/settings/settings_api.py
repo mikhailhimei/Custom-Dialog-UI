@@ -18,7 +18,7 @@ from .schemas import (
     GET_SETTINGS_SCHEMA,
     SAVE_SETTINGS_SCHEMA,
 )
-def async_register_script_actions_websockets(hass: HomeAssistant) -> None:
+def async_register_settings_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_settings)
     websocket_api.async_register_command(hass, _ws_save_settings)
     
