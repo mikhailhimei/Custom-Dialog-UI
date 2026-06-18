@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 
 from ....const import DOMAIN
 from ....normalize import _normalize_value
+from .assistant_commands_search import async_search_assistant_commands
 from ....storage.assistant_commands_storage import (
     async_load_assistant_commands,
     async_save_assistant_commands,
@@ -233,14 +234,6 @@ async def _ws_delete_assistant_command(hass, connection, msg):
 @websocket_api.websocket_command(SEARCH_ASSISTANT_COMMANDS_SCHEMA)
 @websocket_api.async_response
 async def _ws_search_assistant_commands(hass, connection, msg):
-    assistant_commands = await async_load_assistant_commands(hass)
-    query = _normalize_value(msg.get("query")).lower()
-
-    data = [
-        {"uuid": item.get("uuid", ""), "title": item.get("title", "")}
-        for item in assistant_commands
-        if query in _normalize_value(item.get("title")).lower()
-        or query in _normalize_value(item.get("uuid")).lower()
-    ]
+    data = await async_search_assistant_commands(hass, msg.get("query"))
 
     connection.send_result(msg["id"], {"data": data})
