@@ -9,7 +9,6 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 
-from ....utils import _get_authorized_entry
 from ....const import (
     DOMAIN
 )
@@ -30,11 +29,6 @@ async def _ws_get_settings(
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    entry = _get_authorized_entry(hass, connection, msg)
-
-    if entry is None:
-        return
-
     data = await async_load_settings(hass)
 
     connection.send_result(
@@ -48,14 +42,9 @@ async def _ws_get_settings(
 @websocket_api.async_response
 async def _ws_save_settings(
     hass: HomeAssistant,
-    entry,
     connection: websocket_api.ActiveConnection,
     msg: dict[str, Any],
 ) -> None:
-    entry = _get_authorized_entry(hass, connection, msg)
-
-    if entry is None:
-        return
 
     current_settings = await async_load_settings(hass)
     new_settings = msg["data"]
@@ -80,7 +69,7 @@ async def _ws_save_settings(
         updated_settings,
     )
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = hass.data[DOMAIN]["coordinator"]
 
     await coordinator.async_reload()
 

@@ -57,6 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await async_register_panel(hass)
     coordinator = DialogCommandCoordinator(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator
+    hass.data[DOMAIN]["coordinator"] = coordinator
     await coordinator.async_start()
  
     await hass.config_entries.async_forward_entry_setups(

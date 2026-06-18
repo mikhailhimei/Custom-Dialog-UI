@@ -5,11 +5,6 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-import logging
-
-_LOGGER = logging.getLogger(__name__)
-
-
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
@@ -79,9 +74,7 @@ async def _save(hass, script_actions, connection, msg) -> bool:
         _ws_error(connection, msg, "save_failed", "Failed to save script actions")
         return False
     
-    coordinator = next(iter(hass.data[DOMAIN].values()))
-
-    _LOGGER.error("Coordinator is %s", type(coordinator))
+    coordinator = hass.data[DOMAIN]["coordinator"]
 
     try:
         await coordinator.async_reload()
