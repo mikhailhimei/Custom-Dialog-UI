@@ -5,6 +5,11 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+import logging
+
+_LOGGER = logging.getLogger(__name__)
+
+
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
@@ -76,14 +81,16 @@ async def _save(hass, script_actions, connection, msg) -> bool:
     
     coordinator = next(iter(hass.data[DOMAIN].values()))
 
+    _LOGGER.error("Coordinator is %s", type(coordinator))
+
     try:
         await coordinator.async_reload()
-    except Exception:
+    except Exception as e:
         _ws_error(
             connection,
             msg,
             "reload_failed",
-            "Saved but reload failed",
+            f"Saved but reload failed {e}",
         )
         return False
 
