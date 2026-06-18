@@ -7,24 +7,7 @@ from ....const import (
 
 SAVE_SETTINGS_SCHEMA = {
     vol.Required("type"): WS_SAVE_SETTINGS,
-    vol.Required("data"): {
-        vol.Required("remote"): {
-            vol.Required("base_url", default=""): str,
-            vol.Required("client_id", default=""): str,
-            vol.Required("authorization", default=""): str,
-        },
-        vol.Optional("yandex_tts"): {
-            vol.Required("api_key", default=""): str,
-            vol.Required("folder_id", default=""): str,
-            vol.Required("lang", default="ru-RU"): str,
-            vol.Required("codec", default="oggopus"): str,
-            vol.Required("voice", default="oksana"): str,
-            vol.Required("emotion", default="good"): str,
-            vol.Required("speed", default=1.1): float,
-        },
-        vol.Optional("theme", default="dark"): str,
-        vol.Optional("isAdmin", default=False): bool,
-    },
+    vol.Required("data"): dict
 }
 
 
