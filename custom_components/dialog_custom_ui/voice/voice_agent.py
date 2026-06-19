@@ -85,10 +85,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
 
-        if text and should_continue:
-            self._hass.async_create_task(
-                self._async_play_drop_after_speech(application_id, text),
-            )
+        # if text and should_continue:
+        #     self._hass.async_create_task(
+        #         self._async_play_drop_after_speech(application_id, text),
+        #     )
 
         return ConversationResult(
             response=response,

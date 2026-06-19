@@ -5,7 +5,7 @@ import {
   ScriptActionDetails,
 } from '../../types/scripts';
 
-import { ConditionAccordion } from '../ConditionAccordion/ConditionAccordion';
+import { ConditionAccordion } from '../ConditionAccordion/Script/ConditionAccordion';
 
 import { Dropdown } from '../Dropdown/Dropdown'
 

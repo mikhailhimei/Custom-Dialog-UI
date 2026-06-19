@@ -8,10 +8,18 @@ const tabs = [
     to: "/scripts",
     label: "Скрипты",
   },
+  
   {
     to: "/commands",
     label: "Комманды",
   },
+
+  {
+    to: "/settings",
+    label: "Настройки",
+  },
+  
+
 ];
 
 export const NavigationTabs = () => {

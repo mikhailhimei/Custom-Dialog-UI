@@ -5,8 +5,9 @@ import {
   Routes,
 } from "react-router-dom";
 
-import { ScriptsPage } from "../pages/ScriptActionPage/ScriptsPage";
+import { ScriptsPage } from "../pages/ScriptActionsPage/ScriptsPage";
 import { CommandsPage } from "../pages/CommandPage/CommandPage"
+import { SettingsPage } from "../pages/SettingsPage/SettingsPage"
 
 export const AppRoutes = () => {
   return (
@@ -29,6 +30,11 @@ export const AppRoutes = () => {
       <Route
         path="/commands"
         element={<CommandsPage />}
+      />
+
+      <Route 
+        path='/settings'
+        element= {<SettingsPage />}
       />
 
        <Route

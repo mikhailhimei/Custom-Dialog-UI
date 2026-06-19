@@ -24,6 +24,20 @@ export interface ScriptActionDetails {
   conditions: Condition[];
 }
 
+export interface Settings {
+  yandex_tts: YandexTTS
+}
+
+export interface YandexTTS {
+  api_key?: string;
+  folderId?: string;
+  voice?: string;
+  speed?: number;
+  language?: string;
+  codec?: "oggopus" | "wav" | "lpcm";
+  emotion?: "good" | "neutral" | "evil"
+}
+
 export interface ApiResponse<T> {
   id: number;
 
