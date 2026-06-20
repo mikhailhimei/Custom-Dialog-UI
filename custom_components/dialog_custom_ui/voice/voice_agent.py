@@ -107,7 +107,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         chars_count = len(text)
         
         estimated_seconds = max(words_count / 2.4, chars_count / 14)
-        return min(max(estimated_seconds + 0.5, 1.0), 12.0)
+        return min(max(estimated_seconds + 0.07, 1.0), 12.0)
 
     @staticmethod
     def _build_commands_url(ip_address: str) -> str:
