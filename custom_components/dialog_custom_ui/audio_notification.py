@@ -77,25 +77,38 @@ async def _async_wait_until_finished(
     hass,
     target: str,
     check_interval: float = 1.0,
+    start_timeout: float = 5.0,
 ) -> None:
-    """Wait until media player stops playing."""
+    """Wait until media player starts and then stops playing."""
     try:
+        elapsed = 0.0
+        seen_playback = False
+
         while True:
             await asyncio.sleep(check_interval)
+            elapsed += check_interval
 
             state = hass.states.get(target)
 
             if state is None:
                 break
 
-            if state.state in ("idle", "off", "paused"):
+            if state.state == "playing":
+                seen_playback = True
+                continue
+
+            if state.state in ("idle", "off", "paused") and (
+                seen_playback or elapsed >= start_timeout
+            ):
                 break
 
     except Exception as err:
         _LOGGER.error("Failed while waiting for playback to finish on %s: %s", target, err)
 
 
-async def audio_notification(hass, device_id, audio_file, volume_level=None):
+async def audio_notification(
+    hass, device_id, audio_file, volume_level=None, wait_until_finished=False
+):
     audio_url = f"media-source://media_source/local/{audio_file}"
     if device_id:
                 target = _resolve_media_player_entity_id(hass, device_id)
@@ -158,10 +171,13 @@ async def audio_notification(hass, device_id, audio_file, volume_level=None):
                             except Exception as err:
                                 _LOGGER.error("Failed to start ramp task for %s: %s", target, err)
 
+                        if wait_until_finished:
+                            await _async_wait_until_finished(hass, target)
+
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
                         if old_volume is not None and volume_level is not None:
                             try:
-                                if is_range:
+                                if is_range and not wait_until_finished:
                                    await _async_wait_until_finished(hass, target)
                                 
                                 hass.async_create_task(

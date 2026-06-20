@@ -79,6 +79,13 @@ SERVICE_SCHEMA = vol.Schema(
     }
 )
 
+def _is_end_status_true(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "on"}
+    return bool(value)
+
 
 def _normalize_speed(value: Any) -> float:
     try:
@@ -209,14 +216,29 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         end_status = call.data.get("end_status")
         volume_level = call.data.get("volume_level") 
 
-        _LOGGER.error(f"info: {text}, {media_url}, devices: {devices}, end_status: {end_status}, volume_level: {volume_level}")
+        _LOGGER.error(
+            "info: %s, %s, devices: %s, end_status: %s, volume_level: %s",
+            text,
+            media_url,
+            devices,
+            end_status,
+            volume_level,
+        )
 
-        volume_level= volume_level if volume_level is not None else 1.0
+        volume_level = volume_level if volume_level is not None else 1.0
+
+        end_status_finished = _is_end_status_true(end_status)
 
         if devices:
-            await audio_notification(hass, devices, media_url, volume_level=volume_level)
+            await audio_notification(
+                hass,
+                devices,
+                media_url,
+                volume_level=volume_level,
+                wait_until_finished=not end_status_finished,
+            )
 
-        if not end_status:
+        if not end_status_finished:
             await audio_notification(hass, devices, "water-single-short-drop.mp3", volume_level=volume_level)
 
         _LOGGER.info("Yandex TTS audio generated: %s", media_url)
