@@ -9,7 +9,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from ....normalize import _normalize_value
-from ....storage.alarm_time_widgets_storage import (
+from ....storage.alarm_requests_storage import (
     async_load_alarm_time_widgets,
     async_save_alarm_time_widgets,
 )
