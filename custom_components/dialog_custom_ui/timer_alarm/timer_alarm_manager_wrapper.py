@@ -13,6 +13,7 @@ from homeassistant.util import dt as dt_util
 from .alarm_manager import DialogAlarmManager
 from .alarm_persistence import AlarmPersistence
 from ..normalize import _normalize_value
+from ..storage.time_widgets_storage import async_load_time_widgets, async_save_time_widgets
 from .timer_manager import DialogTimerManager
 from ..utils import _get_entry, _get_manager, _get_options, _extract_count
 from ..const import (
@@ -27,8 +28,14 @@ from ..const import (
     CONF_TIMEOUT,
     DEFAULT_REDIS_URL,
     DOMAIN,
+    WS_CREATE_ALARM,
+    WS_CREATE_TIME_WIDGET,
+    WS_DELETE_ALARM,
+    WS_DELETE_TIME_WIDGET,
     WS_GET_TIMER_ALARM_CONFIG,
     WS_SAVE_TIMER_ALARM_CONFIG,
+    WS_UPDATE_ALARM,
+    WS_UPDATE_TIME_WIDGET,
 )
 from .timer_alarm_utils import (
     _ALARM_PREFIX,
@@ -271,6 +278,12 @@ class DialogTimerAlarmManager:
 def async_register_timer_alarm_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_timer_alarm_config)
     websocket_api.async_register_command(hass, _ws_save_timer_alarm_config)
+    websocket_api.async_register_command(hass, _ws_create_alarm)
+    websocket_api.async_register_command(hass, _ws_update_alarm)
+    websocket_api.async_register_command(hass, _ws_delete_alarm)
+    websocket_api.async_register_command(hass, _ws_create_time_widget)
+    websocket_api.async_register_command(hass, _ws_update_time_widget)
+    websocket_api.async_register_command(hass, _ws_delete_time_widget)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_TIMER_ALARM_CONFIG})
@@ -458,3 +471,155 @@ def _select_manager(
             best_score = score
             best_manager = manager
     return best_manager or managers[0]
+
+
+ALARM_ITEM_SCHEMA = {
+    vol.Optional("clientId", default=""): str,
+    vol.Optional("userId", default=""): str,
+    vol.Required("deviceId"): str,
+    vol.Optional("device_id"): str,
+    vol.Required("time"): vol.Any(str, {vol.Required("time"): str}),
+    vol.Required("status"): vol.In(["on", "off"]),
+}
+
+TIME_WIDGET_SCHEMA = {
+    vol.Required("times"): [str],
+}
+
+
+def _normalize_alarm_request(data: dict[str, Any], shared_client_id: str, alarm_id: str | None = None) -> dict[str, Any]:
+    time_value = data.get("time")
+    if isinstance(time_value, dict):
+        alarm_time = _normalize_value(time_value.get("time"))
+    else:
+        alarm_time = _normalize_value(time_value)
+    item_id = _normalize_value(alarm_id) or f"{_ALARM_PREFIX}{uuid.uuid4().hex[:10]}"
+    client_id = _normalize_value(data.get("clientId") or data.get("userId") or shared_client_id)
+    return {
+        "id": item_id,
+        "type": "alarm",
+        "status": _normalize_value(data.get("status")).lower() or "on",
+        "clientId": client_id,
+        "userId": client_id,
+        "deviceId": _normalize_value(data.get("deviceId") or data.get("device_id")),
+        "time": {"time": alarm_time or "08:00"},
+    }
+
+
+def _get_alarm_runtime(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> tuple[Any | None, dict[str, Any] | None]:
+    entry = _get_entry(hass)
+    if entry is None:
+        connection.send_error(msg["id"], "not_configured", "Integration entry not found")
+        return None, None
+    manager = _get_manager(hass, entry)
+    if manager is None:
+        connection.send_error(msg["id"], "not_ready", "Timer/alarm manager not found")
+        return None, None
+    return manager, dict(entry.options)
+
+
+async def _apply_alarm_change(hass: HomeAssistant, manager: Any, items: list[dict[str, Any]], shared_client_id: str) -> list[dict[str, Any]]:
+    managers = _iter_managers(hass) or [manager]
+    result: list[dict[str, Any]] = []
+    for runtime_manager in managers:
+        result = await runtime_manager.async_apply_ui_items(items, shared_client_id)
+    return result
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_CREATE_ALARM, vol.Required("data"): ALARM_ITEM_SCHEMA})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_create_alarm(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    manager, options = _get_alarm_runtime(hass, connection, msg)
+    if manager is None or options is None:
+        return
+    shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+    current_items = manager.get_items()
+    alarm = _normalize_alarm_request(msg["data"], shared_client_id)
+    await _apply_alarm_change(hass, manager, current_items + [alarm], shared_client_id)
+    connection.send_result(msg["id"], {"saved": True, "data": alarm})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_UPDATE_ALARM, vol.Required("uuid"): str, vol.Required("data"): ALARM_ITEM_SCHEMA})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_update_alarm(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    manager, options = _get_alarm_runtime(hass, connection, msg)
+    if manager is None or options is None:
+        return
+    alarm_id = _normalize_value(msg["uuid"])
+    current_items = manager.get_items()
+    if not any(_normalize_value(item.get("id")) == alarm_id and _normalize_value(item.get("type")) == "alarm" for item in current_items):
+        connection.send_error(msg["id"], "not_found", "Alarm not found")
+        return
+    shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+    updated = _normalize_alarm_request(msg["data"], shared_client_id, alarm_id)
+    next_items = [updated if _normalize_value(item.get("id")) == alarm_id else item for item in current_items]
+    await _apply_alarm_change(hass, manager, next_items, shared_client_id)
+    connection.send_result(msg["id"], {"updated": True, "data": updated})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_DELETE_ALARM, vol.Required("uuid"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_delete_alarm(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    manager, options = _get_alarm_runtime(hass, connection, msg)
+    if manager is None or options is None:
+        return
+    alarm_id = _normalize_value(msg["uuid"])
+    current_items = manager.get_items()
+    if not any(_normalize_value(item.get("id")) == alarm_id and _normalize_value(item.get("type")) == "alarm" for item in current_items):
+        connection.send_error(msg["id"], "not_found", "Alarm not found")
+        return
+    shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+    next_items = [item for item in current_items if _normalize_value(item.get("id")) != alarm_id]
+    await _apply_alarm_change(hass, manager, next_items, shared_client_id)
+    connection.send_result(msg["id"], {"deleted": True})
+
+
+def _find_time_widget(time_widgets: list[dict[str, Any]], uuid_value: str) -> dict[str, Any] | None:
+    uuid_value = _normalize_value(uuid_value)
+    for item in time_widgets:
+        if _normalize_value(item.get("uuid")) == uuid_value:
+            return item
+    return None
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_CREATE_TIME_WIDGET, vol.Required("data"): TIME_WIDGET_SCHEMA})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_create_time_widget(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    time_widgets = await async_load_time_widgets(hass)
+    item = {"uuid": str(uuid.uuid4()), "times": [_normalize_value(time) for time in msg["data"].get("times", []) if _normalize_value(time)]}
+    time_widgets.append(item)
+    await async_save_time_widgets(hass, time_widgets)
+    connection.send_result(msg["id"], {"saved": True, "data": item})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_UPDATE_TIME_WIDGET, vol.Required("uuid"): str, vol.Required("data"): TIME_WIDGET_SCHEMA})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_update_time_widget(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    time_widgets = await async_load_time_widgets(hass)
+    uuid_value = _normalize_value(msg["uuid"])
+    if _find_time_widget(time_widgets, uuid_value) is None:
+        connection.send_error(msg["id"], "not_found", "Time widget not found")
+        return
+    updated = {"uuid": uuid_value, "times": [_normalize_value(time) for time in msg["data"].get("times", []) if _normalize_value(time)]}
+    time_widgets = [updated if _normalize_value(item.get("uuid")) == uuid_value else item for item in time_widgets]
+    await async_save_time_widgets(hass, time_widgets)
+    connection.send_result(msg["id"], {"updated": True, "data": updated})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_DELETE_TIME_WIDGET, vol.Required("uuid"): str})
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_delete_time_widget(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    time_widgets = await async_load_time_widgets(hass)
+    uuid_value = _normalize_value(msg["uuid"])
+    if _find_time_widget(time_widgets, uuid_value) is None:
+        connection.send_error(msg["id"], "not_found", "Time widget not found")
+        return
+    time_widgets = [item for item in time_widgets if _normalize_value(item.get("uuid")) != uuid_value]
+    await async_save_time_widgets(hass, time_widgets)
+    connection.send_result(msg["id"], {"deleted": True})
