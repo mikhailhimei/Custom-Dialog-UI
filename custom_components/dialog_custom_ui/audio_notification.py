@@ -76,7 +76,7 @@ async def _async_ramp_volume(
 async def _async_wait_until_finished(
     hass,
     target: str,
-    check_interval: float = 1.0,
+    check_interval: float = 0.1,
     start_timeout: float = 5.0,
 ) -> None:
     """Wait until media player starts and then stops playing."""
@@ -177,8 +177,6 @@ async def audio_notification(
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
                         if old_volume is not None and volume_level is not None:
                             try:
-                                if is_range and not wait_until_finished:
-                                   await _async_wait_until_finished(hass, target)
                                 
                                 hass.async_create_task(
                                     _async_restore_volume(hass, target, old_volume),
