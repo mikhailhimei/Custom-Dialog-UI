@@ -87,7 +87,7 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
 
         if text and should_continue:
             self._hass.async_create_task(
-                self._async_play_drop_after_speech(application_id, text, should_continue),
+                self._async_play_drop_after_speech(application_id, text),
             )
 
         return ConversationResult(
@@ -96,10 +96,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
             continue_conversation=should_continue,
         )
 
-    async def _async_play_drop_after_speech(self, application_id: str, text: str, should_continue) -> None:
+    async def _async_play_drop_after_speech(self, application_id: str, text: str) -> None:
         speech_delay = self._estimate_speech_duration(text)
         await asyncio.sleep(speech_delay)
-        await audio_notification(self._hass, application_id, "listen.mp3", 1.0, should_continue)
+        await audio_notification(self._hass, application_id, "listen.mp3", 1.0)
 
     @staticmethod
     def _estimate_speech_duration(text: str) -> float:
