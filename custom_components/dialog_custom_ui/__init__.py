@@ -19,6 +19,7 @@ from .const import (
 from .coordinator import DialogCommandCoordinator
 from .dialog_http import async_register_dialog_http
 from .src.api.script_action.script_actions_api import async_register_script_actions_websockets
+from .src.api.timer_request.timer_requests_api import async_register_timer_requests_websockets
 from .src.api.assistant_commands.assistant_commands_api import async_register_assistant_commands_websockets
 from .src.api.assistant_commands.assistant_sub_commands_api import async_register_assistant_sub_commands_websockets
 from .src.api.assistant_commands.assistant_sub_direct_controls_api import async_register_assistant_sub_direct_controls_websockets
@@ -41,6 +42,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
     async_register_websockets(hass)
     async_register_script_actions_websockets(hass)
+    async_register_timer_requests_websockets(hass)
     async_register_assistant_commands_websockets(hass)
     async_register_assistant_sub_commands_websockets(hass)
     async_register_assistant_sub_direct_controls_websockets(hass)

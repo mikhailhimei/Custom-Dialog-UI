@@ -30,7 +30,6 @@ from ..const import (
     WS_GET_TIMER_ALARM_CONFIG,
     WS_SAVE_TIMER_ALARM_CONFIG,
 )
-from .timer_save_api import async_register_timer_save_websockets
 from .timer_alarm_utils import (
     _ALARM_PREFIX,
     _DEFAULT_TIMER_MEDIA_CONTENT_ID,
@@ -272,7 +271,6 @@ class DialogTimerAlarmManager:
 def async_register_timer_alarm_websockets(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, _ws_get_timer_alarm_config)
     websocket_api.async_register_command(hass, _ws_save_timer_alarm_config)
-    async_register_timer_save_websockets(hass)
 
 
 @websocket_api.websocket_command({vol.Required("type"): WS_GET_TIMER_ALARM_CONFIG})
