@@ -17,7 +17,7 @@ const tabs = [
     label: "Команды второстепенные",
   },
   {
-    to: "/commands/direct",
+    to: "/commands/direct/main",
     label: "Команды прямые",
   },
   {

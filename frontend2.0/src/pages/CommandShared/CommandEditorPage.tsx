@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from "react-router-dom";
 
 import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
 import { Modal } from '../../components/Modal/Modal';
@@ -211,6 +212,7 @@ interface CommandEditorPageProps {
 
 export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
   const api = useDialogApi();
+  const navigate = useNavigate();
   const [activeDirectMode, setActiveDirectMode] = useState<DirectMode>(configKey === "directTemplate" ? "template" : "main");
   const [commands, setCommands] = useState<ShortResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -381,7 +383,10 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
                 key={mode.key}
                 type="button"
                 className={`${styles.innerTab} ${activeDirectMode === mode.key ? styles.activeInnerTab : ""}`}
-                onClick={() => setActiveDirectMode(mode.key)}
+                onClick={() => {
+                  setActiveDirectMode(mode.key);
+                  navigate(`/commands/direct/${mode.key === "main" ? "main" : "template"}`);
+                }}
               >
                 {mode.label}
               </button>
