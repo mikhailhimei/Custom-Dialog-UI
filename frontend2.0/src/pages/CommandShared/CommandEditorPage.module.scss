@@ -1,0 +1,308 @@
+.page {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 32px;
+
+  padding: 28px;
+
+  background: #0f1115;
+
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 24px;
+}
+
+.headerTop {
+  display: flex;
+
+  align-items: flex-start;
+
+  justify-content: space-between;
+
+  gap: 24px;
+}
+
+.title {
+  margin: 0;
+
+  font-size: 40px;
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  letter-spacing: -0.04em;
+
+  color: #f5f7fa;
+}
+
+.description {
+  margin-top: 10px;
+
+  color: #8b93a1;
+
+  font-size: 15px;
+
+  line-height: 1.5;
+}
+
+.addButton {
+  height: 44px;
+
+  padding: 0 18px;
+
+  border: 1px solid #2a2f3a;
+
+  border-radius: 12px;
+
+  background: #171a21;
+
+  color: #f5f7fa;
+
+  cursor: pointer;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.addButton:hover {
+  background: #1d212b;
+
+  border-color: #3a4150;
+}
+
+.addButton:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+  .headerTop {
+    flex-direction: column;
+  }
+
+  .addButton {
+    width: 100%;
+  }
+
+  .title {
+    font-size: 32px;
+  }
+}
+.subTabs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.subTab {
+  padding: 10px 14px;
+  border: 1px solid #252b36;
+  border-radius: 999px;
+  background: #151922;
+  color: #8b93a1;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.activeSubTab,
+.subTab:hover {
+  background: #222a36;
+  border-color: #3b82f6;
+  color: #f5f7fa;
+}
+
+.state {
+  color: #8b93a1;
+}
+
+.commandList {
+  display: grid;
+  gap: 12px;
+}
+
+.commandTab {
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.commandButton,
+.moreButton {
+  border: 1px solid #252b36;
+  border-radius: 14px;
+  background: #171a21;
+  color: #f5f7fa;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.commandButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 58px;
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.commandButton small {
+  color: #8b93a1;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.moreButton {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.commandButton:hover,
+.moreButton:hover {
+  background: #1d212b;
+  border-color: #3a4150;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f5f7fa;
+  font-size: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #c8ced8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 12px 14px;
+  border: 1px solid #2a2f3a;
+  border-radius: 12px;
+  background: #11141b;
+  color: #f5f7fa;
+  resize: vertical;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.arrayItem {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #252b36;
+  border-radius: 12px;
+  background: #12161f;
+  margin-bottom: 12px;
+}
+
+.rawPreview {
+  overflow: auto;
+  padding: 16px;
+  border-radius: 12px;
+  background: #11141b;
+  color: #c8ced8;
+}
+
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.bottomSheet {
+  width: min(100%, 520px);
+  padding: 12px 20px 24px;
+  border: 1px solid #2a2f3a;
+  border-radius: 24px 24px 0 0;
+  background: #171a21;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bottomSheet h3 {
+  margin: 4px 0 8px;
+  color: #f5f7fa;
+  font-size: 18px;
+}
+
+.sheetHandle {
+  width: 48px;
+  height: 5px;
+  border-radius: 999px;
+  background: #3a4150;
+  align-self: center;
+}
+
+@media (min-width: 769px) {
+  .bottomSheet {
+    margin-bottom: 32px;
+    border-radius: 24px;
+  }
+}
+
+.innerTabs {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px;
+  gap: 4px;
+  border: 1px solid #252b36;
+  border-radius: 14px;
+  background: #11141b;
+}
+
+.innerTab {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8b93a1;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.activeInnerTab,
+.innerTab:hover {
+  background: #222a36;
+  color: #f5f7fa;
+}
