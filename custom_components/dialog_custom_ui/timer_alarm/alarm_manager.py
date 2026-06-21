@@ -190,7 +190,7 @@ class DialogAlarmManager:
         return {
             "client_id": client_id,
             "device_id": device_id,
-            "actionType": "several",
+            "actionType": "success",
             "message": f"{alarms[index].get('time')}",
         }
 
