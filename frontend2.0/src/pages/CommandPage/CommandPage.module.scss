@@ -102,3 +102,148 @@
     font-size: 32px;
   }
 }
+.state {
+  color: #8b93a1;
+}
+
+.commandTabs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.commandTab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #242936;
+  border-radius: 16px;
+  background: #171a21;
+}
+
+.commandTab.disabled {
+  opacity: 0.65;
+}
+
+.commandTitle {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #f5f7fa;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.kebab {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #2a2f3a;
+  border-radius: 999px;
+  background: #10131a;
+  color: #f5f7fa;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sheetOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.bottomSheet {
+  width: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 20px 24px;
+  border: 1px solid #2a2f3a;
+  border-radius: 24px 24px 0 0;
+  background: #171a21;
+  color: #f5f7fa;
+}
+
+.sheetHandle {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto 4px;
+  border-radius: 999px;
+  background: #4b5565;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #dbe1ea;
+  font-size: 14px;
+}
+
+.fieldLabel {
+  color: #8b93a1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1px solid #2a2f3a;
+  border-radius: 14px;
+  background: #10131a;
+  color: #f5f7fa;
+  font: inherit;
+}
+
+.accordion {
+  padding: 14px;
+  border: 1px solid #242936;
+  border-radius: 16px;
+  background: #12151c;
+  color: #f5f7fa;
+}
+
+.accordion summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.accordionItem {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #242936;
+  border-radius: 14px;
+  background: #171a21;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
