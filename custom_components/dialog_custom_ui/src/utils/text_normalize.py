@@ -68,6 +68,8 @@ def _parse_number_words(tokens: list[str], start: int) -> tuple[int, int] | None
 def normalize_numbers(text: str) -> str:
     if not text:
         return text
+
+    text = re.sub(r'(?<!\d)\.|\.(?!\d)', '', text)
     
     for char, replacement in _SPECIAL_CHARACTERS.items():
         text = text.replace(char, f" {replacement}")
