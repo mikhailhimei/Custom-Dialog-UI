@@ -3,7 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDialogApi } from "../context/DialogContext";
 import { AlarmRequest, AlarmTimeWidget, TimerAlarmDevice, TimerAlarmShortItem, TimerRequest } from "../types/timerAlarm";
 
-const unwrapData = <T,>(response: any): T => response?.data ?? response?.result?.data ?? response?.result ?? response;
+const unwrapData = <T,>(response: any): T => response?.result?.data ?? response?.result ?? response?.data ?? response;
+
+const getUtcFinishDate = (minutes: number) => {
+  const safeMinutes = Math.max(1, Number(minutes) || 1);
+
+  return new Date(Date.now() + safeMinutes * 60 * 1000).toISOString();
+};
 
 const toTimerSeconds = (timerTime: TimerRequest["timer_time"]): number => {
   if (typeof timerTime === "number") return timerTime;
@@ -18,6 +24,14 @@ const toTimerSeconds = (timerTime: TimerRequest["timer_time"]): number => {
   }
 
   if (timerTime && typeof timerTime === "object") {
+    if (timerTime.date_end) {
+      const dateEnd = Date.parse(timerTime.date_end);
+
+      if (!Number.isNaN(dateEnd)) {
+        return Math.max(0, Math.ceil((dateEnd - Date.now()) / 1000));
+      }
+    }
+
     return Number(timerTime.total_seconds) || toTimerSeconds(timerTime.count_timer || "");
   }
 
@@ -35,7 +49,7 @@ const formatTimerTime = (minutes: number) => {
 const getResponseItems = (response: any): TimerAlarmShortItem[] => {
   const data = unwrapData<any>(response);
 
-  return Array.isArray(data?.data) ? data.data : [];
+  return Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
 };
 
 export function useTimerAlarmRequests() {
@@ -57,7 +71,7 @@ export function useTimerAlarmRequests() {
       })
     );
 
-    setTimers(details.filter(Boolean));
+    setTimers(details.filter((timer): timer is TimerRequest => Boolean(timer) && timer.action_type === "create_timer"));
   }, [api]);
 
   const loadAlarms = useCallback(async () => {
@@ -69,7 +83,7 @@ export function useTimerAlarmRequests() {
       })
     );
 
-    setAlarms(details.filter(Boolean));
+    setAlarms(details.filter((alarm): alarm is AlarmRequest => Boolean(alarm) && alarm.action_type !== "delete_alarm"));
   }, [api]);
 
   const loadAlarmTimeWidgets = useCallback(async () => {
@@ -99,7 +113,13 @@ export function useTimerAlarmRequests() {
   }, [loadAll]);
 
   const createTimer = async (deviceId: string, minutes: number) => {
-    await api._save({ name: `Таймер ${minutes} мин`, action_type: "create_timer", device_id: deviceId, timer_time: formatTimerTime(minutes) }, "save_timer_request");
+    const timerTime = {
+      count_timer: formatTimerTime(minutes),
+      date_end: getUtcFinishDate(minutes),
+      total_seconds: Math.max(1, Number(minutes) || 1) * 60,
+    };
+
+    await api._save({ name: `Таймер ${minutes} мин`, action_type: "create_timer", device_id: deviceId, timer_time: timerTime }, "save_timer_request");
     await loadTimers();
   };
 
