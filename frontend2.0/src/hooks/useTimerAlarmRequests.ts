@@ -124,7 +124,6 @@ export function useTimerAlarmRequests() {
   };
 
   const stopTimer = async (timer: TimerRequest) => {
-    await api._save({ name: timer.name || "Остановить таймер", action_type: "delete_timer", device_id: timer.device_id, timer_time: "" }, "save_timer_request");
     await api._delete(timer.uuid, "delete_timer_request");
     await loadTimers();
   };
@@ -140,7 +139,6 @@ export function useTimerAlarmRequests() {
   };
 
   const deleteAlarm = async (alarm: AlarmRequest) => {
-    await api._save({ name: alarm.name || "Удалить будильник", action_type: "delete_alarm", device_id: alarm.device_id, status: "off", time: alarm.time }, "save_alarm_request");
     await api._delete(alarm.uuid, "delete_alarm_request");
     await loadAlarms();
   };
