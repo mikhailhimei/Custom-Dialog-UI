@@ -1,0 +1,141 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useDialogApi } from "../context/DialogContext";
+import { AlarmRequest, AlarmTimeWidget, TimerAlarmDevice, TimerAlarmShortItem, TimerRequest } from "../types/timerAlarm";
+
+const unwrapData = <T,>(response: any): T => response?.data ?? response?.result?.data ?? response?.result ?? response;
+
+const toTimerSeconds = (timerTime: TimerRequest["timer_time"]): number => {
+  if (typeof timerTime === "number") return timerTime;
+
+  if (typeof timerTime === "string") {
+    const parts = timerTime.split(":").map((part) => Number(part));
+
+    if (parts.length === 3) return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+    if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+
+    return Number(timerTime) || 0;
+  }
+
+  if (timerTime && typeof timerTime === "object") {
+    return Number(timerTime.total_seconds) || toTimerSeconds(timerTime.count_timer || "");
+  }
+
+  return 0;
+};
+
+const formatTimerTime = (minutes: number) => {
+  const safeMinutes = Math.max(1, Number(minutes) || 1);
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:00`;
+};
+
+const getResponseItems = (response: any): TimerAlarmShortItem[] => {
+  const data = unwrapData<any>(response);
+
+  return Array.isArray(data?.data) ? data.data : [];
+};
+
+export function useTimerAlarmRequests() {
+  const api = useDialogApi();
+
+  const [timers, setTimers] = useState<TimerRequest[]>([]);
+  const [alarms, setAlarms] = useState<AlarmRequest[]>([]);
+  const [alarmTimeWidgets, setAlarmTimeWidgets] = useState<AlarmTimeWidget[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const devices = useMemo<TimerAlarmDevice[]>(() => api.getDevices(), [api]);
+
+  const loadTimers = useCallback(async () => {
+    const shortResponse = await api._getShort("get_timer_requests_short", 1, 100);
+    const details = await Promise.all(
+      getResponseItems(shortResponse).map(async (item) => {
+        const response = await api._getDetail(item.uuid, "get_timer_request");
+        return unwrapData<{ data: TimerRequest }>(response)?.data ?? unwrapData<TimerRequest>(response);
+      })
+    );
+
+    setTimers(details.filter(Boolean));
+  }, [api]);
+
+  const loadAlarms = useCallback(async () => {
+    const shortResponse = await api._getShort("get_alarm_requests_short", 1, 100);
+    const details = await Promise.all(
+      getResponseItems(shortResponse).map(async (item) => {
+        const response = await api._getDetail(item.uuid, "get_alarm_request");
+        return unwrapData<{ data: AlarmRequest }>(response)?.data ?? unwrapData<AlarmRequest>(response);
+      })
+    );
+
+    setAlarms(details.filter(Boolean));
+  }, [api]);
+
+  const loadAlarmTimeWidgets = useCallback(async () => {
+    const shortResponse = await api._getShort("get_alarm_time_widgets_short", 1, 100);
+    const details = await Promise.all(
+      getResponseItems(shortResponse).map(async (item) => {
+        const response = await api._getDetail(item.uuid, "get_alarm_time_widget");
+        return unwrapData<{ data: AlarmTimeWidget }>(response)?.data ?? unwrapData<AlarmTimeWidget>(response);
+      })
+    );
+
+    setAlarmTimeWidgets(details.filter(Boolean));
+  }, [api]);
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      await Promise.all([loadTimers(), loadAlarms(), loadAlarmTimeWidgets()]);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadAlarms, loadAlarmTimeWidgets, loadTimers]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  const createTimer = async (deviceId: string, minutes: number) => {
+    await api._save({ name: `Таймер ${minutes} мин`, action_type: "create_timer", device_id: deviceId, timer_time: formatTimerTime(minutes) }, "save_timer_request");
+    await loadTimers();
+  };
+
+  const stopTimer = async (timer: TimerRequest) => {
+    await api._save({ name: timer.name || "Остановить таймер", action_type: "delete_timer", device_id: timer.device_id, timer_time: "" }, "save_timer_request");
+    await api._delete(timer.uuid, "delete_timer_request");
+    await loadTimers();
+  };
+
+  const createAlarm = async (deviceId: string, time: string) => {
+    await api._save({ name: `Будильник ${time}`, action_type: "create_alarm", device_id: deviceId, status: "on", time }, "save_alarm_request");
+    await loadAlarms();
+  };
+
+  const updateAlarm = async (alarm: AlarmRequest, data: Partial<AlarmRequest>) => {
+    await api._update(alarm.uuid, "update_alarm_request", { ...alarm, action_type: "edit_alarm", ...data });
+    await loadAlarms();
+  };
+
+  const deleteAlarm = async (alarm: AlarmRequest) => {
+    await api._save({ name: alarm.name || "Удалить будильник", action_type: "delete_alarm", device_id: alarm.device_id, status: "off", time: alarm.time }, "save_alarm_request");
+    await api._delete(alarm.uuid, "delete_alarm_request");
+    await loadAlarms();
+  };
+
+  return {
+    alarmTimeWidgets,
+    alarms,
+    createAlarm,
+    createTimer,
+    deleteAlarm,
+    devices,
+    loading,
+    stopTimer,
+    timers,
+    toTimerSeconds,
+    updateAlarm,
+  };
+}

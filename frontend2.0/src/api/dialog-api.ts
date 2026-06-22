@@ -8,12 +8,13 @@ export interface HassLike {
 export class DialogApi {
   constructor(private hass: HassLike) {}
 
-  async _getShort(type: string, page?: number) {
+  async _getShort(type: string, page?: number, pageSize?: number) {
 
     const result =
       await this.hass.connection.sendMessagePromise({
         type: `dialog_custom_ui/${type}`,
         ...(page ? { page } : {}),
+        ...(pageSize ? { page_size: pageSize } : {}),
       });
 
     console.log("WS <=", result);
@@ -52,6 +53,19 @@ export class DialogApi {
       type: `dialog_custom_ui/${type}`,
       uuid,
     });
+  }
+
+  getDevices() {
+    return Object.values(this.hass.states)
+      .filter((entity: any) => {
+        const entityId = String(entity.entity_id || "");
+
+        return entityId.startsWith("media_player.") || entityId.startsWith("speaker.");
+      })
+      .map((entity: any) => ({
+        id: entity.entity_id,
+        name: entity.attributes?.friendly_name ?? entity.entity_id,
+      }));
   }
 
   getScripts() {

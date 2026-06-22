@@ -1,0 +1,20 @@
+.page { min-height: 100vh; padding: 28px; background: #0f1115; color: #f5f7fa; display: flex; flex-direction: column; gap: 28px; }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.title { margin: 0; font-size: 40px; line-height: 1; letter-spacing: -0.04em; }
+.description { margin: 10px 0 0; color: #8b93a1; font-size: 15px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.card, .empty { padding: 20px; border: 1px solid #23262d; border-radius: 20px; background: #151518; }
+.cardHeader { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.cardTitle { margin: 0; font-size: 18px; }
+.meta { margin-top: 8px; color: #8b93a1; font-size: 14px; }
+.time { margin-top: 18px; font-size: 38px; font-weight: 700; letter-spacing: -0.04em; }
+.form { display: flex; flex-direction: column; gap: 18px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.label { color: #a1a1aa; font-size: 13px; font-weight: 500; }
+.select, .input { height: 44px; padding: 0 14px; border: 1px solid #27272a; border-radius: 14px; background: #111114; color: #fafafa; font-size: 14px; }
+.quickTabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.quickTab { height: 40px; padding: 0 14px; border: 1px solid #27272a; border-radius: 999px; background: #18181b; color: #a1a1aa; cursor: pointer; }
+.activeQuickTab { background: #fafafa; color: #09090b; }
+.row { display: flex; align-items: center; gap: 10px; }
+.switch { transform: scale(1.2); }
+@media (max-width: 768px) { .header { align-items: stretch; flex-direction: column; } .title { font-size: 32px; } }
