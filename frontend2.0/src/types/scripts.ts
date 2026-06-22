@@ -25,7 +25,23 @@ export interface ScriptActionDetails {
 }
 
 export interface Settings {
-  yandex_tts: YandexTTS
+  yandex_tts: YandexTTS;
+  remout?: RemoteSettings;
+  timer_alarm: TimerAlarmSettings;
+  theme: string;
+  is_admin: boolean;
+  active_remout: boolean;
+}
+
+export interface RemoteSettings {
+  base_url?: string;
+  client_id?: string;
+  token?: string;
+}
+
+export interface TimerAlarmSettings {
+  global_music_timer?: string;
+  global_music_alarm?: string;
 }
 
 export interface YandexTTS {

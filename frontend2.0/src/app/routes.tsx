@@ -12,6 +12,8 @@ import { CommandDirectPage } from "../pages/CommandDirectPage/CommandDirectPage"
 import { CommandDirectTemplatePage } from "../pages/CommandDirectTemplatePage/CommandDirectTemplatePage";
 import { CommandSettingsPage } from "../pages/CommandSettingsPage/CommandSettingsPage";
 import { SettingsPage } from "../pages/SettingsPage/SettingsPage"
+import { TimerPage } from "../pages/TimerAlarmPages/TimerPage";
+import { AlarmPage } from "../pages/TimerAlarmPages/AlarmPage";
 
 export const AppRoutes = () => {
   return (
@@ -74,6 +76,16 @@ export const AppRoutes = () => {
       <Route
         path="/commands/settings"
         element={<CommandSettingsPage />}
+      />
+
+      <Route
+        path="/timer"
+        element={<TimerPage />}
+      />
+
+      <Route
+        path="/alarm"
+        element={<AlarmPage />}
       />
 
       <Route 

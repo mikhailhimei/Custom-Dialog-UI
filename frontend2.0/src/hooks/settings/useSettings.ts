@@ -2,11 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useDialogApi } from "../../context/DialogContext";
 
-import {
-  ApiResponse,
-  ScriptActionDetails,
-  ScriptsResponse,
-} from "../../types/scripts";
+import { ApiResponse, RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
 
 export function useSettings() {
   const api = useDialogApi();
@@ -14,7 +10,7 @@ export function useSettings() {
   const [loading, setLoading] = useState(true);
 
   const [settings, setSettings] =
-    useState<ScriptsResponse | null>(null);
+    useState<Settings | null>(null);
 
   const loadScripts = useCallback(async () => {
     setLoading(true);
@@ -25,7 +21,7 @@ export function useSettings() {
 
       console.log(response)
 
-      setSettings(response);
+      setSettings(response?.result ?? response);
 
     } finally {
       setLoading(false);
@@ -37,7 +33,7 @@ export function useSettings() {
   }, [loadScripts]);
 
 
-  const saveSettings = async (data) => {
+  const saveSettings = async (data: Omit<Partial<Settings>, "remout" | "timer_alarm" | "yandex_tts"> & { remout?: Partial<RemoteSettings>; timer_alarm?: Partial<TimerAlarmSettings>; yandex_tts?: Partial<YandexTTS> }) => {
     await api._save(data, "save_settings")
   }
 

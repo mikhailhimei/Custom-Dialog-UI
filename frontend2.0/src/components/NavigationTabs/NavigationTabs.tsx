@@ -25,6 +25,14 @@ const tabs = [
     label: "Команды настройки",
   },
   {
+    to: "/timer",
+    label: "Таймер",
+  },
+  {
+    to: "/alarm",
+    label: "Будильник",
+  },
+  {
     to: "/settings",
     label: "Настройки",
   },
