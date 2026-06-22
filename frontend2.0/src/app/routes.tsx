@@ -6,7 +6,11 @@ import {
 } from "react-router-dom";
 
 import { ScriptsPage } from "../pages/ScriptActionsPage/ScriptsPage";
-import { CommandsPage } from "../pages/CommandPage/CommandPage"
+import { CommandMainPage } from "../pages/CommandMainPage/CommandMainPage";
+import { CommandSubPage } from "../pages/CommandSubPage/CommandSubPage";
+import { CommandDirectPage } from "../pages/CommandDirectPage/CommandDirectPage";
+import { CommandDirectTemplatePage } from "../pages/CommandDirectTemplatePage/CommandDirectTemplatePage";
+import { CommandSettingsPage } from "../pages/CommandSettingsPage/CommandSettingsPage";
 import { SettingsPage } from "../pages/SettingsPage/SettingsPage"
 
 export const AppRoutes = () => {
@@ -29,7 +33,47 @@ export const AppRoutes = () => {
 
       <Route
         path="/commands"
-        element={<CommandsPage />}
+        element={
+          <Navigate
+            to="/commands/main"
+            replace
+          />
+        }
+      />
+
+      <Route
+        path="/commands/main"
+        element={<CommandMainPage />}
+      />
+
+      <Route
+        path="/commands/sub"
+        element={<CommandSubPage />}
+      />
+
+      <Route
+        path="/commands/direct"
+        element={
+          <Navigate
+            to="/commands/direct/main"
+            replace
+          />
+        }
+      />
+
+      <Route
+        path="/commands/direct/main"
+        element={<CommandDirectPage />}
+      />
+
+      <Route
+        path="/commands/direct/template"
+        element={<CommandDirectTemplatePage />}
+      />
+
+      <Route
+        path="/commands/settings"
+        element={<CommandSettingsPage />}
       />
 
       <Route 

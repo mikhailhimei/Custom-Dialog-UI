@@ -8,18 +8,26 @@ const tabs = [
     to: "/scripts",
     label: "Скрипты",
   },
-  
   {
-    to: "/commands",
-    label: "Комманды",
+    to: "/commands/main",
+    label: "Команды основные",
   },
-
+  {
+    to: "/commands/sub",
+    label: "Команды второстепенные",
+  },
+  {
+    to: "/commands/direct/main",
+    label: "Команды прямые",
+  },
+  {
+    to: "/commands/settings",
+    label: "Команды настройки",
+  },
   {
     to: "/settings",
     label: "Настройки",
   },
-  
-
 ];
 
 export const NavigationTabs = () => {

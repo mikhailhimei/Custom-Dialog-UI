@@ -8,11 +8,12 @@ export interface HassLike {
 export class DialogApi {
   constructor(private hass: HassLike) {}
 
-  async _getShort(type: string) {
+  async _getShort(type: string, page?: number) {
 
     const result =
       await this.hass.connection.sendMessagePromise({
         type: `dialog_custom_ui/${type}`,
+        ...(page ? { page } : {}),
       });
 
     console.log("WS <=", result);
