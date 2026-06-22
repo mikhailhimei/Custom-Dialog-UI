@@ -1,0 +1,1477 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "dialog_custom_ui_assistant_commands",
+  "data": [
+    {
+      "_id": "69e73531f9572978e5d4b1a9",
+      "status": true,
+      "title": "Перезапуск лица",
+      "uuid": "t9gr-ksom-qkvf-crxf",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "face_restart",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [],
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1aa",
+      "status": true,
+      "title": "Продолжить уборку",
+      "uuid": "3ghj-bedd-tj3p-pphm",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "continue_cleaning",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": null,
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1ab",
+      "status": true,
+      "title": "Стиралка",
+      "uuid": "7214-82jp-s2tu-ql58",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "washing_machine",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": null,
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "uuid": "icpl-7gox-gfpx-l6e7",
+            "actionType": null
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1ad",
+      "status": true,
+      "title": "День",
+      "uuid": "zgep-8nhb-v6an-ofex",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "date",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": null,
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1ae",
+      "status": true,
+      "title": "Будильник",
+      "uuid": "qtn0-7lm7-zsgi-a7o7",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "alarm_start",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Будильник на ${cotimers}",
+          "Поставь будильника на ${cotimers}",
+          "Установи будильник на ${cotimers}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "l1ab-jx41-l0nl-ucid"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "success",
+            "voiceResponse": "Будильник на ${message} установлен"
+          },
+          {
+            "actionType": "error",
+            "voiceResponse": "${message}"
+          },
+          {
+            "actionType": "not",
+            "voiceResponse": "${message}"
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1af",
+      "status": true,
+      "title": "Погода",
+      "uuid": "z2ql-eqeg-qwnn-mr6a",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "weather",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Какая погода",
+          "сколько градусов"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "success",
+            "voiceResponse": "Сейчас ${temp} градус Цельсия\n${desc}"
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b0",
+      "status": true,
+      "title": "Выключи",
+      "uuid": "9rw6-pdc5-n9fi-ate7",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "turn_off_light",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Выключи свет ${light} ${home} ${turn_off_l}",
+          "Выключи свет"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "65650_1778423065650_71d623e0"
+          },
+          {
+            "uuid": "61891_1778047361891_5072555d"
+          },
+          {
+            "uuid": "22478_1778604922478_dc97ff21"
+          }
+        ],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b2",
+      "status": true,
+      "title": "Таймер запустить",
+      "uuid": "h3uy-v7ow-o8h6-5z1v",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "timer_start",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Установи таймер ${timer}",
+          "таймер на ${timer}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "qsz1-ehwa-f6la-x5t8"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "success",
+            "voiceResponse": "Таймер ${message} установлен"
+          },
+          {
+            "actionType": "error",
+            "voiceResponse": "${message}"
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b3",
+      "status": true,
+      "title": "Таймер стоп",
+      "uuid": "fvyd-fsaa-f3ox-jdgr",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "timer_stop",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Удали таймер ${count}",
+          "Удали таймер"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "vqsw-5x1b-7i7q-10r8"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "several",
+            "voiceResponse": "Какой таймер вы хотите удалить ${message}"
+          },
+          {
+            "actionType": "success",
+            "voiceResponse": "Готово"
+          },
+          {
+            "actionType": "not",
+            "voiceResponse": "${message}3"
+          },
+          {
+            "actionType": "error",
+            "voiceResponse": "${message}2"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "custom",
+            "actionType": "several",
+            "uuid": "fvyd-fsaa-f3ox-jdgr"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b4",
+      "status": true,
+      "title": "Привет",
+      "uuid": "5j78-5fs3-x8so-0e3e",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "hi",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Привет"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "l1ab-jx41-l0nl-ucid"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default_next_step",
+            "voiceResponse": "Аов"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "custom",
+            "actionType": "his",
+            "uuid": "4a8k-yrni-nvwq-jinv"
+          },
+          {
+            "actionTypeComponent": "custom",
+            "actionType": "his",
+            "uuid": "5ddo-118x-5o7y-h7k7"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b5",
+      "status": true,
+      "title": "Сообщение поумолчанию",
+      "uuid": "sfud-01rb-gnwb-zss2",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "default",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "Чем могу вам помочь?"
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b6",
+      "status": true,
+      "title": "стоп",
+      "uuid": "0c0x-owny-bygb-y0eu",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "stop",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "стоп",
+          "отмена",
+          "хватит",
+          "Продолжение следует",
+          "Субтитры сделал DimaTorzok",
+          "Субтитры подогнал «Симон»"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": ","
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b7",
+      "status": true,
+      "title": "Какая температура пк",
+      "uuid": "0t3v-p098-vzkf-1e97",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "what_temperature",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": "какая температура пк; какая температура компьютера;какая температура сервера",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "error",
+            "voiceResponse": "${message}",
+            "system": null,
+            "LLM": null,
+            "model": null
+          },
+          {
+            "actionType": "temp",
+            "voiceResponse": "${message}",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b8",
+      "status": true,
+      "title": "Насыпать еды",
+      "uuid": "15z7-v0rv-6k4q-4g4l",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "sprinkle_food",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "покорми котов",
+          "насыпь еды",
+          "насып(ь|аешь)? ${count} гр(ам|амм|Ов|амма|аммов)? ед(ы|а|у)?"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "vqsw-5x1b-7i7q-10r8"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default_next_step",
+            "voiceResponse": "Сколько насыпать?"
+          },
+          {
+            "actionType": "default",
+            "voiceResponse": "готово"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "zxo8-nbhu-y89u-6xq2"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "5lp2-qgt0-nuiq-op8e"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "l47j-l2zo-hfnr-znq5"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1b9",
+      "status": true,
+      "title": "Включи распознование лица",
+      "uuid": "pfa3-sfd6-ijlm-k5gq",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "face_start",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "включи распознавание лица;вкл распознавание лица",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "готово",
+            "system": null,
+            "LLM": false,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1ba",
+      "status": true,
+      "title": "Выключи распознование лица",
+      "uuid": "9t03-3mnw-djoc-7nfa",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "face_start",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "выкл распознавание лица;выключи распознавание лица",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "готово",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1bb",
+      "status": true,
+      "title": "Статус распознования лица",
+      "uuid": "8sdb-6tje-kyj5-pd25",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "face_info",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": "инфо распознование лица;запущено ли распозно23156821 запрос тест c продолжениявание лица;какой статус у распознования лица;тест лицо;тест-лицо;какой статус у распознавания лица;инфо распознавание лица",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "готово",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1bc",
+      "status": true,
+      "title": "Запусти пылесос везде",
+      "uuid": "2yqv-eje5-1gwz-bzc3",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "start_cleaning_all",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "пылвез",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "готово",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1bd",
+      "status": true,
+      "title": "Закрыть дверь",
+      "uuid": "chg2-5laz-daks-jizr",
+      "replaceUuid": null,
+      "cacheDialog": null,
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "close_door_yes",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "закрыть дверь;закрой дверь;закрдверь",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "готово",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1be",
+      "status": true,
+      "title": "Статус двери",
+      "uuid": "2wm4-mypn-veau-2mqz",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "status_door",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "статус двери",
+          "проверь дверь",
+          "ста двери",
+          "стадверь",
+          "123"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "door_open_close",
+            "voiceResponse": "Дверь открыта, хотите закрыть?"
+          },
+          {
+            "actionType": "door_close",
+            "voiceResponse": "Дверь закрыта"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "4a8k-yrni-nvwq-jinv"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "5ddo-118x-5o7y-h7k7"
+          },
+          {
+            "actionTypeComponent": "custom",
+            "actionType": "door_open_close",
+            "uuid": "2wm4-mypn-veau-2mqz"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c0",
+      "status": true,
+      "title": "Запуск пылесоса",
+      "uuid": "b3k5-4g41-vfuk-kmwv",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "start_cleaning",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Запусти пылесос",
+          "запусти пылесос"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "uurr-5hi5-wg4h-jp8r"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default_next_step",
+            "voiceResponse": "Где вы хотите чтобы я запустила пылесос"
+          },
+          {
+            "actionType": "default",
+            "voiceResponse": "Готово"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "buxe-s51f-cx5s-muwt"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "izxj-6uz1-ym2r-lbe0"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "cku0-dz64-rxs3-kj7z"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "lpwz-yr14-xy4w-x43l"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "uihg-aqyp-zu3e-czge"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "l519-t81i-6ryf-1l3u"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "as1y-d9ql-5a6v-iavu"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "6y80-m6go-uuc2-j113"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "90yf-5s95-wxb6-c04a"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "1zpv-3giu-7xst-0lq2"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "t4mg-i6vi-iabq-6wlk"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "1zpv-3giu-7xst-0lq2"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "9n0i-eiz7-c1ri-yut4"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c1",
+      "status": true,
+      "title": "23156829",
+      "uuid": "zy3z-1zac-kkfp-952o",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "test_finish_redis",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "финиш редис",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "ответ финиша редис",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c2",
+      "status": true,
+      "title": "23156832",
+      "uuid": "kbb1-092u-qo2g-u2kq",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "at_test_next",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "заложенные команды кастомная",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "testNext",
+            "voiceResponse": "Кастомный ответ\n${message}\n${test}",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "custom",
+            "uuid": "uvs3-idvn-9pt5-9zj1",
+            "actionType": "testNext"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c3",
+      "status": true,
+      "title": "23156833",
+      "uuid": "cxf6-wlcz-kb5o-jd7z",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "at_test",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "заложенные команды",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "ответ заложенной комманды",
+            "system": null,
+            "LLM": null,
+            "model": null
+          },
+          {
+            "actionType": "testNext",
+            "voiceResponse": "Кастомный ответ\n${message}\n${test}",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c4",
+      "status": true,
+      "title": "23156836",
+      "uuid": "6idq-21yi-xi45-khmx",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "test_sub_combo",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "23156836 тест суб комбо",
+          "23156836 тест суб комбо ${room}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "uurr-5hi5-wg4h-jp8r"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default_next_step",
+            "voiceResponse": "Ответ суб комбо"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "6ekd-w45c-n0qw-nmof"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "7vwi-7sun-1ea6-g3mn"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "5545-vfry-bmgy-pdrt"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "r5sd-yp1v-sr1z-5nab"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c5",
+      "status": true,
+      "title": "23156822",
+      "uuid": "uvs3-idvn-9pt5-9zj1",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "test_not_continuation",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "23156822 запрос тест без продолжения",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "ответ теста без продолжения",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c6",
+      "status": true,
+      "title": "23156821",
+      "uuid": "fpaz-v76j-vdal-s8s0",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "test_continuation",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "23156821 запрос тест c продолжения",
+          "23156821 запрос тест c продолжения ${room}",
+          "23156821 запрос прямой с количеством ${count}",
+          "23156821 запрос прямой с датой ${date}",
+          "23156821 запрос прямой со строки ${string2}",
+          "23156821 запрос прямой со комманды ${room}",
+          "23156821 запрос прямой жесткая комбинация ${room} и ${count} и ${string2} и ${cotimers} и ${all_test} и ${date}",
+          "23156821 запрос прямой со временем ${cotimers}",
+          "23156821 запрос прямой со все ${all_test}",
+          "23156821 запрос на проверку лампы ${light}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "l1ab-jx41-l0nl-ucid"
+          },
+          {
+            "uuid": "vqsw-5x1b-7i7q-10r8"
+          },
+          {
+            "uuid": "wg80-slyi-f9jt-hcwi"
+          },
+          {
+            "uuid": "2c73-95le-jxj0-gqxm"
+          },
+          {
+            "uuid": "uurr-5hi5-wg4h-jp8r"
+          },
+          {
+            "uuid": "qs06-5ir7-9y9z-lfsl"
+          },
+          {
+            "uuid": "7jvj-60rn-skt3-pmyg"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "Ответ от прямой команды"
+          },
+          {
+            "actionType": "default_next_step",
+            "voiceResponse": "ответ запроса с продолжением"
+          },
+          {
+            "actionType": "miss",
+            "voiceResponse": "Не понял"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "7vwi-7sun-1ea6-g3mn"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "n7vu-pj47-2xwi-49da"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "jyki-ykot-at8m-6pls"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "oshb-jwfq-ut4y-wwp1"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c7",
+      "status": true,
+      "title": "23156837",
+      "uuid": "27j8-ujq1-wr76-kzwe",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "test_miss_default",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": "запрос с дефолтным мисс",
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "Второй уровень",
+            "system": null,
+            "LLM": null,
+            "model": null
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "uuid": "7vwi-7sun-1ea6-g3mn",
+            "actionType": null
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c8",
+      "status": true,
+      "title": "23156824",
+      "uuid": "rgf4-u8mc-au4b-90l3",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "test_error_redis",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "23156824 ошибка редис сто"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "error",
+            "voiceResponse": "ответ ошибки редис без продолжения"
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69e73531f9572978e5d4b1c9",
+      "status": true,
+      "title": "23156823",
+      "uuid": "3x17-k0ul-0dfv-8nyf",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "test_redis_main",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "23156823 главная редис мейн"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "error",
+            "voiceResponse": "Ошибка редис"
+          },
+          {
+            "actionType": "default",
+            "voiceResponse": "Успешный редис\n${message} \n${test}"
+          },
+          {
+            "actionType": "testNext",
+            "voiceResponse": "Успешный ответ редис кастом ответ"
+          },
+          {
+            "actionType": "testNotNext",
+            "voiceResponse": "Успешный ответ редис кастом ответ без продолжения\n${message} \n${test}"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "7vwi-7sun-1ea6-g3mn"
+          },
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "jyki-ykot-at8m-6pls"
+          },
+          {
+            "actionTypeComponent": "custom",
+            "actionType": "testNext",
+            "uuid": "7vwi-7sun-1ea6-g3mn"
+          },
+          {
+            "actionTypeComponent": "children_error",
+            "actionType": "",
+            "uuid": "7vwi-7sun-1ea6-g3mn"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69e7a25fbc129a47a8e66e1d",
+      "status": true,
+      "title": "Включить свет",
+      "uuid": "m9w8-dy01-95kd-7l07",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "turn_on_light",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Включи свет ${light} ${home} ${turn_off_l}",
+          "Включи свет"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "uurr-5hi5-wg4h-jp8r"
+          },
+          {
+            "uuid": "61891_1778047361891_5072555d"
+          },
+          {
+            "uuid": "65650_1778423065650_71d623e0"
+          },
+          {
+            "uuid": "22478_1778604922478_dc97ff21"
+          }
+        ],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "69ed0cb70279c0f1170fa11b",
+      "title": "Др",
+      "uuid": "75442_1777142853464_dd9b625e",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "calendar",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Когда день рождени(я|е)? ${name}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "72725_1777144295654_59c60d52"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "Ошибка"
+          },
+          {
+            "actionType": "success",
+            "voiceResponse": "${message}"
+          }
+        ],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "69f337ff7fad1ee84ad5ddaf",
+      "title": "Информация о таймере",
+      "uuid": "23354_1777547223354_547f0d3b",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "timer_info",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Сколько таймера осталось",
+          "Сколько осталось таймера",
+          "Какие таймеры запущены"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "one",
+            "voiceResponse": "Осталось ${message}"
+          },
+          {
+            "actionType": "several",
+            "voiceResponse": "Запущены следующие таймеры ${message}"
+          },
+          {
+            "actionType": "not",
+            "voiceResponse": "${message}"
+          },
+          {
+            "actionType": "error",
+            "voiceResponse": "${message}"
+          }
+        ],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "69f37892bf03b6da5d2394c4",
+      "title": "Инфо о будильнике",
+      "uuid": "65534_1777563765534_3a23784e",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "alarm_info",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "какие будильник установлены",
+          "какое время установлен будильник"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "one",
+            "voiceResponse": "Установлен будильник на ${message}"
+          },
+          {
+            "actionType": "several",
+            "voiceResponse": "Установлены следующие будильники ${message}"
+          },
+          {
+            "actionType": "error",
+            "voiceResponse": "${message}123"
+          }
+        ],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "69f489e00fff1c4db44382fd",
+      "title": "Время",
+      "uuid": "14663_1777633714663_9f6f2899",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "time",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "сколько времени",
+          "сколько время"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "success",
+            "voiceResponse": "${message}"
+          }
+        ],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "69f4c4b2361219671e1b05d4",
+      "title": "Дата",
+      "uuid": "57442_1777648757442_19ef1f88",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "date",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Какой сегодня день",
+          "какое сегодня число"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "success",
+            "voiceResponse": "${message}"
+          }
+        ],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "69faff663ebe6fdcb2414f89",
+      "title": "Удали будильник",
+      "uuid": "54550_1778057054550_701ad009",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "alarm_stop",
+        "forwardText": false,
+        "answerType": "redis",
+        "voiceCommands": [
+          "Удали будильник"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [
+          {
+            "actionType": "not_alarm",
+            "voiceResponse": "нет"
+          },
+          {
+            "actionType": "several",
+            "voiceResponse": "Установлены следующией будильники: ${message}"
+          },
+          {
+            "actionType": "one",
+            "voiceResponse": "${message} 14"
+          },
+          {
+            "actionType": "success",
+            "voiceResponse": "Будильник на ${message} удален"
+          }
+        ],
+        "nextAction": [
+          {
+            "actionTypeComponent": "children",
+            "actionType": "",
+            "uuid": "zdem-vi8u-vjpd-w3cx"
+          },
+          {
+            "actionTypeComponent": "custom",
+            "actionType": "several",
+            "uuid": "54550_1778057054550_701ad009"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "69fd5601fb18b5aed86f8420",
+      "title": "Открыть шторы",
+      "uuid": "62830_1778210162830_02d674b9",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "curtains_open",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "откр(ой|ою|ыл)? штор(ы|ами|у)? ${curtains} на ${count} процентов",
+          "откр(ой|ою|ыл)? штор(ы|ами|у)? ${curtains}",
+          "откр(ой|ою|ыл)? штор(ы|ами|у)? ${count} процентов",
+          "откр(ой|ою|ыл)? штор(ы|ами|у)?",
+          "откр(ой|ою|ыл)? штор(ы|ами|у)? ${home}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "vqsw-5x1b-7i7q-10r8"
+          },
+          {
+            "uuid": "85099_1779000185099_351a2408"
+          },
+          {
+            "uuid": "61891_1778047361891_5072555d"
+          }
+        ],
+        "voiceResponseArray": [],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "6a005d26fb383c61c66a4e41",
+      "title": "Закрыть шторы",
+      "uuid": "96630_1778408696630_4b746793",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "curtains_close",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Закр(ой|ыть|ою) штор(у|в|ы)?",
+          "Закр(ой|ыть|ою) штор(у|в|ы)? ${count} процентов",
+          "Закр(ой|ыть|ою) штор(у|в|ы)? ${curtains} на ${count} процентов",
+          "Закр(ой|ыть|ою) штор(у|в|ы)? ${curtains}",
+          "Закр(ой|ыть|ою) штор(у|в|ы)? ${home}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "vqsw-5x1b-7i7q-10r8"
+          },
+          {
+            "uuid": "61891_1778047361891_5072555d"
+          },
+          {
+            "uuid": "85099_1779000185099_351a2408"
+          }
+        ],
+        "voiceResponseArray": [],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "6a08ae8a2f0b9e658e7421d0",
+      "title": "День",
+      "uuid": "02470_1778953802470_fe9b6739",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "day_info",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "${day} какой день недели"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "sawv-vqom-zkds-gqtp"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "Гуж"
+          }
+        ],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "6a0a05012f0b9e658e7421d3",
+      "title": "Вкл вытяжка",
+      "uuid": "00423_1779041300423_a2058c0d",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "turn_on_hood",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Включи вытяжк(у|а)?"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "6a0a053f2f0b9e658e7421d4",
+      "title": "Выкл вытяжку",
+      "uuid": "48244_1779041548244_3a64b655",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "turn_off_hood",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Выключи вытяжк(у|а)?"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "6a1489e92f0b9e658e7421d5",
+      "title": "Включить ночник",
+      "uuid": "73039_1779730873039_be7d9ae2",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "turn_on_night",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Включи ночник"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "6a148a0c2f0b9e658e7421d6",
+      "title": "Выключить ночник",
+      "uuid": "28151_1779730928151_dfdb85e7",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "turn_off_night",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "выключи ночник"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "6a205fe67bf80df39191124c",
+      "title": "изменить громкость в процентах",
+      "uuid": "18085_1780506518085_33cf13cc",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "voice_edit",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "громкость ${count}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "vqsw-5x1b-7i7q-10r8"
+          }
+        ],
+        "voiceResponseArray": [],
+        "nextAction": []
+      },
+      "status": true
+    },
+    {
+      "_id": "6a23b96d35ad13bfb9aa3496",
+      "title": "Включи музыку",
+      "uuid": "05582_1780726105582_ffd8a22a",
+      "componentDialog": {
+        "endStatus": true,
+        "actionType": "music_start",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "включи музыку(у|а)?"
+        ],
+        "nextDirectControl": [],
+        "voiceResponseArray": [],
+        "nextAction": []
+      }
+    },
+    {
+      "_id": "6a285f7d3bcc194201120af7",
+      "title": "Включи определенную песню",
+      "uuid": "23797_1781030723797_c657edd4",
+      "componentDialog": {
+        "endStatus": false,
+        "actionType": "music_search",
+        "forwardText": false,
+        "answerType": "default",
+        "voiceCommands": [
+          "Включи ${string2}"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "2c73-95le-jxj0-gqxm"
+          }
+        ],
+        "voiceResponseArray": [
+          {
+            "actionType": "default",
+            "voiceResponse": "Гуд"
+          }
+        ],
+        "nextAction": []
+      }
+    }
+  ]
+}

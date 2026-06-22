@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "dialog_custom_ui_alarm_requests",
+  "data": {
+    "alarm_requests": [
+      {
+        "uuid": "4e5bcd4c-f022-4cf7-a5d7-e2f65696c07b",
+        "name": "Будильник 08:00",
+        "action_type": "delete_alarm",
+        "device_id": "media_player.home_assistant_voice_0ab77d_media_player",
+        "status": "off",
+        "time": "08:00"
+      }
+    ],
+    "alarm_time_widgets": []
+  }
+}

@@ -27,7 +27,6 @@ const EMPTY_YANDEX_TTS: YandexTTS = {
 
 const EMPTY_REMOUT: RemoteSettings = {
   base_url: "",
-  client_id: "",
   token: "",
 };
 
@@ -57,7 +56,6 @@ const normalizeTTS = (tts?: Partial<YandexTTS>): YandexTTS => ({
 
 const normalizeRemout = (remout?: Partial<RemoteSettings>): RemoteSettings => ({
   base_url: remout?.base_url ?? "",
-  client_id: remout?.client_id ?? "",
   token: remout?.token ?? "",
 });
 

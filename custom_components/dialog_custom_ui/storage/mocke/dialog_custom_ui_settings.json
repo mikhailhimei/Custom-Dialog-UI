@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "dialog_custom_ui_settings",
+  "data": {
+    "yandex_tts": {
+      "api_key": "AQVNyUkOGXXmE6xpSf8HEfw3deYPl_PoyZD23Ix6",
+      "folderId": "b1gp059vb0ukreogbt0g",
+      "language": "ru-RU",
+      "codec": "oggopus",
+      "voice": "oksana",
+      "emotion": "good",
+      "speed": 1.1
+    },
+    "remout": {
+      "base_url": "http://192.168.31.83:9379",
+      "token": "Bearer erqwlkrqelkjqweklqwjeqwlejkqwwww"
+    },
+    "timer_alarm": {
+      "global_music_timer": "",
+      "global_music_alarm": ""
+    },
+    "client_id": "4CDC6871493B1FB5532185457BA7864FB65F366F93C431FD8D8F847894B9287D",
+    "theme": "dark",
+    "is_admin": false,
+    "active_remout": false
+  }
+}

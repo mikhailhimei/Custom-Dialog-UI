@@ -1,0 +1,928 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "dialog_custom_ui_assistant_sub_commands",
+  "data": [
+    {
+            "_id": "69e7519bf51b68514a4f888b",
+            "status": false,
+            "title": "Влажная уборка",
+            "uuid": "lv14-tsl8-lred-h8vt",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_wet",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": [],
+                "nextDirectControl": [],
+                "voiceResponseArray": [],
+                "nextAction": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f888c",
+            "status": true,
+            "title": "Датчик движение выключить кастом",
+            "uuid": "8xf5-vy77-9j3x-m49i",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_custom",
+                "forwardText": true,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f888d",
+            "status": true,
+            "title": "Закрыть дверь да",
+            "uuid": "4a8k-yrni-nvwq-jinv",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "close_door_yes",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": [
+                    "да"
+                ],
+                "nextDirectControl": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Готово"
+                    }
+                ],
+                "nextAction": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f888e",
+            "status": true,
+            "title": "Закрыть дверь нет",
+            "uuid": "5ddo-118x-5o7y-h7k7",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "close_door_no",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": [
+                    "нет"
+                ],
+                "nextDirectControl": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Окей"
+                    }
+                ],
+                "nextAction": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f888f",
+            "status": true,
+            "title": "Какие есть режимый уборки",
+            "uuid": "c9fu-tip6-x8xw-xld8",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_info",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8890",
+            "status": true,
+            "title": "Комната туалет ",
+            "uuid": "izxj-6uz1-ym2r-lbe0",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_toilet",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8891",
+            "status": true,
+            "title": "Сухая + влажная уборка",
+            "uuid": "4cde-y19e-4lz1-naxi",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_default",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8892",
+            "status": true,
+            "title": "кастомное управление светом",
+            "uuid": "8qzi-uj2q-nmq3-vj8y",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_castom",
+                "forwardText": true,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8893",
+            "status": true,
+            "title": "Белое ",
+            "uuid": "icpl-7gox-gfpx-l6e7",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "white",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8894",
+            "status": true,
+            "title": "Запись города",
+            "uuid": "5kw9-oe7v-l53i-ne0i",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_bd_city",
+                "forwardText": true,
+                "answerType": "builtin",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8895",
+            "status": true,
+            "title": "количество",
+            "uuid": "zdem-vi8u-vjpd-w3cx",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "count_remove",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": [
+                    "${count}"
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "vqsw-5x1b-7i7q-10r8"
+                    }
+                ],
+                "voiceResponseArray": [],
+                "nextAction": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8896",
+            "status": true,
+            "title": "Запусти пылесос в зале и кухне",
+            "uuid": "2wpt-0dob-wsyh-uabq",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_hall_and_kitchen",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в зал(е)? и кухн(е|ю|я)?;кухн(е|я|ю)? и зал(е)?;зал(e)? кухн(е|ю|я)? ${count} раз(а)?;кухн(е|ю|я)? зал(e)? ${count} раз(а)?",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "vqsw-5x1b-7i7q-10r8"
+                    }
+                ]
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8897",
+            "status": true,
+            "title": "Запусти пылесос в рабочая и гардероб ",
+            "uuid": "xz7s-558i-atia-w1d0",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_work_and_wardrobe",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в рабочей и гардеробе; в гардеробе и рабочей;рабочая и гардероб;гардероб и рабочая;рабочие в гардеробе;в рабочей гардеробе",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8898",
+            "status": true,
+            "title": "Запусти пылесос везде",
+            "uuid": "1zpv-3giu-7xst-0lq2",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_all",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "везде;все комнаты",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f8899",
+            "status": true,
+            "title": "Запусти пылесос везде кроме рабочей и туалет",
+            "uuid": "90yf-5s95-wxb6-c04a",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_not_work_and_toilet.",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "везде кроме рабочей и туалете;везде кроме рабочей и туалет;везде кроме туалет и рабочей;везде кроме туалета и рабочей;везде кроме рабочей и туалета",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f889a",
+            "status": true,
+            "title": "Запустить пылесос в коридоре и туалете",
+            "uuid": "sdpj-20lv-vhc0-h7i0",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_hallway_toilet",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в коридоре и туалете;в туалете и коридоре;туалет и коридор; коридор и туалет;в коридор и туалет",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f889b",
+            "status": true,
+            "title": "Как можно насыпать еды",
+            "uuid": "l47j-l2zo-hfnr-znq5",
+            "subComponentDialog": {
+                "endStatus": false,
+                "actionType": "sprinkle_food_info",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "что указать;какие есть возможности;как сказать;незнаю; не знаю",
+                "nextAction": [
+                    {
+                        "actionTypeComponent": "children",
+                        "uuid": "zxo8-nbhu-y89u-6xq2",
+                        "actionType": null
+                    },
+                    {
+                        "actionTypeComponent": "children",
+                        "uuid": "5lp2-qgt0-nuiq-op8e",
+                        "actionType": null
+                    }
+                ],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "епт",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f889c",
+            "status": true,
+            "title": "Кастомная уборка",
+            "uuid": "9n0i-eiz7-c1ri-yut4",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_custom",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "привет ${room} ${count} раз(а)?;привет ${room}",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "uurr-5hi5-wg4h-jp8r"
+                    },
+                    {
+                        "uuid": "vqsw-5x1b-7i7q-10r8"
+                    }
+                ]
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f889d",
+            "status": true,
+            "title": "Комната гардероб",
+            "uuid": "6y80-m6go-uuc2-j113",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_wardrobe",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в гардеробе;в гардероб;гардероб;гардеробе",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f889e",
+            "status": true,
+            "title": "Комната коридор",
+            "uuid": "cku0-dz64-rxs3-kj7z",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_hallway",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в коридоре;в коридор;коридоре;коридор",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f889f",
+            "status": true,
+            "title": "Комната кухня",
+            "uuid": "l519-t81i-6ryf-1l3u",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_kitchen",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в кухне;кухня;в кухню;накухне;на кухне;на кухню;накухню;накухне",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a0",
+            "status": true,
+            "title": "Комната рабочая",
+            "uuid": "as1y-d9ql-5a6v-iavu",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_work",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в рабочую;в рабочей;рабочую; рабочей;в рабочий;в детск(ой|ая|ую)",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a1",
+            "status": true,
+            "title": "Комната спальня",
+            "uuid": "lpwz-yr14-xy4w-x43l",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_bedroom",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в спальне;в спальню;спальня;спальню",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a2",
+            "status": true,
+            "title": "Указать грамм еды",
+            "uuid": "5lp2-qgt0-nuiq-op8e",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "sprinkle_food",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "${count} гр(амм|ам|аммов)?;${count}",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "vqsw-5x1b-7i7q-10r8"
+                    }
+                ]
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a3",
+            "status": true,
+            "title": "Указать грамм еды как обычно",
+            "uuid": "zxo8-nbhu-y89u-6xq2",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "sprinkle_food",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "обычно;как обычно",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a4",
+            "status": true,
+            "title": "Комната зал",
+            "uuid": "uihg-aqyp-zu3e-czge",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_hall",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "в зал(е)?;зал(е)?;в зал(е)? ${count} раз(а)?;гостинн(ой|ая)",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a5",
+            "status": true,
+            "title": "Уборка кастомный",
+            "uuid": "t4mg-i6vi-iabq-6wlk",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_custom",
+                "forwardText": true,
+                "answerType": "redis",
+                "voiceCommands": [],
+                "nextDirectControl": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "success",
+                        "voiceResponse": "Готово"
+                    },
+                    {
+                        "actionType": "error",
+                        "voiceResponse": "Не нашел комнату"
+                    }
+                ],
+                "nextAction": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a6",
+            "status": true,
+            "title": "Запустить пылесос везде кроме рабочей",
+            "uuid": "buxe-s51f-cx5s-muwt",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "_not_work",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "везде кроме рабоч(ая|ей|их)?",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Готово",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a7",
+            "status": true,
+            "title": "23156828",
+            "uuid": "h9by-sqwg-wyma-xlc4",
+            "subComponentDialog": {
+                "endStatus": false,
+                "actionType": "test_sub_next",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "продолжение ошибки",
+                "nextAction": [
+                    {
+                        "actionTypeComponent": "children",
+                        "uuid": "7vwi-7sun-1ea6-g3mn",
+                        "actionType": null
+                    },
+                    {
+                        "actionTypeComponent": "children",
+                        "uuid": "uvs3-idvn-9pt5-9zj1",
+                        "actionType": null
+                    }
+                ],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default_next_step",
+                        "voiceResponse": "Далее",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a8",
+            "status": true,
+            "title": "23156830",
+            "uuid": "5545-vfry-bmgy-pdrt",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "test_finish",
+                "forwardText": true,
+                "answerType": "default",
+                "voiceCommands": null,
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Ответ с тоглом forwardText",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88a9",
+            "status": true,
+            "title": "23156827",
+            "uuid": "n7vu-pj47-2xwi-49da",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "test_redis_sub",
+                "forwardText": false,
+                "answerType": "redis",
+                "voiceCommands": "суб редис",
+                "nextAction": [
+                    {
+                        "actionTypeComponent": "children",
+                        "uuid": "7vwi-7sun-1ea6-g3mn",
+                        "actionType": null
+                    },
+                    {
+                        "actionTypeComponent": "custom",
+                        "uuid": "uvs3-idvn-9pt5-9zj1",
+                        "actionType": "testNext"
+                    },
+                    {
+                        "actionTypeComponent": "chidren_error",
+                        "uuid": "zy3z-1zac-kkfp-952o",
+                        "actionType": null
+                    }
+                ],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "error",
+                        "voiceResponse": "ошибка",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    },
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Успешный ответ",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    },
+                    {
+                        "actionType": "testNext",
+                        "voiceResponse": "Успешный ответ кастом",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    },
+                    {
+                        "actionType": "testNotNext",
+                        "voiceResponse": "Успешный ответ кастом без продолжения\n${message}\n${test}",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88aa",
+            "status": true,
+            "title": "23156831",
+            "uuid": "jyki-ykot-at8m-6pls",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "at_test_sub",
+                "forwardText": false,
+                "answerType": "builtin",
+                "voiceCommands": "заложенные команды",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "ответ заложенной комманды\n${message}\n${test}",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88ab",
+            "status": true,
+            "title": "23156834",
+            "uuid": "oshb-jwfq-ut4y-wwp1",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "at_test_sub_next",
+                "forwardText": false,
+                "answerType": "builtin",
+                "voiceCommands": "заложенные команды кастом",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "testNext",
+                        "voiceResponse": "ответ заложенной комманды\n${message}\n${test}",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88ac",
+            "status": true,
+            "title": "23156825",
+            "uuid": "6ekd-w45c-n0qw-nmof",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "test_sub_all",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "23156825 суб запрос тест c продолжения;23156825 суб запрос прямой с количеством ${count};23156825 суб запрос прямой с датой ${date};суб запрос прямой со вермя ${cotimers};23156825 суб запрос прямой со строки ${string2};23156825 суб запрос прямой со комманды ${room};23156825 суб запрос прямой жесткая комбинация ${room} и ${count} и ${string2} и ${cotimers} и ${all_test} и ${date};23156825 суб запрос прямой со временем ${cotimers};23156825 суб запрос прямой со все ${all_test};",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Ответ от суб прямого действия",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "vqsw-5x1b-7i7q-10r8"
+                    },
+                    {
+                        "uuid": "qs06-5ir7-9y9z-lfsl"
+                    },
+                    {
+                        "uuid": "2c73-95le-jxj0-gqxm"
+                    },
+                    {
+                        "uuid": "l1ab-jx41-l0nl-ucid"
+                    },
+                    {
+                        "uuid": "wg80-slyi-f9jt-hcwi"
+                    },
+                    {
+                        "uuid": "uurr-5hi5-wg4h-jp8r"
+                    }
+                ]
+            }
+        },
+        {
+            "_id": "69e7519bf51b68514a4f88ad",
+            "status": true,
+            "title": "23156826",
+            "uuid": "7vwi-7sun-1ea6-g3mn",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "test_sub_command",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": "23156826 Тест запроса на суб команду",
+                "nextAction": [],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Тест ответа на суб команду",
+                        "system": null,
+                        "LLM": null,
+                        "model": null
+                    }
+                ],
+                "nextDirectControl": []
+            }
+        },
+        {
+            "_id": "69ebb8e1ef9c675d1afa5d9e",
+            "title": "Таймер или будильник удалить",
+            "uuid": "uuid_1777055921384_e9cce427",
+            "subComponentDialog": {
+                "endStatus": false,
+                "actionType": "timer_alarm_count",
+                "forwardText": false,
+                "answerType": "default",
+                "voiceCommands": [
+                    "${count}"
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "vqsw-5x1b-7i7q-10r8"
+                    }
+                ],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "default",
+                        "voiceResponse": "Готово"
+                    }
+                ],
+                "nextAction": []
+            }
+        },
+        {
+            "_id": "69ed12b20279c0f1170fa11d",
+            "title": "Подскажите имя",
+            "uuid": "uuid_1777144416498_796ea079",
+            "subComponentDialog": {
+                "endStatus": true,
+                "actionType": "birthday_name",
+                "forwardText": false,
+                "answerType": "redis",
+                "voiceCommands": [
+                    "${name}"
+                ],
+                "nextDirectControl": [
+                    {
+                        "uuid": "72725_1777144295654_59c60d52"
+                    }
+                ],
+                "voiceResponseArray": [
+                    {
+                        "actionType": "success",
+                        "voiceResponse": "${message}",
+                        "llm": true,
+                        "system": "Ты выполняешь строгое редактирование текста. Имя собственное является неизменяемой строкой символов. Запрещено менять язык, алфавит, транслитерировать, переводить или модифицировать имя. Разрешено только грамматическое склонение имени в рамках русской фразы. Не добавляй и не удаляй слова. Верни только итоговую фразу.",
+                        "model": "llama3"
+                    }
+                ],
+                "nextAction": []
+            }
+        }
+  ]
+}

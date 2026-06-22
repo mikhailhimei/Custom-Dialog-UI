@@ -76,7 +76,6 @@ export const RemoteSettingsForm = ({ data, onChange }: RemoteProps) => {
   return (
     <div className={styles.form}>
       <Input label="Base URL" value={data.base_url ?? ""} placeholder="http://192.168.31.83:9379" onChange={(e) => updateField("base_url", e.target.value)} />
-      <Input label="Client ID" value={data.client_id ?? ""} onChange={(e) => updateField("client_id", e.target.value)} />
       <Input label="Token" value={data.token ?? ""} placeholder="Bearer ..." onChange={(e) => updateField("token", e.target.value)} />
     </div>
   );

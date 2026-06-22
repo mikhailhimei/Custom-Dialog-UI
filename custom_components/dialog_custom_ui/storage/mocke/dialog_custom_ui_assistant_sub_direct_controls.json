@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "dialog_custom_ui_assistant_sub_direct_controls",
+  "data": [
+    {
+      "_id": "69e73c64cc1b121f55c0b105",
+      "status": false,
+      "title": "проектор",
+      "uuid": "sq8x-j5rj-xn4x-l3gn",
+      "directControl": {
+          "mappingType": "proetcor",
+          "valueType": "command",
+          "voiceCommands": [
+              "проектор"
+          ],
+          "manual": false,
+          "subDirectControl": ""
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b106",
+      "status": true,
+      "title": "Город ",
+      "uuid": "sxsd-hpjy-43za-3wco",
+      "directControl": {
+          "mappingType": "city",
+          "manual": true,
+          "valueType": null,
+          "voiceCommands": null,
+          "subDirectControl": null
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b107",
+      "status": true,
+      "title": "Температура север",
+      "uuid": "w7h1-xosa-y79o-9p4z",
+      "directControl": {
+          "mappingType": "temp",
+          "manual": true,
+          "valueType": "All",
+          "voiceCommands": null,
+          "subDirectControl": null
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b108",
+      "status": true,
+      "title": "День",
+      "uuid": "sawv-vqom-zkds-gqtp",
+      "directControl": {
+          "mappingType": "day",
+          "valueType": "date"
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b109",
+      "status": true,
+      "title": "Дата",
+      "uuid": "wg80-slyi-f9jt-hcwi",
+      "directControl": {
+          "mappingType": "date",
+          "valueType": "date"
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b10a",
+      "status": true,
+      "title": "Таймер",
+      "uuid": "qsz1-ehwa-f6la-x5t8",
+      "directControl": {
+          "mappingType": "timer",
+          "manual": true,
+          "valueType": "time",
+          "voiceCommands": null,
+          "subDirectControl": null
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b10d",
+      "status": true,
+      "title": "время",
+      "uuid": "l1ab-jx41-l0nl-ucid",
+      "directControl": {
+          "mappingType": "cotimers",
+          "manual": true,
+          "valueType": "time",
+          "voiceCommands": null,
+          "subDirectControl": null
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b10e",
+      "status": true,
+      "title": "Комнаты",
+      "uuid": "uurr-5hi5-wg4h-jp8r",
+      "directControl": {
+          "mappingType": "room",
+          "manual": false,
+          "valueType": "command",
+          "voiceCommands": null,
+          "subDirectControl": "4d2d5d28-eb3d-4386-8a63-c9e6cb6cc17e"
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b10f",
+      "status": true,
+      "title": "строка",
+      "uuid": "2c73-95le-jxj0-gqxm",
+      "directControl": {
+          "mappingType": "string2",
+          "manual": true,
+          "valueType": "string",
+          "voiceCommands": null,
+          "subDirectControl": null
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b110",
+      "status": true,
+      "title": "количество раз",
+      "uuid": "vqsw-5x1b-7i7q-10r8",
+      "directControl": {
+          "mappingType": "count",
+          "manual": true,
+          "valueType": "int",
+          "voiceCommands": null,
+          "subDirectControl": []
+      }
+  },
+  {
+      "_id": "69e73c64cc1b121f55c0b111",
+      "status": true,
+      "title": "все подряд",
+      "uuid": "qs06-5ir7-9y9z-lfsl",
+      "directControl": {
+          "mappingType": "all_test",
+          "manual": true,
+          "valueType": "all",
+          "voiceCommands": null,
+          "subDirectControl": null
+      }
+  },
+  {
+      "_id": "69ed12040279c0f1170fa11c",
+      "title": "Имя",
+      "uuid": "72725_1777144295654_59c60d52",
+      "directControl": {
+          "mappingType": "name",
+          "valueType": "string"
+      }
+  },
+  {
+      "_id": "69fad9873ebe6fdcb2414f88",
+      "title": "В доме",
+      "uuid": "61891_1778047361891_5072555d",
+      "directControl": {
+          "mappingType": "home",
+          "valueType": "command",
+          "voiceCommands": [
+              "в дом(e)?"
+          ],
+          "manual": false,
+          "subDirectControl": ""
+      }
+  },
+  {
+      "_id": "6a00953d9773ad3e827c3e33",
+      "title": "Выключи свет доп",
+      "uuid": "65650_1778423065650_71d623e0",
+      "directControl": {
+          "mappingType": "turn_off_l",
+          "valueType": "command",
+          "voiceCommands": [
+              "выключи"
+          ],
+          "manual": true,
+          "subDirectControl": [
+              {
+                  "id": 1,
+                  "subMappingType": "_hall",
+                  "title": null,
+                  "subVoiceCommands": "зал(е)?"
+              },
+              {
+                  "id": 2,
+                  "subMappingType": "_kitchen",
+                  "title": null,
+                  "subVoiceCommands": "выключи в кухн(е)?"
+              }
+          ]
+      },
+      "status": true
+  },
+  {
+      "_id": "6a035b9e5aea05463450ca95",
+      "title": "Комнаты для света",
+      "uuid": "22478_1778604922478_dc97ff21",
+      "directControl": {
+          "mappingType": "light",
+          "valueType": "command",
+          "voiceCommands": null,
+          "manual": false,
+          "subDirectControl": "78884_1778604878884_6e071157"
+      },
+      "status": true
+  },
+  {
+      "_id": "6a09639c2f0b9e658e7421d2",
+      "title": "Комнаты для штор",
+      "uuid": "85099_1779000185099_351a2408",
+      "directControl": {
+          "mappingType": "curtains",
+          "valueType": "command",
+          "voiceCommands": null,
+          "manual": false,
+          "subDirectControl": "82546_1778999882546_bbb14073"
+      }
+  }
+  ]
+}

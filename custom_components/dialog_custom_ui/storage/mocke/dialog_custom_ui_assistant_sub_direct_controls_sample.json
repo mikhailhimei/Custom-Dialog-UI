@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "dialog_custom_ui_assistant_sub_direct_controls_sample",
+  "data": [
+    {
+      "_id": "69e73e42cc1b121f55c0b112",
+      "title": "Комнаты",
+      "uuid": "4d2d5d28-eb3d-4386-8a63-c9e6cb6cc17e",
+      "subDirectControl": [
+        {
+          "subMappingType": "_hall",
+          "subVoiceCommands": "зал(е)?"
+        },
+        {
+          "subMappingType": "_kitchen",
+          "subVoiceCommands": "кухн(я|е)"
+        },
+        {
+          "subMappingType": "_badroom",
+          "subVoiceCommands": "спальн(я|е|ю)"
+        },
+        {
+          "subMappingType": "_work",
+          "subVoiceCommands": "рабоч(ей|ую|ая);детск(ая|ой|ую)"
+        },
+        {
+          "subMappingType": "_corridor",
+          "subVoiceCommands": "коридор(е)?"
+        },
+        {
+          "subMappingType": "_toilet",
+          "subVoiceCommands": "туалет(е)?"
+        },
+        {
+          "subMappingType": "_bath",
+          "title": null,
+          "subVoiceCommands": "ванн(е|а)"
+        },
+        {
+          "subMappingType": "_wardrobe",
+          "subVoiceCommands": "гардероб(е)?"
+        }
+      ]
+    },
+    {
+      "_id": "6a035b665aea05463450ca94",
+      "title": "Свет",
+      "uuid": "78884_1778604878884_6e071157",
+      "subDirectControl": [
+        {
+          "id": 1,
+          "subMappingType": "device_id: 90315fd3f0d126693134d394bd5df6ef",
+          "title": null,
+          "subVoiceCommands": "Кухн(е|я)?"
+        },
+        {
+          "id": 2,
+          "subMappingType": "device_id: 18bb0cd858a304d6e9acfbe41c39413e",
+          "title": null,
+          "subVoiceCommands": "Над телевизор(ом)?"
+        },
+        {
+          "id": 3,
+          "subMappingType": "hall",
+          "title": null,
+          "subVoiceCommands": "зал(е)?"
+        },
+        {
+          "id": 4,
+          "subMappingType": "device_id: 99bb4ef7bc1882b15a31bb192e7605f5",
+          "title": null,
+          "subVoiceCommands": "Над диван(ом)?"
+        },
+        {
+          "id": 5,
+          "subMappingType": "device_id: a764a44c2d3b5e54b9145498fe330ff9",
+          "title": null,
+          "subVoiceCommands": "Ванн(е|ой|а)?"
+        },
+        {
+          "id": 6,
+          "subMappingType": "device_id: 8c274f7c371d0eab17794aa506c0679f",
+          "title": null,
+          "subVoiceCommands": "коридор(е)?"
+        },
+        {
+          "id": 7,
+          "subMappingType": "device_id: e6bea4d60113449e9374a42914145a3f",
+          "title": null,
+          "subVoiceCommands": "Спальн(е|я)?"
+        },
+        {
+          "id": 8,
+          "subMappingType": "entity_id: switch.svet_i_vytiazhka_l1",
+          "title": null,
+          "subVoiceCommands": "туалет(е)?"
+        }
+      ]
+    },
+    {
+      "_id": "6a0962b32f0b9e658e7421d1",
+      "title": "Шторы",
+      "uuid": "82546_1778999882546_bbb14073",
+      "subDirectControl": [
+        {
+          "id": 1,
+          "subMappingType": "5f5cef5f501b14bb84e7b0e82b60195a",
+          "title": null,
+          "subVoiceCommands": "зал(е)?"
+        },
+        {
+          "id": 2,
+          "subMappingType": "5de97b6ae185bcb736d01952431b8f10",
+          "title": null,
+          "subVoiceCommands": "спальн(я|е|ю)?"
+        },
+        {
+          "id": 3,
+          "subMappingType": "a4f6f8acb78b6e053845e950794a67bb",
+          "title": null,
+          "subVoiceCommands": "кухн(е|я|ю)?"
+        },
+        {
+          "id": 4,
+          "subMappingType": "9de08043e6454949cedba0aae3fd4415",
+          "title": null,
+          "subVoiceCommands": "рабоч(ая|ую|ей)?"
+        }
+      ]
+    },
+    {
+      "title": "",
+      "subDirectControl": [
+        {
+          "subMappingType": "",
+          "title": null,
+          "subVoiceCommands": ""
+        }
+      ],
+      "uuid": "7d6ce628-a1cc-4150-bfa2-ea3557eae52b"
+    }
+  ]
+}
