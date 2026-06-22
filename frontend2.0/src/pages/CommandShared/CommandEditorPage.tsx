@@ -12,7 +12,7 @@ import { useDialogApi } from '../../context/DialogContext';
 import styles from "./CommandEditorPage.module.scss";
 
 type DirectMode = "main" | "template";
-type FormKind = "dialog" | "direct" | "template";
+type FormKind = "dialog" | "direct" | "template" | "assistantSettings";
 
 type ShortCommand = {
   uuid: string;
@@ -73,6 +73,9 @@ type CommandDetails = {
     [key: string]: any;
   };
   subDirectControl?: SubDirectControlItem[];
+  actionType?: string;
+  message?: string | null;
+  endStatus?: boolean;
   [key: string]: any;
 };
 
@@ -146,12 +149,12 @@ const configs: Record<string, EndpointConfig> = {
   settings: {
     key: "settings",
     label: "Настройки команды",
-    kind: "template",
-    shortType: "get_assistant_sub_direct_control_samples_short",
-    detailType: "get_assistant_sub_direct_control_sample",
-    saveType: "save_assistant_sub_direct_control_sample",
-    updateType: "update_assistant_sub_direct_control_sample",
-    deleteType: "delete_assistant_sub_direct_control_sample",
+    kind: "assistantSettings",
+    shortType: "get_assistant_settings_short",
+    detailType: "get_assistant_setting",
+    saveType: "save_assistant_setting",
+    updateType: "update_assistant_setting",
+    deleteType: "delete_assistant_setting",
     hasStatus: false,
   },
 };
@@ -189,6 +192,15 @@ const createEmptyCommand = (config: EndpointConfig): CommandDetails => {
         manual: false,
         subDirectControl: "",
       },
+    };
+  }
+
+  if (config.kind === "assistantSettings") {
+    return {
+      title: "",
+      actionType: "",
+      message: null,
+      endStatus: false,
     };
   }
 
@@ -542,6 +554,27 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
               ) : (
                 <Input label="directControl.subDirectControl" value={typeof directControl.subDirectControl === "string" ? directControl.subDirectControl : ""} onChange={(event) => updateDirectControl({ subDirectControl: event.target.value })} />
               )}
+            </>
+          )}
+
+          {activeConfig.kind === "assistantSettings" && (
+            <>
+              <Input label="actionType" value={formData.actionType ?? ""} onChange={(event) => setFormData({ ...formData, actionType: event.target.value })} />
+
+              <div className={styles.field}>
+                <label>message</label>
+                <textarea
+                  className={styles.textarea}
+                  value={formData.message ?? ""}
+                  onChange={(event) => setFormData({ ...formData, message: event.target.value || null })}
+                  rows={4}
+                />
+              </div>
+
+              <label className={styles.checkboxRow}>
+                <input type="checkbox" checked={Boolean(formData.endStatus)} onChange={(event) => setFormData({ ...formData, endStatus: event.target.checked })} />
+                endStatus
+              </label>
             </>
           )}
 

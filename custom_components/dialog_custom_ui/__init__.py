@@ -26,6 +26,7 @@ from .src.api.assistant_commands.assistant_commands_api import async_register_as
 from .src.api.assistant_commands.assistant_sub_commands_api import async_register_assistant_sub_commands_websockets
 from .src.api.assistant_commands.assistant_sub_direct_controls_api import async_register_assistant_sub_direct_controls_websockets
 from .src.api.assistant_commands.assistant_sub_direct_controls_sample_api import async_register_assistant_sub_direct_control_samples_websockets
+from .src.api.assistant_commands.assistant_settings import async_register_assistant_settings_websockets
 from .src.api.settings.settings_api import async_register_settings_websockets
 from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_websockets
 from .panel import async_register_panel
@@ -51,6 +52,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async_register_assistant_sub_commands_websockets(hass)
     async_register_assistant_sub_direct_controls_websockets(hass)
     async_register_assistant_sub_direct_control_samples_websockets(hass)
+    async_register_assistant_settings_websockets(hass)
     async_register_settings_websockets(hass)
     async_register_timer_alarm_websockets(hass)
     async_register_dialog_http(hass)
