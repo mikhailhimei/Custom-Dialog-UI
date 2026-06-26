@@ -10,6 +10,8 @@ import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
+from .storage.settings_storage import get_cached_settings
+
 from .utils import (
     _get_entry,
     _get_options

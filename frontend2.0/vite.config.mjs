@@ -4,8 +4,11 @@ import path from 'node:path';
 const root = path.resolve(process.cwd(), 'frontend2.0');
 const staticDir = path.resolve(process.cwd(), 'custom_components/dialog_custom_ui/static');
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
   root,
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(mode),
+  },
   server: {
     host: '127.0.0.1',
     port: 5173,
@@ -15,6 +18,7 @@ export default defineConfig(({ command }) => ({
     outDir: staticDir,
     emptyOutDir: false,
     sourcemap: command !== 'build',
+    cssCodeSplit: false,
     lib: {
       entry: path.resolve(root, 'src/panel-element.tsx'),
       formats: ['es'],
