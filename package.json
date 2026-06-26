@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite --config frontend2.0/vite.config.mjs",
     "dev:ha": "node frontend/scripts/build.mjs --watch --mode=development",
-    "build": "node frontend/scripts/build.mjs --mode=production"
+    "build": "node frontend/scripts/build.mjs --mode=production",
+    "dev:frontend2": "vite --config frontend2.0/vite.config.mjs",
+    "build:frontend2": "vite build --config frontend2.0/vite.config.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

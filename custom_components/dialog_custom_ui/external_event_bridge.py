@@ -15,15 +15,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import (
-    CONF_BASE_URL,
-    CONF_CLIENT_ID,
-    CONF_TIMER_ALARM_TOKEN,
-    EVENT_ACTIVE_COMMAND,
-    EVENT_DIALOG_MESSAGE,
-)
+from .const import EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
 from .normalize import _normalize_value
 from .utils import _get_options
+from .storage.settings_storage import get_cached_settings
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +46,7 @@ def _append_query(url: str, params: dict[str, str]) -> str:
 
 
 def _build_stream_url(base_url: str, client_id: str) -> str:
-    """Build stream URL from CONF_BASE_URL.
+    """Build stream URL from configured remote base URL.
 
     If the configured URL already looks like a concrete endpoint, keep it as-is.
     Otherwise use the integration convention under /api/dialog/events.
@@ -154,8 +149,8 @@ class ExternalEventBridge:
         if self._listen_task or self._unsubs:
             return
 
-        options = _get_options(self.entry)
-        base_url = _normalize_base_url(options.get(CONF_BASE_URL))
+        options = _get_options(self.entry, get_cached_settings(self.hass))
+        base_url = _normalize_base_url(options.get("base_url"))
         if listen_external_active_commands and not base_url:
             self._append_log("error", "external bridge listen skipped: base_url is empty")
             listen_external_active_commands = False
@@ -201,10 +196,10 @@ class ExternalEventBridge:
 
     async def _listen_loop(self) -> None:
         while not self._stopping:
-            options = _get_options(self.entry)
-            base_url = _normalize_base_url(options.get(CONF_BASE_URL))
-            client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-            token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
+            options = _get_options(self.entry, get_cached_settings(self.hass))
+            base_url = _normalize_base_url(options.get("base_url"))
+            client_id = _normalize_value(options.get("client_id"))
+            token = _normalize_value(options.get("remote_token"))
 
             if not base_url:
                 await asyncio.sleep(_RECONNECT_DELAY_SECONDS)
@@ -299,9 +294,9 @@ class ExternalEventBridge:
         if self._session is None:
             return
 
-        options = _get_options(self.entry)
-        base_url = _normalize_base_url(options.get(CONF_BASE_URL))
-        token = _normalize_value(options.get(CONF_TIMER_ALARM_TOKEN))
+        options = _get_options(self.entry, get_cached_settings(self.hass))
+        base_url = _normalize_base_url(options.get("base_url"))
+        token = _normalize_value(options.get("remote_token"))
         if not base_url:
             return
 
@@ -309,7 +304,7 @@ class ExternalEventBridge:
         event_data["origin"] = _ORIGIN_EXTERNAL_BRIDGE
         payload = {
             "event": event_type,
-            "clientId": _normalize_value(options.get(CONF_CLIENT_ID)),
+            "clientId": _normalize_value(options.get("client_id")),
             "data": event_data,
         }
         headers = {"Content-Type": "application/json"}

@@ -12,7 +12,6 @@ import aiohttp
 import async_timeout
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -20,27 +19,27 @@ import homeassistant.helpers.config_validation as cv
 
 from ..audio_notification import audio_notification
 
-from ..const import (
-    CONF_YANDEX_TTS_API_KEY,
-    CONF_YANDEX_TTS_CODEC,
-    CONF_YANDEX_TTS_EMOTION,
-    CONF_YANDEX_TTS_FOLDER_ID,
-    CONF_YANDEX_TTS_LANG,
-    CONF_YANDEX_TTS_SPEED,
-    CONF_YANDEX_TTS_VOICE,
-    DEFAULT_YANDEX_TTS_CODEC,
-    DEFAULT_YANDEX_TTS_EMOTION,
-    DEFAULT_YANDEX_TTS_LANG,
-    DEFAULT_YANDEX_TTS_SPEED,
-    DEFAULT_YANDEX_TTS_VOICE,
-    DOMAIN,
-)
+from ..const import DOMAIN
 
 from ..normalize import (
     _normalize_value
 )
+from ..storage.settings_storage import async_get_cached_settings
 
 _LOGGER = logging.getLogger(__name__)
+YANDEX_TTS_API_KEY = "yandex_tts_api_key"
+YANDEX_TTS_FOLDER_ID = "yandex_tts_folder_id"
+YANDEX_TTS_LANG = "yandex_tts_lang"
+YANDEX_TTS_CODEC = "yandex_tts_codec"
+YANDEX_TTS_VOICE = "yandex_tts_voice"
+YANDEX_TTS_EMOTION = "yandex_tts_emotion"
+YANDEX_TTS_SPEED = "yandex_tts_speed"
+
+YANDEX_TTS_FALLBACK_LANG = "ru-RU"
+YANDEX_TTS_FALLBACK_CODEC = "oggopus"
+YANDEX_TTS_FALLBACK_VOICE = "oksana"
+YANDEX_TTS_FALLBACK_EMOTION = "good"
+YANDEX_TTS_FALLBACK_SPEED = 1.1
 
 YANDEX_API_URL = "https://tts.api.cloud.yandex.net/speech/v1/tts:synthesize"
 
@@ -70,11 +69,11 @@ SERVICE_SCHEMA = vol.Schema(
         vol.Optional("entity_id"): vol.Any(cv.entity_id, [cv.entity_id]),
         vol.Optional("device_id"): vol.Any(cv.entity_id, [cv.entity_id]),
         vol.Optional("end_status"): vol.Any(bool, cv.string),
-        vol.Optional(CONF_YANDEX_TTS_LANG): cv.string,
-        vol.Optional(CONF_YANDEX_TTS_CODEC): cv.string,
-        vol.Optional(CONF_YANDEX_TTS_VOICE): cv.string,
-        vol.Optional(CONF_YANDEX_TTS_EMOTION): cv.string,
-        vol.Optional(CONF_YANDEX_TTS_SPEED): vol.Any(int, float),
+        vol.Optional(YANDEX_TTS_LANG): cv.string,
+        vol.Optional(YANDEX_TTS_CODEC): cv.string,
+        vol.Optional(YANDEX_TTS_VOICE): cv.string,
+        vol.Optional(YANDEX_TTS_EMOTION): cv.string,
+        vol.Optional(YANDEX_TTS_SPEED): vol.Any(int, float),
         vol.Optional("volume_level"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
     }
 )
@@ -91,7 +90,7 @@ def _normalize_speed(value: Any) -> float:
     try:
         speed = float(value)
     except (TypeError, ValueError):
-        speed = DEFAULT_YANDEX_TTS_SPEED
+        speed = YANDEX_TTS_FALLBACK_SPEED
     return max(0.1, min(3.0, speed))
 
 
@@ -113,44 +112,40 @@ def _codec_extension(codec: str) -> str:
     return "ogg"
 
 
-def _tts_options_from_entry(entry: ConfigEntry | None) -> dict[str, Any]:
-    options = dict(entry.options) if entry else {}
+async def _async_tts_options_from_storage(hass: HomeAssistant) -> dict[str, Any]:
+    settings = await async_get_cached_settings(hass)
+    yandex = settings.get("yandex_tts") if isinstance(settings.get("yandex_tts"), dict) else {}
     return {
-        CONF_YANDEX_TTS_API_KEY: _normalize_value(options.get(CONF_YANDEX_TTS_API_KEY)),
-        CONF_YANDEX_TTS_FOLDER_ID: _normalize_value(options.get(CONF_YANDEX_TTS_FOLDER_ID)),
-        CONF_YANDEX_TTS_LANG: _normalize_value(options.get(CONF_YANDEX_TTS_LANG) or DEFAULT_YANDEX_TTS_LANG),
-        CONF_YANDEX_TTS_CODEC: _normalize_value(options.get(CONF_YANDEX_TTS_CODEC) or DEFAULT_YANDEX_TTS_CODEC),
-        CONF_YANDEX_TTS_VOICE: _normalize_value(options.get(CONF_YANDEX_TTS_VOICE) or DEFAULT_YANDEX_TTS_VOICE),
-        CONF_YANDEX_TTS_EMOTION: _normalize_value(options.get(CONF_YANDEX_TTS_EMOTION) or DEFAULT_YANDEX_TTS_EMOTION),
-        CONF_YANDEX_TTS_SPEED: _normalize_speed(options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED)),
+        YANDEX_TTS_API_KEY: _normalize_value(yandex.get("api_key")),
+        YANDEX_TTS_FOLDER_ID: _normalize_value(yandex.get("folderId") or yandex.get("folder_id")),
+        YANDEX_TTS_LANG: _normalize_value(yandex.get("language") or YANDEX_TTS_FALLBACK_LANG),
+        YANDEX_TTS_CODEC: _normalize_value(yandex.get("codec") or YANDEX_TTS_FALLBACK_CODEC),
+        YANDEX_TTS_VOICE: _normalize_value(yandex.get("voice") or YANDEX_TTS_FALLBACK_VOICE),
+        YANDEX_TTS_EMOTION: _normalize_value(yandex.get("emotion") or YANDEX_TTS_FALLBACK_EMOTION),
+        YANDEX_TTS_SPEED: _normalize_speed(yandex.get("speed", YANDEX_TTS_FALLBACK_SPEED)),
     }
 
 
-def _current_entry(hass: HomeAssistant) -> ConfigEntry | None:
-    entries = hass.config_entries.async_entries(DOMAIN)
-    return entries[0] if entries else None
-
-
 async def _async_synthesize(hass: HomeAssistant, text: str, options: dict[str, Any]) -> tuple[str, bytes]:
-    api_key = _normalize_value(options.get(CONF_YANDEX_TTS_API_KEY))
-    folder_id = _normalize_value(options.get(CONF_YANDEX_TTS_FOLDER_ID))
+    api_key = _normalize_value(options.get(YANDEX_TTS_API_KEY))
+    folder_id = _normalize_value(options.get(YANDEX_TTS_FOLDER_ID))
     if not api_key or not folder_id:
         raise HomeAssistantError("Заполните yandex_tts_api_key и yandex_tts_folder_id в Settings.")
 
-    language = _normalize_value(options.get(CONF_YANDEX_TTS_LANG) or DEFAULT_YANDEX_TTS_LANG)
-    codec = _normalize_value(options.get(CONF_YANDEX_TTS_CODEC) or DEFAULT_YANDEX_TTS_CODEC)
-    voice = _normalize_value(options.get(CONF_YANDEX_TTS_VOICE) or DEFAULT_YANDEX_TTS_VOICE)
-    emotion = _normalize_value(options.get(CONF_YANDEX_TTS_EMOTION) or DEFAULT_YANDEX_TTS_EMOTION)
-    speed = _normalize_speed(options.get(CONF_YANDEX_TTS_SPEED, DEFAULT_YANDEX_TTS_SPEED))
+    language = _normalize_value(options.get(YANDEX_TTS_LANG) or YANDEX_TTS_FALLBACK_LANG)
+    codec = _normalize_value(options.get(YANDEX_TTS_CODEC) or YANDEX_TTS_FALLBACK_CODEC)
+    voice = _normalize_value(options.get(YANDEX_TTS_VOICE) or YANDEX_TTS_FALLBACK_VOICE)
+    emotion = _normalize_value(options.get(YANDEX_TTS_EMOTION) or YANDEX_TTS_FALLBACK_EMOTION)
+    speed = _normalize_speed(options.get(YANDEX_TTS_SPEED, YANDEX_TTS_FALLBACK_SPEED))
 
     if language not in SUPPORTED_LANGUAGES:
-        language = DEFAULT_YANDEX_TTS_LANG
+        language = YANDEX_TTS_FALLBACK_LANG
     if codec not in SUPPORTED_CODECS:
-        codec = DEFAULT_YANDEX_TTS_CODEC
+        codec = YANDEX_TTS_FALLBACK_CODEC
     if voice not in SUPPORTED_VOICES:
-        voice = DEFAULT_YANDEX_TTS_VOICE
+        voice = YANDEX_TTS_FALLBACK_VOICE
     if emotion not in SUPPORTED_EMOTIONS:
-        emotion = DEFAULT_YANDEX_TTS_EMOTION
+        emotion = YANDEX_TTS_FALLBACK_EMOTION
 
     session = async_get_clientsession(hass)
     payload = {
@@ -193,13 +188,13 @@ async def async_register_tts_service(hass: HomeAssistant) -> None:
         if not text:
             raise HomeAssistantError("Поле text обязательно.")
 
-        options = _tts_options_from_entry(_current_entry(hass))
+        options = await _async_tts_options_from_storage(hass)
         for key in (
-            CONF_YANDEX_TTS_LANG,
-            CONF_YANDEX_TTS_CODEC,
-            CONF_YANDEX_TTS_VOICE,
-            CONF_YANDEX_TTS_EMOTION,
-            CONF_YANDEX_TTS_SPEED,
+            YANDEX_TTS_LANG,
+            YANDEX_TTS_CODEC,
+            YANDEX_TTS_VOICE,
+            YANDEX_TTS_EMOTION,
+            YANDEX_TTS_SPEED,
         ):
             if key in call.data:
                 options[key] = call.data[key]

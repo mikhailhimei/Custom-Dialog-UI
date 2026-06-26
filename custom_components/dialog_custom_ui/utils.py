@@ -5,35 +5,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.components import websocket_api
 
 
-from .const import (
-    CONF_BASE_URL,
-    CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
-    CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
-    CONF_CLIENT_ID,
-    CONF_REDIS_PASSWORD,
-    CONF_REDIS_URL,
-    CONF_SCENARIOS,
-    CONF_TIMER_ALARM_DEVICE_IDS,
-    CONF_TIMER_ALARM_ITEMS,
-    CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
-    CONF_TIMER_ALARM_PRESETS,
-    CONF_TIMER_ALARM_TOKEN,
-    DEFAULT_BASE_URL,
-    DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
-    DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
-    DEFAULT_REDIS_URL,
-    DOMAIN,
-    CONF_TIMEOUT,
-    DEFAULT_TIMEOUT,
-    CONF_ALLOW_NON_ADMIN_PANEL
-)
-
+from .const import DOMAIN
 from .normalize import (
     _normalize_value,
     _normalize_device_ids
 )
 
-_DEFAULT_TIMER_MEDIA_CONTENT_ID = "timer-alarm.mp3"
+_FALLBACK_TIMER_MEDIA_CONTENT_ID = "timer-alarm.mp3"
 
 
 def _get_entry(hass: HomeAssistant) -> ConfigEntry | None:
@@ -60,38 +38,30 @@ def _get_manager(hass: HomeAssistant, entry: ConfigEntry) -> Any | None:
     )
     return manager if all(hasattr(manager, attr) for attr in required_attrs) else None
 
-def _get_options(entry: ConfigEntry) -> dict[str, Any]:
+def _get_options(entry: ConfigEntry, settings: dict[str, Any] | None = None) -> dict[str, Any]:
     stored = dict(entry.options)
-    return {
-        CONF_BASE_URL: stored.get(CONF_BASE_URL, DEFAULT_BASE_URL),
-        CONF_CLIENT_ID: stored.get(CONF_CLIENT_ID, ""),
-        CONF_EXTERNAL_EVENT_BRIDGE_ENABLED: bool(
-            stored.get(
-                CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
-                DEFAULT_EXTERNAL_EVENT_BRIDGE_ENABLED,
-            )
-        ),
-        CONF_REMOTE_ACTIVE_SEARCH_ENABLED: bool(
-            stored.get(
-                CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
-                DEFAULT_REMOTE_ACTIVE_SEARCH_ENABLED,
-            )
-        ),
-        CONF_REDIS_URL: stored.get(CONF_REDIS_URL, DEFAULT_REDIS_URL),
-        CONF_REDIS_PASSWORD: stored.get(CONF_REDIS_PASSWORD, ""),
-        CONF_TIMER_ALARM_TOKEN: stored.get(CONF_TIMER_ALARM_TOKEN, ""),
-        CONF_TIMEOUT: int(stored.get(CONF_TIMEOUT, DEFAULT_TIMEOUT)),
-        CONF_SCENARIOS: list(stored.get(CONF_SCENARIOS, [])),
-        CONF_TIMER_ALARM_ITEMS: list(stored.get(CONF_TIMER_ALARM_ITEMS, [])),
-        CONF_TIMER_ALARM_PRESETS: list(stored.get(CONF_TIMER_ALARM_PRESETS, [])),
-        CONF_TIMER_ALARM_DEVICE_IDS: _normalize_device_ids(stored.get(CONF_TIMER_ALARM_DEVICE_IDS, [])),
-        CONF_TIMER_ALARM_MEDIA_CONTENT_ID: _normalize_value(
-            stored.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, _DEFAULT_TIMER_MEDIA_CONTENT_ID)
-        )
-        or _DEFAULT_TIMER_MEDIA_CONTENT_ID,
-        
-    }
+    settings = settings or {}
+    remote = settings.get("remout") if isinstance(settings.get("remout"), dict) else {}
+    timer_alarm = settings.get("timer_alarm") if isinstance(settings.get("timer_alarm"), dict) else {}
+    active_remote = bool(settings.get("active_remout"))
+    timer_music = _normalize_value(timer_alarm.get("global_music_timer"))
+    alarm_music = _normalize_value(timer_alarm.get("global_music_alarm"))
+    default_music = timer_music or alarm_music or _FALLBACK_TIMER_MEDIA_CONTENT_ID
 
+    return {
+        "base_url": _normalize_value(remote.get("base_url")) if active_remote else "",
+        "client_id": _normalize_value(settings.get("client_id")),
+        "external_event_bridge_enabled": active_remote,
+        "remote_active_search_enabled": active_remote,
+        "remote_token": _normalize_value(remote.get("token")),
+        "timeout": 10,
+        "timer_alarm_items": list(stored.get("timer_alarm_items", [])),
+        "timer_alarm_presets": list(stored.get("timer_alarm_presets", [])),
+        "timer_alarm_device_ids": _normalize_device_ids(stored.get("timer_alarm_device_ids", [])),
+        "timer_alarm_media_content_id": default_music,
+        "timer_music": timer_music or default_music,
+        "alarm_music": alarm_music or default_music,
+    }
 
 def _safe_float(value: Any, default: float) -> float:
     try:
@@ -149,7 +119,7 @@ def _get_authorized_entry(
 
     if (
         not is_admin
-        and not entry.options.get(CONF_ALLOW_NON_ADMIN_PANEL, True)
+        and not entry.options.get("allow_non_admin_panel", True)
     ):
         connection.send_error(
             msg["id"],

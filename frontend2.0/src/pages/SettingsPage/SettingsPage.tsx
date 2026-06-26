@@ -42,6 +42,9 @@ const EMPTY_SETTINGS: Settings = {
   theme: "dark",
   is_admin: false,
   active_remout: false,
+  client_id: "",
+  api_commands_enabled: false,
+  api_commands_token: "",
 };
 
 const normalizeTTS = (tts?: Partial<YandexTTS>): YandexTTS => ({
@@ -71,6 +74,9 @@ const normalizeSettings = (settings?: Partial<Settings> | null): Settings => ({
   theme: settings?.theme ?? "dark",
   is_admin: Boolean(settings?.is_admin),
   active_remout: Boolean(settings?.active_remout),
+  client_id: settings?.client_id ?? "",
+  api_commands_enabled: Boolean(settings?.api_commands_enabled),
+  api_commands_token: settings?.api_commands_token ?? "",
 });
 
 const getObjectDiff = <T extends Record<string, any>>(current: T, initial: T) => {
@@ -104,6 +110,9 @@ const getDiff = (current: Settings, initial: Settings): SettingsSavePayload => {
   if (current.theme !== initial.theme) result.theme = current.theme;
   if (current.is_admin !== initial.is_admin) result.is_admin = current.is_admin;
   if (current.active_remout !== initial.active_remout) result.active_remout = current.active_remout;
+  if (current.client_id !== initial.client_id) result.client_id = current.client_id;
+  if (current.api_commands_enabled !== initial.api_commands_enabled) result.api_commands_enabled = current.api_commands_enabled;
+  if (current.api_commands_token !== initial.api_commands_token) result.api_commands_token = current.api_commands_token;
 
   if (current.active_remout) {
     const remoutDiff = getObjectDiff(current.remout ?? EMPTY_REMOUT, initial.remout ?? EMPTY_REMOUT);
@@ -147,6 +156,9 @@ export const SettingsPage = () => {
             active_remout: settingsData.active_remout,
             is_admin: settingsData.is_admin,
             theme: settingsData.theme,
+            client_id: settingsData.client_id,
+            api_commands_enabled: settingsData.api_commands_enabled,
+            api_commands_token: settingsData.api_commands_token,
           }}
           onChange={(generalData) => setSettingsData({ ...settingsData, ...generalData })}
         />
