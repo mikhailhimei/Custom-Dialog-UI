@@ -75,7 +75,10 @@ async def async_get_cached_settings(hass: HomeAssistant) -> dict[str, Any]:
 
 
 def get_cached_settings(hass: HomeAssistant) -> dict[str, Any]:
-    return deepcopy(hass.data.get(DOMAIN, {}).get(_CACHE_KEY) or SETTINGS_FALLBACKS)
+    cached = hass.data.get(DOMAIN, {}).get(_CACHE_KEY)
+    if isinstance(cached, dict):
+        return deepcopy(normalize_settings(cached))
+    return deepcopy(SETTINGS_FALLBACKS)
 
 
 async def async_save_settings(hass: HomeAssistant, settings: dict[str, Any]) -> None:
