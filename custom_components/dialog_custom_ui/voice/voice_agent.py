@@ -19,13 +19,9 @@ from ..src.service.dialog_runtime import set_current_hass
 from ..audio_notification import audio_notification
 
 from ..utils import _get_options
+from ..storage.settings_storage import get_cached_settings
 
 from ..normalize import _normalize_value
-from ..const import (
-    CONF_BASE_URL,
-    CONF_CLIENT_ID,
-    CONF_TIMER_ALARM_TOKEN
-)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,9 +47,9 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         if self._entry is None:
             raise HomeAssistantError("Dialog Custom UI integration entry not found")
 
-        options = _get_options(self._entry)
+        options = _get_options(self._entry, get_cached_settings(self._hass))
         
-        client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        client_id = _normalize_value(options.get("client_id"))
         
         application_id = getattr(user_input, "device_id", None) or self._fallback_application_id
         

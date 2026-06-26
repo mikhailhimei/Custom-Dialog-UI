@@ -10,20 +10,12 @@ from .normalize import unwrap_payload, normalize_payload
 from .scenario_engine import match_scenario
 from .script_runner import run_script
 from .storage.script_actions_storage import async_load_script_actions
-from .storage.settings_storage import async_load_settings
+from .storage.settings_storage import async_get_cached_settings, get_cached_settings
 from .timer_alarm.timer_alarm_manager_wrapper import DialogTimerAlarmManager
 from .external_event_bridge import ExternalEventBridge
-from .const import (
-    CONF_EXTERNAL_EVENT_BRIDGE_ENABLED,
-    CONF_REMOTE_ACTIVE_SEARCH_ENABLED,
-    CONF_TIMER_ALARM_DEVICE_IDS,
-    DOMAIN,
-    EVENT_ACTIVE_COMMAND,
-    EVENT_DIALOG_MESSAGE,
-)
+from .const import DOMAIN, EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
 
 _LOGGER = logging.getLogger(__name__)
-USE_SCRIPT_ACTIONS_STORAGE = False
 
 
 def _normalize_active_command_event_data(data: dict) -> dict:
@@ -116,7 +108,8 @@ class DialogCommandCoordinator:
             _LOGGER.debug("Coordinator already started for entry %s", self.entry.entry_id)
             return
         _LOGGER.info("Starting DialogCommandCoordinator for entry %s", self.entry.entry_id)
-        options = _get_options(self.entry)
+        settings = await async_get_cached_settings(self.hass)
+        options = _get_options(self.entry, settings)
         await self.timer_alarm_manager.async_restore_from_options(options)
         self._append_log("info", "coordinator started")
         self._unsub_active_command = self.hass.bus.async_listen(
@@ -124,8 +117,8 @@ class DialogCommandCoordinator:
             self._handle_active_command_event,
         )
         remote_active_search_enabled = bool(
-            options.get(CONF_REMOTE_ACTIVE_SEARCH_ENABLED)
-            or options.get(CONF_EXTERNAL_EVENT_BRIDGE_ENABLED)
+            options.get("remote_active_search_enabled")
+            or options.get("external_event_bridge_enabled")
         )
         await self.external_event_bridge.async_start(
             listen_external_active_commands=remote_active_search_enabled,
@@ -149,7 +142,7 @@ class DialogCommandCoordinator:
             self.entry.entry_id,
             data,
         )
-        options = _get_options(self.entry)
+        options = _get_options(self.entry, get_cached_settings(self.hass))
         event_client_id = _normalize_value(data.get("client_id"))
         configured_client_id = _normalize_value(options.get("client_id"))
 
@@ -178,12 +171,9 @@ class DialogCommandCoordinator:
             return
 
         for payload in payloads:
-            options = _get_options(self.entry)
-            scenario_source = (
-                await async_load_script_actions(self.hass)
-                if USE_SCRIPT_ACTIONS_STORAGE
-                else options["scenarios"]
-            )
+            settings = get_cached_settings(self.hass)
+            options = _get_options(self.entry, settings)
+            scenario_source = await async_load_script_actions(self.hass)
             scenario = match_scenario(payload, scenario_source)
 
             if not scenario:

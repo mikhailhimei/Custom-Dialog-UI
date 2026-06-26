@@ -15,24 +15,11 @@ from .alarm_persistence import AlarmPersistence
 from ..normalize import _normalize_value
 from .timer_manager import DialogTimerManager
 from ..utils import _get_entry, _get_manager, _get_options, _extract_count
-from ..const import (
-    CONF_BASE_URL,
-    CONF_CLIENT_ID,
-    CONF_REDIS_PASSWORD,
-    CONF_REDIS_URL,
-    CONF_TIMER_ALARM_DEVICE_IDS,
-    CONF_TIMER_ALARM_ITEMS,
-    CONF_TIMER_ALARM_MEDIA_CONTENT_ID,
-    CONF_TIMER_ALARM_PRESETS,
-    CONF_TIMEOUT,
-    DEFAULT_REDIS_URL,
-    DOMAIN,
-    WS_GET_TIMER_ALARM_CONFIG,
-    WS_SAVE_TIMER_ALARM_CONFIG,
-)
+from ..storage.settings_storage import get_cached_settings
+from ..const import DOMAIN, WS_GET_TIMER_ALARM_CONFIG, WS_SAVE_TIMER_ALARM_CONFIG
 from .timer_alarm_utils import (
     _ALARM_PREFIX,
-    _DEFAULT_TIMER_MEDIA_CONTENT_ID,
+    _FALLBACK_TIMER_MEDIA_CONTENT_ID,
     _TIMER_PREFIX,
     _normalize_alarm_presets,
     _collect_device_labels,
@@ -79,6 +66,7 @@ class DialogTimerAlarmManager:
         self._last_updated: str | None = None
         self._restored = False
         self._runtime_state_key = f"timer_alarm_runtime:{id(self)}"
+        self._active_builtin_type = "timer"
 
     async def async_restore_from_options(self, options: dict[str, Any]) -> None:
         if self._restored:
@@ -86,12 +74,12 @@ class DialogTimerAlarmManager:
         
         await self._persistence.connect()
 
-        shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
+        shared_client_id = _normalize_value(options.get("client_id"))
 
         await self.alarm_manager.async_restore_from_persistence(shared_client_id)
 
-        self.alarm_manager.load_alarm_presets(_normalize_alarm_presets(options.get(CONF_TIMER_ALARM_PRESETS, [])))
-        raw_items = options.get(CONF_TIMER_ALARM_ITEMS)
+        self.alarm_manager.load_alarm_presets(_normalize_alarm_presets(options.get("timer_alarm_presets", [])))
+        raw_items = options.get("timer_alarm_items")
         items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
         normalized_items = [self._normalize_ui_item(item, shared_client_id) for item in items]
         incoming_timers = {
@@ -129,6 +117,7 @@ class DialogTimerAlarmManager:
 
         commands = None
         if parent_type == "timer_start":
+            self._active_builtin_type = "timer"
             timer = _extract_timer_parts(payload.get("children_direct_type"))
             commands = await self.timer_manager.async_handle_timer_start(timer, client_id, device_id, execution_command)
         elif parent_type == "timer_stop":
@@ -140,6 +129,7 @@ class DialogTimerAlarmManager:
         elif parent_type == "timer_resume":
             commands = await self.timer_manager.async_handle_timer_resume(client_id, device_id, count)
         elif parent_type == "alarm_start":
+            self._active_builtin_type = "alarm"
             alarm_time = _extract_alarm_time(payload.get("children_direct_type"))
             commands = await self.alarm_manager.async_handle_alarm_start(alarm_time, client_id, device_id, execution_command)
         elif parent_type == "alarm_stop":
@@ -232,11 +222,13 @@ class DialogTimerAlarmManager:
     def _default_media_content_id(self) -> str:
         entry = _get_entry(self.hass)
         if entry is None:
-            return _DEFAULT_TIMER_MEDIA_CONTENT_ID
-        configured = _normalize_value(entry.options.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID))
+            return _FALLBACK_TIMER_MEDIA_CONTENT_ID
+        options = _get_options(entry, get_cached_settings(self.hass))
+        key = "alarm_music" if self._active_builtin_type == "alarm" else "timer_music"
+        configured = _normalize_value(options.get(key) or options.get("timer_alarm_media_content_id"))
         if configured.startswith("media-source://media_source/local/"):
             configured = configured.split("media-source://media_source/local/", 1)[1]
-        return configured or _DEFAULT_TIMER_MEDIA_CONTENT_ID
+        return configured or _FALLBACK_TIMER_MEDIA_CONTENT_ID
 
     def _persist_items_to_entry(self) -> None:
         entry = _get_entry(self.hass)
@@ -244,8 +236,8 @@ class DialogTimerAlarmManager:
             return
         try:
             options = dict(entry.options)
-            options[CONF_TIMER_ALARM_ITEMS] = self.serialize_persisted_items()
-            options[CONF_TIMER_ALARM_PRESETS] = self.get_alarm_presets()
+            options["timer_alarm_items"] = self.serialize_persisted_items()
+            options["timer_alarm_presets"] = self.get_alarm_presets()
             self.hass.config_entries.async_update_entry(entry, options=options)
         except Exception as err:
             _LOGGER.debug("Failed to persist timer/alarm items to entry options: %s", err)
@@ -282,12 +274,12 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
         return
     manager = _get_manager(hass, entry)
     managers = _iter_managers(hass)
-    options = _get_options(entry)
+    options = _get_options(entry, get_cached_settings(hass))
     all_items: dict[str, dict[str, Any]] = {}
     all_active: dict[str, dict[str, Any]] = {}
     all_presets: set[str] = set()
     last_updated: str | None = None
-    all_presets.update(_normalize_alarm_presets(options.get(CONF_TIMER_ALARM_PRESETS, [])))
+    all_presets.update(_normalize_alarm_presets(options.get("timer_alarm_presets", [])))
     for current in managers:
         for item in current.get_items():
             item_id = _normalize_value(item.get("id"))
@@ -352,15 +344,15 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
     connection.send_result(
         msg["id"],
         {
-            "base_url": options[CONF_BASE_URL],
-            "client_id": options[CONF_CLIENT_ID],
-            "interval": options[CONF_TIMEOUT],
-            "device_ids": options[CONF_TIMER_ALARM_DEVICE_IDS],
-            "default_media_content_id": options[CONF_TIMER_ALARM_MEDIA_CONTENT_ID],
+            "base_url": options["base_url"],
+            "client_id": options["client_id"],
+            "interval": options["timeout"],
+            "device_ids": options["timer_alarm_device_ids"],
+            "default_media_content_id": options["timer_alarm_media_content_id"],
             "items": items,
             "active_items": active_items,
             "alarm_presets": alarm_presets,
-            "device_labels": _collect_device_labels(hass, items, options.get(CONF_TIMER_ALARM_DEVICE_IDS, [])),
+            "device_labels": _collect_device_labels(hass, items, options.get("timer_alarm_device_ids", [])),
             "last_updated": last_updated,
             "debug_meta": {
                 "managers_detected": len(managers),
@@ -375,8 +367,7 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
 @websocket_api.websocket_command(
     {
         vol.Required("type"): WS_SAVE_TIMER_ALARM_CONFIG,
-        vol.Optional(CONF_TIMER_ALARM_ITEMS, default=[]): [dict],
-        vol.Optional(CONF_TIMER_ALARM_MEDIA_CONTENT_ID, default=_DEFAULT_TIMER_MEDIA_CONTENT_ID): str,
+        vol.Optional("timer_alarm_items", default=[]): [dict],
     }
 )
 @websocket_api.async_response
@@ -391,9 +382,10 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
         connection.send_error(msg["id"], "not_ready", "Main coordinator not found")
         return
 
-    options = dict(entry.options)
-    shared_client_id = _normalize_value(options.get(CONF_CLIENT_ID))
-    requested_items = [item for item in msg.get(CONF_TIMER_ALARM_ITEMS, []) if isinstance(item, dict)]
+    options = _get_options(entry, get_cached_settings(hass))
+    entry_options = dict(entry.options)
+    shared_client_id = _normalize_value(options.get("client_id"))
+    requested_items = [item for item in msg.get("timer_alarm_items", []) if isinstance(item, dict)]
     manager_targets = managers or ([manager] if manager is not None else [])
     target_manager = _select_manager(manager_targets, requested_items, shared_client_id) or manager
     if not manager_targets or target_manager is None:
@@ -408,12 +400,9 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
         except Exception as err:  # pragma: no cover - defensive path
             _LOGGER.warning("Failed to apply UI timer/alarm update to runtime manager: %s", err)
 
-    options[CONF_TIMER_ALARM_ITEMS] = target_manager.serialize_persisted_items()
-    options[CONF_TIMER_ALARM_PRESETS] = target_manager.get_alarm_presets()
-    options[CONF_TIMER_ALARM_MEDIA_CONTENT_ID] = (
-        _normalize_value(msg.get(CONF_TIMER_ALARM_MEDIA_CONTENT_ID)) or _DEFAULT_TIMER_MEDIA_CONTENT_ID
-    )
-    hass.config_entries.async_update_entry(entry, options=options)
+    entry_options["timer_alarm_items"] = target_manager.serialize_persisted_items()
+    entry_options["timer_alarm_presets"] = target_manager.get_alarm_presets()
+    hass.config_entries.async_update_entry(entry, options=entry_options)
 
     connection.send_result(msg["id"], {"saved": True})
 

@@ -14,8 +14,6 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import Event, HomeAssistant, callback
 
 from .const import (
-    CONF_CLIENT_ID,
-    CONF_TIMER_ALARM_TOKEN,
     DOMAIN,
     EVENT_ACTIVE_COMMAND,
     EVENT_DIALOG_MESSAGE,
@@ -25,6 +23,7 @@ from .normalize import _normalize_value
 from .src.service import dialog_service
 from .src.service.dialog_runtime import set_current_hass
 from .utils import _get_entry, _get_options
+from .storage.settings_storage import get_cached_settings
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +59,7 @@ def _entry_token(hass: HomeAssistant) -> str:
     entry = _get_entry(hass)
     if entry is None:
         return ""
-    return _normalize_value(_get_options(entry).get(CONF_TIMER_ALARM_TOKEN))
+    return _normalize_value(_get_options(entry, get_cached_settings(hass)).get("remote_token"))
 
 
 def _is_authorized(request: web.Request, hass: HomeAssistant) -> bool:
@@ -99,7 +98,7 @@ def _extract_client_id(payload: dict[str, Any], options: dict[str, Any]) -> str:
         if client_id:
             return client_id
 
-    return _normalize_value(options.get(CONF_CLIENT_ID))
+    return _normalize_value(options.get("client_id"))
 
 
 def _extract_device_id(payload: dict[str, Any]) -> str:
@@ -224,7 +223,7 @@ class DialogCommandsView(HomeAssistantView):
         if not isinstance(payload, dict):
             return _json_response({"error": "invalid_payload"}, status=400)
 
-        options = _get_options(entry)
+        options = _get_options(entry, get_cached_settings(hass))
         dialog_payload = _build_words_scripts_payload(payload, options)
         if not _extract_command_text(dialog_payload):
             return _json_response({"error": "command_required"}, status=400)

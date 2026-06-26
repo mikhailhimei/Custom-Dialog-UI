@@ -20,7 +20,6 @@ from .normalize import (
 )
 
 from .const import (
-    CONF_CLIENT_ID,
     DOMAIN,
     EVENT_DIALOG_MESSAGE,
 )
@@ -72,10 +71,10 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
     if entry is None:
         raise HomeAssistantError("Dialog Custom UI integration entry not found")
 
-    options = _get_options(entry)
+    options = _get_options(entry, get_cached_settings(hass))
     variables = _parse_variables(call.data.get(ATTR_VARIABLES))
     payload = {
-        ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get(CONF_CLIENT_ID)),
+        ATTR_CLIENT_ID: _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get("client_id")),
         ATTR_DEVICE_ID: _normalize_value(call.data.get(ATTR_DEVICE_ID)),
         ATTR_ACTION_TYPE: _normalize_value(call.data.get(ATTR_ACTION_TYPE)),
         ATTR_VARIABLES: variables,

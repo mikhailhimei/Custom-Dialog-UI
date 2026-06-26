@@ -12,7 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .voice.yandex_tts import _async_synthesize, _tts_options_from_entry
+from .voice.yandex_tts import _async_synthesize, _async_tts_options_from_storage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class YandexTTSProvider(TextToSpeechEntity):
     ) -> TtsAudioType:
         """Convert text to speech using Yandex API."""
         try:
-            tts_options = _tts_options_from_entry(self.config_entry)
+            tts_options = await _async_tts_options_from_storage(self.hass)
             extension, audio_bytes = await _async_synthesize(self.hass, message, tts_options)
 
             codec = extension

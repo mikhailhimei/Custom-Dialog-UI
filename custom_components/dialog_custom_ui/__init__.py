@@ -9,13 +9,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_IP_ADDRESS
 from homeassistant.core import HomeAssistant
 
-from .src.api.config_api import async_register_websockets
-from .const import (
-    CONF_VOICE_AGENT_IP,
-    CONF_VOICE_AGENT_USER_ID,
-    DOMAIN,
-    MAX_LOG_ENTRIES,
-)
+from .src.api.logs_api import async_register_logs_websockets
+from .const import DOMAIN, MAX_LOG_ENTRIES
 from .coordinator import DialogCommandCoordinator
 from .dialog_http import async_register_dialog_http
 from .src.api.script_action.script_actions_api import async_register_script_actions_websockets
@@ -43,7 +38,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     set_current_hass(hass)
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN].setdefault("logs", deque(maxlen=MAX_LOG_ENTRIES))
-    async_register_websockets(hass)
+    async_register_logs_websockets(hass)
     async_register_script_actions_websockets(hass)
     async_register_timer_requests_websockets(hass)
     async_register_alarm_requests_websockets(hass)
@@ -115,7 +110,7 @@ async def _async_migrate_legacy_voice_agent_options(
     entry: ConfigEntry,
 ) -> None:
     options = dict(entry.options)
-    if options.get(CONF_VOICE_AGENT_IP) and options.get(CONF_VOICE_AGENT_USER_ID):
+    if options.get("voice_agent_ip") and options.get("voice_agent_user_id"):
         return
 
     legacy_entries = hass.config_entries.async_entries("custom_voice_agent")
@@ -128,6 +123,6 @@ async def _async_migrate_legacy_voice_agent_options(
     if not migrated_ip or not migrated_user_id:
         return
 
-    options[CONF_VOICE_AGENT_IP] = migrated_ip
-    options[CONF_VOICE_AGENT_USER_ID] = migrated_user_id
+    options["voice_agent_ip"] = migrated_ip
+    options["voice_agent_user_id"] = migrated_user_id
     hass.config_entries.async_update_entry(entry, options=options)
