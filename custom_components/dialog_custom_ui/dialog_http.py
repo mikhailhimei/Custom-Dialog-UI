@@ -63,10 +63,25 @@ def _entry_token(hass: HomeAssistant) -> str:
 
 
 def _is_authorized(request: web.Request, hass: HomeAssistant) -> bool:
-    expected_token = _entry_token(hass)
-    if not expected_token:
-        return True
-    return request.headers.get("Authorization", "") == expected_token
+    entry = _get_entry(hass)
+    if entry is None:
+        return False
+    
+    options = _get_options(entry, get_cached_settings(hass))
+    
+    # Check if API commands are enabled
+    api_commands_enabled = options.get("api_commands_enabled", False)
+    if not api_commands_enabled:
+        return False
+    
+    # If no token is set, deny access
+    api_commands_token = options.get("api_commands_token", "")
+    if not api_commands_token:
+        return False
+    
+    # Verify the token from Authorization header
+    auth_header = request.headers.get("Authorization", "")
+    return auth_header == f"Bearer {api_commands_token}"
 
 
 def _extract_command_text(payload: dict[str, Any]) -> str:

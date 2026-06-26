@@ -21,8 +21,8 @@ interface TimerAlarmProps {
 }
 
 interface GeneralProps {
-  data: Pick<Settings, "active_remout" | "is_admin" | "theme">;
-  onChange: (data: Pick<Settings, "active_remout" | "is_admin" | "theme">) => void;
+  data: Pick<Settings, "active_remout" | "is_admin" | "theme" | "client_id" | "api_commands_enabled" | "api_commands_token">;
+  onChange: (data: Pick<Settings, "active_remout" | "is_admin" | "theme" | "client_id" | "api_commands_enabled" | "api_commands_token">) => void;
 }
 
 export const SettingsForm = ({ data, onChange }: YandexProps) => {
@@ -107,6 +107,13 @@ export const GeneralSettingsForm = ({ data, onChange }: GeneralProps) => {
 
   return (
     <div className={styles.form}>
+      <Input 
+        label="Client ID" 
+        value={data.client_id ?? ""} 
+        onChange={(e) => updateField("client_id", e.target.value)} 
+        placeholder="Уникальный идентификатор клиента"
+      />
+
       <label className={styles.field}>
         <span className={styles.label}>Theme</span>
         <select className={styles.input} value={data.theme ?? "dark"} onChange={(e) => updateField("theme", e.target.value)}>
@@ -124,6 +131,21 @@ export const GeneralSettingsForm = ({ data, onChange }: GeneralProps) => {
         <input type="checkbox" checked={Boolean(data.active_remout)} onChange={(e) => updateField("active_remout", e.target.checked)} />
         <span>Active remout</span>
       </label>
+
+      <label className={styles.checkboxRow}>
+        <input type="checkbox" checked={Boolean(data.api_commands_enabled)} onChange={(e) => updateField("api_commands_enabled", e.target.checked)} />
+        <span>Enable API /api/dialog/commands</span>
+      </label>
+
+      {data.api_commands_enabled && (
+        <Input 
+          label="API Commands Token" 
+          value={data.api_commands_token ?? ""} 
+          onChange={(e) => updateField("api_commands_token", e.target.value)}
+          placeholder="Ключ доступа для /api/dialog/commands"
+          type="password"
+        />
+      )}
     </div>
   );
 };

@@ -33,7 +33,7 @@ export function useApiScripts() {
 
   useEffect(() => {
     loadScripts();
-  }, [loadScripts]);
+  }, []);
 
   const getScriptAction = async (
     uuid: string

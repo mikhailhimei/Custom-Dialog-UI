@@ -32,12 +32,14 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   private loadStyles() {
-    // Load CSS from the same path as the JS module
-    const cssPath = import.meta.url.replace(".js", ".css");
-    if (!document.querySelector(`link[href="${cssPath}"]`)) {
+    // Load CSS from the static path registered by panel.py
+    const cssFileName = 'dialog-custom-ui-panel.css';
+    const cssUrl = `/dialog_custom_ui_static/${cssFileName}`;
+    
+    if (!document.querySelector(`link[href*="${cssFileName}"]`)) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = cssPath;
+      link.href = cssUrl;
       document.head.appendChild(link);
     }
   }

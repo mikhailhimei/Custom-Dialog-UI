@@ -31,6 +31,9 @@ export interface Settings {
   theme: string;
   is_admin: boolean;
   active_remout: boolean;
+  client_id?: string;
+  api_commands_enabled: boolean;
+  api_commands_token?: string;
 }
 
 export interface RemoteSettings {
