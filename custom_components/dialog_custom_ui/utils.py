@@ -54,6 +54,8 @@ def _get_options(entry: ConfigEntry, settings: dict[str, Any] | None = None) -> 
         "external_event_bridge_enabled": active_remote,
         "remote_active_search_enabled": active_remote,
         "remote_token": _normalize_value(remote.get("token")),
+        "api_commands_enabled": bool(settings.get("api_commands_enabled")),
+        "api_commands_token": _normalize_value(settings.get("api_commands_token")),
         "timeout": 10,
         "timer_alarm_items": list(stored.get("timer_alarm_items", [])),
         "timer_alarm_presets": list(stored.get("timer_alarm_presets", [])),
