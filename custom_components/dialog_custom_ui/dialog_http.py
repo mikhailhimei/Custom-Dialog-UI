@@ -223,7 +223,7 @@ class DialogCommandsView(HomeAssistantView):
         if not isinstance(payload, dict):
             return _json_response({"error": "invalid_payload"}, status=400)
 
-        options = _get_options(entry, get_cached_settings(hass))
+        options = _get_options(entry, get_cached_settings(self.hass))
         dialog_payload = _build_words_scripts_payload(payload, options)
         if not _extract_command_text(dialog_payload):
             return _json_response({"error": "command_required"}, status=400)

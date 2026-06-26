@@ -22,12 +22,24 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   connectedCallback() {
+    this.loadStyles();
     this.render();
   }
 
   disconnectedCallback() {
     this.root?.unmount();
     this.root = undefined;
+  }
+
+  private loadStyles() {
+    // Load CSS from the same path as the JS module
+    const cssPath = import.meta.url.replace(".js", ".css");
+    if (!document.querySelector(`link[href="${cssPath}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = cssPath;
+      document.head.appendChild(link);
+    }
   }
 
   private render() {
