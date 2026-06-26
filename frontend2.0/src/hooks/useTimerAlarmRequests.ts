@@ -109,8 +109,10 @@ export function useTimerAlarmRequests() {
   }, [loadAlarms, loadAlarmTimeWidgets, loadTimers]);
 
   useEffect(() => {
+    // Load timers/alarms once on mount to avoid continuous polling
     loadAll();
-  }, [loadAll]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createTimer = async (deviceId: string, minutes: number) => {
     const timerTime = {

@@ -29,8 +29,12 @@ export function useSettings() {
   }, [api]);
 
   useEffect(() => {
+    // Run once on mount. `api` is provided by DialogProvider and is stable
+    // for the lifetime of the mounted app, so avoid re-running when `api`
+    // identity changes to prevent polling loops.
     loadScripts();
-  }, [loadScripts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const saveSettings = async (data: Omit<Partial<Settings>, "remout" | "timer_alarm" | "yandex_tts"> & { remout?: Partial<RemoteSettings>; timer_alarm?: Partial<TimerAlarmSettings>; yandex_tts?: Partial<YandexTTS> }) => {

@@ -34,8 +34,14 @@ class DialogCustomUiPanel extends HTMLElement {
   private loadStyles() {
     // Load CSS from the static path registered by panel.py
     const cssFileName = 'dialog-custom-ui-panel.css';
-    const cssUrl = `/dialog_custom_ui_static/${cssFileName}`;
-    
+    // Try to reuse the same version query parameter as the loaded module
+    // (if present) to avoid stale cached CSS. We look for a script tag
+    // that loads the panel JS and copy its search/query string.
+    const moduleScriptName = 'dialog-custom-ui-panel.js';
+    const script = Array.from(document.getElementsByTagName('script')).find((s) => s.src && s.src.includes(moduleScriptName));
+    const search = script && script.src ? (new URL(script.src, window.location.href)).search : '';
+    const cssUrl = `/dialog_custom_ui_static/${cssFileName}${search}`;
+
     if (!document.querySelector(`link[href*="${cssFileName}"]`)) {
       const link = document.createElement("link");
       link.rel = "stylesheet";

@@ -36,6 +36,8 @@ SETTINGS_FALLBACKS: dict[str, Any] = {
     "theme": "light",
     "is_admin": False,
     "active_remout": False,
+    "api_commands_enabled": False,
+    "api_commands_token": "",
 }
 
 
