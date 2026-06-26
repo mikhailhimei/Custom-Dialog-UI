@@ -7,8 +7,32 @@ import type { HassLike } from "../api/dialog-api";
 
 declare global {
   interface Window {
-    hass: HassLike;
+    hass: any;
   }
+}
+
+export function normalizeHass(hass: any): HassLike {
+  if (hass?.connection?.sendMessagePromise) {
+    return hass as HassLike;
+  }
+
+  if (typeof hass?.callWS === "function") {
+    return {
+      connection: {
+        sendMessagePromise: (msg: any) => hass.callWS(msg),
+      },
+      states: hass.states ?? {},
+    };
+  }
+
+  return {
+    connection: {
+      sendMessagePromise: async () => {
+        throw new Error("Home Assistant websocket API is not available");
+      },
+    },
+    states: {},
+  };
 }
 
 export async function createHass(): Promise<HassLike> {
@@ -17,7 +41,7 @@ export async function createHass(): Promise<HassLike> {
 
   // Прод внутри Home Assistant
   if (!url) {
-    return window.hass;
+    return normalizeHass(window.hass);
   }
 
   // Локальная разработка
