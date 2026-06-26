@@ -69,6 +69,10 @@ def _is_authorized(request: web.Request, hass: HomeAssistant) -> bool:
         return False
     
     options = _get_options(entry, get_cached_settings(hass))
+    # Debug: show whether cache exists and keys available (don't log full token)
+    domain_data = hass.data.get(DOMAIN, {})
+    cache_present = bool(domain_data.get("settings_cache"))
+    _LOGGER.debug("Settings cache present=%s, options keys=%s", cache_present, list(options.keys()))
     
     # Check if API commands are enabled
     api_commands_enabled = options.get("api_commands_enabled", False)
@@ -79,7 +83,7 @@ def _is_authorized(request: web.Request, hass: HomeAssistant) -> bool:
     # If no token is set, deny access
     api_commands_token = options.get("api_commands_token", "")
     if not api_commands_token:
-        _LOGGER.debug("Authorization failed: no token configured")
+        _LOGGER.debug("Authorization failed: no token configured in options")
         return False
     
     # Verify the token from Authorization header
@@ -87,7 +91,7 @@ def _is_authorized(request: web.Request, hass: HomeAssistant) -> bool:
     expected = f"Bearer {api_commands_token}"
     result = auth_header == expected
     if not result:
-        _LOGGER.debug(f"Authorization failed: token mismatch. Got: {auth_header[:20]}..., Expected: {expected[:20]}...")
+        _LOGGER.debug("Authorization failed: token mismatch. auth_header=%s, expected_prefix=%s", auth_header[:32], expected[:32])
     return result
 
 
