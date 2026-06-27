@@ -1,3 +1,18 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  font-family:
+    Inter,
+    system-ui,
+    sans-serif;
+  background: #111827;
+  color: white;
+}
+
+.dialog-custom-ui-root {
+  min-height: 100vh;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -10,6 +10,8 @@ const ELEMENT_NAME = "dialog-custom-ui-panel";
 
 class DialogCustomUiPanel extends HTMLElement {
   private root?: ReactDOM.Root;
+  private container?: HTMLDivElement;
+  private shadow?: ShadowRoot;
   private hassValue?: HassLike | null;
 
   set hass(hass: HassLike | null | undefined) {
@@ -22,6 +24,13 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   connectedCallback() {
+    if (!this.shadow) {
+      this.shadow = this.attachShadow({ mode: "open" });
+      this.container = document.createElement("div");
+      this.container.className = "dialog-custom-ui-root";
+      this.shadow.appendChild(this.container);
+    }
+
     this.loadStyles();
     this.render();
   }
@@ -32,22 +41,33 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   private loadStyles() {
-    // Load CSS from the static path registered by panel.py
-    const cssFileName = 'dialog-custom-ui-panel.css';
-    // Try to reuse the same version query parameter as the loaded module
-    // (if present) to avoid stale cached CSS. We look for a script tag
-    // that loads the panel JS and copy its search/query string.
-    const moduleScriptName = 'dialog-custom-ui-panel.js';
-    const script = Array.from(document.getElementsByTagName('script')).find((s) => s.src && s.src.includes(moduleScriptName));
-    const search = script && script.src ? (new URL(script.src, window.location.href)).search : '';
-    const cssUrl = `/dialog_custom_ui_static/${cssFileName}${search}`;
-
-    if (!document.querySelector(`link[href*="${cssFileName}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = cssUrl;
-      document.head.appendChild(link);
+    if (!this.shadow) {
+      return;
     }
+
+    // Load CSS inside this element's shadow root. Home Assistant renders
+    // custom panels inside its own web components, so a document-level
+    // stylesheet can be isolated away and leave the panel unstyled.
+    const cssFileName = "dialog-custom-ui-panel.css";
+    const moduleScriptName = "dialog-custom-ui-panel.js";
+    const script = Array.from(document.getElementsByTagName("script")).find((s) => s.src && s.src.includes(moduleScriptName));
+    const search = script && script.src ? new URL(script.src, window.location.href).search : "";
+    const cssUrl = `/dialog_custom_ui_static/${cssFileName}${search}`;
+    const expectedHref = new URL(cssUrl, window.location.href).href;
+
+    const existingLink = this.shadow.querySelector<HTMLLinkElement>(`link[data-dialog-custom-ui-styles="true"]`);
+    if (existingLink) {
+      if (existingLink.href !== expectedHref) {
+        existingLink.href = cssUrl;
+      }
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = cssUrl;
+    link.dataset.dialogCustomUiStyles = "true";
+    this.shadow.prepend(link);
   }
 
   private render() {
@@ -55,8 +75,12 @@ class DialogCustomUiPanel extends HTMLElement {
       return;
     }
 
+    if (!this.container) {
+      return;
+    }
+
     if (!this.root) {
-      this.root = ReactDOM.createRoot(this);
+      this.root = ReactDOM.createRoot(this.container);
     }
 
     this.root.render(

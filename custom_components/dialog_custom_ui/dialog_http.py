@@ -29,6 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _COMMANDS_URL = "/api/dialog/commands"
 _EVENTS_URL = "/api/dialog/events"
+_EVENT_URL = "/api/dialog/event"
 _KEEPALIVE_SECONDS = 15
 
 
@@ -44,6 +45,7 @@ def async_register_dialog_http(hass: HomeAssistant) -> None:
 
     hass.http.register_view(DialogCommandsView(hass))
     hass.http.register_view(DialogEventsView(hass, broker))
+    hass.http.register_view(DialogEventView(hass, broker))
     broker.async_start()
 
 
@@ -74,9 +76,9 @@ def _is_authorized(request: web.Request, hass: HomeAssistant) -> bool:
     cache_present = bool(domain_data.get("settings_cache"))
     _LOGGER.debug("Settings cache present=%s, options keys=%s", cache_present, list(options.keys()))
     
-    # Check if API commands are enabled
+    # Check if external API is enabled for commands and events
     api_commands_enabled = options.get("api_commands_enabled", False)
-    _LOGGER.debug(f"API commands enabled: {api_commands_enabled}")
+    _LOGGER.debug(f"API enabled: {api_commands_enabled}")
     if not api_commands_enabled:
         return False
     
@@ -269,11 +271,9 @@ class DialogCommandsView(HomeAssistantView):
         return _json_response(response)
 
 
-class DialogEventsView(HomeAssistantView):
+class _BaseDialogEventsView(HomeAssistantView):
     """Expose local active commands as SSE and accept dialog_message events."""
 
-    url = _EVENTS_URL
-    name = "api:dialog_custom_ui:events"
     requires_auth = False
 
     def __init__(self, hass: HomeAssistant, broker: DialogEventBroker) -> None:
@@ -343,3 +343,17 @@ class DialogEventsView(HomeAssistantView):
         event_data = _normalize_event_data(data)
         self.hass.bus.async_fire(event_type, event_data)
         return _json_response({"accepted": True, "event": event_type})
+
+
+class DialogEventsView(_BaseDialogEventsView):
+    """Plural dialog events endpoint."""
+
+    url = _EVENTS_URL
+    name = "api:dialog_custom_ui:events"
+
+
+class DialogEventView(_BaseDialogEventsView):
+    """Singular dialog event endpoint alias."""
+
+    url = _EVENT_URL
+    name = "api:dialog_custom_ui:event"

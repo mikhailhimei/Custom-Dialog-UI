@@ -23,7 +23,6 @@
     "astral",
     "pytz",
     "httpx",
-    "pymongo",
     "num2words",
     "pymorphy3",
     "python-dotenv",
