@@ -508,8 +508,6 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
         if search_result:
             return search_result
 
-        r.set(f'MISS_COMMAND:{client_id}', str({"parent_type": "miss", "client_text": client_text}), ex=120)
-
         return build_text_response(
             dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
             dialog_cms_response.get("endStatus", True),
@@ -528,8 +526,6 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
                 True,
             )]
         return await execute_top_level_command(hass, selected_node, client_id, device_id, client_text, command_data)
-
-    r.set(f'MISS_COMMAND:{client_id}', str({"parent_type": "miss", "client_text": client_text}), ex=120)
 
     return build_text_response(
         dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
