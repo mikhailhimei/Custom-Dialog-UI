@@ -1,5 +1,7 @@
 import React from 'react';
 
+import styles from './Pagination.module.scss';
+
 interface Props {
   page: number;
   totalPages: number;
@@ -14,19 +16,21 @@ export const Pagination = ({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="pagination">
+    <div className={styles.pagination}>
       <button
+        className={styles.button}
         disabled={page === 1}
         onClick={() => onChange(page - 1)}
       >
         Назад
       </button>
 
-      <span>
+      <span className={styles.label}>
         {page} / {totalPages}
       </span>
 
       <button
+        className={styles.button}
         disabled={page === totalPages}
         onClick={() => onChange(page + 1)}
       >
