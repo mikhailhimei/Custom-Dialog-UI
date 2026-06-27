@@ -1,4 +1,4 @@
-﻿# Dialog Custom UI for Home Assistant
+# Dialog Custom UI for Home Assistant
 
 Кастомная интеграция добавляет отдельную боковую вкладку `Dialog`, где можно:
 
@@ -19,8 +19,8 @@
 
 ## Frontend (React): dev/prod
 
-JS панели переведен на React-рендер с бандлингом через `esbuild`.
-Исходники лежат в `frontend/src`, а Home Assistant по-прежнему загружает файлы из `custom_components/dialog_custom_ui/static`.
+JS панели переведен на React frontend2.0 с бандлингом через Vite.
+Исходники лежат в `frontend2.0`, а Home Assistant загружает собранные файлы из `custom_components/dialog_custom_ui/static`.
 
 1. Установить зависимости:
 
@@ -52,9 +52,7 @@ http://127.0.0.1:5173/?tab=scenarios
 http://127.0.0.1:5173/?tab=create-scenario
 ```
 
-Поддерживаемые значения: `scenarios`, `create-scenario`, `timer-alarm`, `json`, `logs`, `settings`.
-Также работают короткие алиасы: `create`, `timer`, `alarm`, `log`, `setting`.
-Если `tab` не указан, dev-стенд открывает `scenarios` по умолчанию.
+Маршруты frontend2.0 открываются через hash-router; если маршрут не указан, открывается главная страница.
 
 3. Dev для Home Assistant (watch-сборка в `custom_components/.../static`):
 
@@ -145,10 +143,9 @@ npm run build
 # 4) Проверка что собралось
 git status
 git diff -- custom_components/dialog_custom_ui/static/dialog-custom-ui-panel.js
-git diff -- custom_components/dialog_custom_ui/static/dialog-custom-ui-timer-alarm.js
 
 # 5) Коммит релиза
-git add custom_components/dialog_custom_ui/manifest.json README.md package.json package-lock.json frontend custom_components/dialog_custom_ui/static
+git add custom_components/dialog_custom_ui/manifest.json README.md package.json package-lock.json frontend2.0 custom_components/dialog_custom_ui/static
 git commit -m "release: prepare v0.3.3 (react ui + localhost dev + scenario tab)"
 
 # 6) Тег и пуш

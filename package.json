@@ -4,10 +4,8 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "vite --config frontend2.0/vite.config.mjs",
-    "dev:ha": "node frontend/scripts/build.mjs --watch --mode=development",
-    "build": "node frontend/scripts/build.mjs --mode=production",
-    "dev:frontend2": "vite --config frontend2.0/vite.config.mjs",
-    "build:frontend2": "vite build --config frontend2.0/vite.config.mjs"
+    "dev:ha": "vite build --watch --config frontend2.0/vite.config.mjs --mode=development",
+    "build": "vite build --config frontend2.0/vite.config.mjs --mode=production"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,7 +18,6 @@
     "react-router-dom": "^7.17.0"
   },
   "devDependencies": {
-    "esbuild": "^0.25.4",
     "sass": "^1.101.0",
     "vite": "^6.4.0"
   }

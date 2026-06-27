@@ -35,10 +35,6 @@ def _redis_url(host: str, port: int, password: str) -> str:
     return f"redis://{host}:{port}/0"
 
 
-MONGODB_HOST = os.getenv("MONGODB_HOST", "192.168.31.83")
-MONGODB_PORT = _env_int("MONGODB_PORT", 27017)
-MONGODB_DB = os.getenv("MONGODB_DB", "dialogs")
-MONGODB_URL = os.getenv("MONGODB_URL") or f"mongodb://{MONGODB_HOST}:{MONGODB_PORT}/"
 
 LLM_HOST = os.getenv("LLM_HOST", "192.168.31.83")
 LLM_PORT = _env_int("LLM_PORT", 11434)

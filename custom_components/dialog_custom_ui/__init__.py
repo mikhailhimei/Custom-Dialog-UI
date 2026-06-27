@@ -27,6 +27,7 @@ from .timer_alarm.timer_alarm_manager_wrapper import async_register_timer_alarm_
 from .panel import async_register_panel
 from .services import async_register_services, async_unregister_services
 from .src.service.dialog_runtime import set_current_hass
+from .src.service.cms_service import async_load_cms_cache
 from .voice.voice_agent import DialogCustomUiVoiceAgent
 from .voice.yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
@@ -50,6 +51,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     async_register_assistant_settings_websockets(hass)
     async_register_settings_websockets(hass)
     async_register_timer_alarm_websockets(hass)
+    await async_load_cms_cache(hass)
     async_register_dialog_http(hass)
     async_register_services(hass)
     await async_register_tts_service(hass)
@@ -65,6 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async_register_services(hass)
     await async_register_tts_service(hass)
     await _async_migrate_legacy_voice_agent_options(hass, entry)
+    await async_load_cms_cache(hass)
     await async_register_panel(hass)
     coordinator = DialogCommandCoordinator(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator

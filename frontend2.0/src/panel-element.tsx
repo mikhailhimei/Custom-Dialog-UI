@@ -42,12 +42,18 @@ class DialogCustomUiPanel extends HTMLElement {
     const search = script && script.src ? (new URL(script.src, window.location.href)).search : '';
     const cssUrl = `/dialog_custom_ui_static/${cssFileName}${search}`;
 
-    if (!document.querySelector(`link[href*="${cssFileName}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = cssUrl;
-      document.head.appendChild(link);
+    const existingLink = document.querySelector<HTMLLinkElement>(`link[href*="${cssFileName}"]`);
+    if (existingLink) {
+      if (existingLink.href !== new URL(cssUrl, window.location.href).href) {
+        existingLink.href = cssUrl;
+      }
+      return;
     }
+
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = cssUrl;
+    document.head.appendChild(link);
   }
 
   private render() {
