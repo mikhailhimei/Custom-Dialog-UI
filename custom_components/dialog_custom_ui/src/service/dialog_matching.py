@@ -1249,6 +1249,10 @@ def search_direct_entries(node, vars):
     return result
 
 
+def _is_external_service_answer_type(answer_type):
+    return str(answer_type or "").strip().lower() in {"ha_storage", "ha", "external", "redis"}
+
+
 def apply_main_command(nodes):
     if not nodes:
         return nodes
@@ -1276,14 +1280,14 @@ def apply_main_command(nodes):
         return nodes
 
     # =========================
-    # 2. ищем redis
+    # 2. ищем внешнюю HA-обработку
     # =========================
-    redis_nodes = [n for n in nodes if n.get("answerType") == "redis"]
+    external_nodes = [n for n in nodes if _is_external_service_answer_type(n.get("answerType"))]
 
     # =========================
-    # 3. если redis НЕТ → первый = main
+    # 3. если внешней HA-обработки НЕТ → первый = main
     # =========================
-    if not redis_nodes:
+    if not external_nodes:
         for n in nodes:
             n["execution_command"] = False
 
@@ -1291,12 +1295,12 @@ def apply_main_command(nodes):
         return nodes
 
     # =========================
-    # 4. выбираем лучший redis
+    # 4. выбираем лучшую внешнюю HA-обработку
     # =========================
-    def redis_priority(n):
+    def external_priority(n):
         template_var = n.get("template_var") or False
 
-        # 🥇 redis без templateVar
+        # 🥇 внешняя обработка без templateVar
         if not template_var:
             return 2
         return 1
@@ -1304,8 +1308,8 @@ def apply_main_command(nodes):
     best_node = None
     best_priority = -1
 
-    for node in redis_nodes:
-        priority = redis_priority(node)
+    for node in external_nodes:
+        priority = external_priority(node)
 
         if priority > best_priority:
             best_priority = priority

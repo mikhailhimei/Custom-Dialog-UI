@@ -9,10 +9,8 @@ from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
 from ...const import DOMAIN, EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
 from ..handler.commands_mapper import generate_ai_response
 from ..utils.dialog_response import build_dialog_response
-from ..utils.redis_init import get_redis
 from ..utils.text_normalize import fix_text
 
-r = get_redis()
 logger = logging.getLogger(__name__)
 # Latest hass instance to avoid stale references
 CURRENT_HASS = None
@@ -67,7 +65,7 @@ def delete_dialog_state_value(key: str, client_id: str, device_id: str):
     store.pop(_dialog_state_key(key, client_id, device_id), None)
 
 
-REDIS_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
+RESPONSE_TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 VOICE_RESPONSE_TYPE_ALIASES = {
     "default": "default",
     "default": "default",
@@ -85,6 +83,13 @@ NEXT_ACTION_COMPONENT_ALIASES = {
     "error": {"children_error", "chidren_error"},
     "miss": set(),
 }
+
+EXTERNAL_SERVICE_ANSWER_TYPES = {"ha_storage", "ha", "external", "redis"}
+
+
+def is_external_service_answer(answer_type):
+    return str(answer_type or "").strip().lower() in EXTERNAL_SERVICE_ANSWER_TYPES
+
 
 
 def _is_feature_enabled(value, default=False):
@@ -217,7 +222,7 @@ async def dialogs_wait(hass, client_id, device_id, timeout=8):
     return None
 
 async def get_service_response(hass, answer_type, command_data, client_id, device_id):
-    if answer_type == 'redis':
+    if is_external_service_answer(answer_type):
         # update module-level hass and start waiting before emitting
         hass = get_current_hass(hass)
         if hass is None:
@@ -264,7 +269,7 @@ def resolve_response_text(response_text, *sources):
                 return str(value)
         return ''
 
-    return REDIS_TEMPLATE_PATTERN.sub(replace_placeholder, response_text)
+    return RESPONSE_TEMPLATE_PATTERN.sub(replace_placeholder, response_text)
 
 
 def has_custom_next_action(next_action, response_type):
