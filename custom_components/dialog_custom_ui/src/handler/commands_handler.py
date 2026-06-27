@@ -1,13 +1,8 @@
 import copy
-import json
 import logging
 import requests
 from ..service.dialog_matching import attach_direct_controls
-from ..utils.redis_init import get_redis
 from ..service.cms_service import *
-from ..config import COMMANDS_KEY
-
-r = get_redis()
 _LOGGER = logging.getLogger(__name__)
 
 EMPTY_COMMANDS_BODY = {
@@ -123,24 +118,6 @@ def normalizeDirectControl(item, attributes):
 # Главная функция
 # ---------------------------
 def get_commands():
-    # Try reading from Redis
-    cached_component = r.get(f'{COMMANDS_KEY}:c')
-    cached_sub_component = r.get(f'{COMMANDS_KEY}:sc')
-    cached_sub_direct_control = r.get(f'{COMMANDS_KEY}:sdc')
-
-    if cached_component and cached_sub_component and cached_sub_direct_control:
-        try:
-            return {
-                "source": "redis",
-                "body": {
-                    "componentDialog": json.loads(cached_component),
-                    "subComponentDialog": json.loads(cached_sub_component),
-                    "subDirectControl": json.loads(cached_sub_direct_control),
-                }
-            }
-        except (TypeError, json.JSONDecodeError):
-            _LOGGER.warning("Ignoring invalid dialog commands cache", exc_info=True)
-
     def fetch_and_normalize(collection, schema_name):
         raw = fetch_all(collection)
         if collection == "sub-direct-controls":
@@ -167,36 +144,18 @@ def get_commands():
         attach_direct_controls(subComponentDialog, sub_direct_by_uuid)
 
         data = {
-                "componentDialog": componentDialog,
-                "subComponentDialog": subComponentDialog,
-                "subDirectControl":subDirectControl
-            }
-            
-            # Save to Redis 1h
-        r.set(f"{COMMANDS_KEY}:c", json.dumps(componentDialog), 60 * 60 * 24)
-        r.set(f"{COMMANDS_KEY}:sc", json.dumps(subComponentDialog), 60 * 60 * 24)
-        r.set(f"{COMMANDS_KEY}:sdc", json.dumps(subDirectControl), 60 * 60 * 24)
+            "componentDialog": componentDialog,
+            "subComponentDialog": subComponentDialog,
+            "subDirectControl": subDirectControl,
+        }
 
-        return {"source": "cms", "body": data}
+        return {"source": "ha_storage", "body": data}
 
     except Exception as e:
         _LOGGER.exception("Failed to load dialog commands")
         return {"source": "error", "body": _empty_commands_body(), "detail": str(e)}
 
 def get_dialog_settings():
-    cached_settings = r.get(f'{COMMANDS_KEY}:settings')
-
-    if cached_settings:
-        try:
-            return {
-                "source": "redis",
-                "body": {
-                    "dialogSettings": json.loads(cached_settings),
-                }
-            }
-        except (TypeError, json.JSONDecodeError):
-            _LOGGER.warning("Ignoring invalid dialog settings cache", exc_info=True)
-
     allowed_keys = {"actionType", "title", "message", "endStatus", "system", "LLM"}
 
     def normalize_dialog_setting(item):
@@ -236,10 +195,8 @@ def get_dialog_settings():
             if (normalized := normalize_dialog_setting(item))
         ]
 
-        r.set(f"{COMMANDS_KEY}:settings", json.dumps(dialog_settings), 60 * 60 * 24)
-
         return {
-            "source": "cms",
+            "source": "ha_storage",
             "body": {
                 "dialogSettings": dialog_settings,
             }

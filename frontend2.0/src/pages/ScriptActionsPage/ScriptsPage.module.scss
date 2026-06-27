@@ -102,3 +102,24 @@
     font-size: 32px;
   }
 }
+.heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.state {
+  color: #8b93a1;
+  font-size: 15px;
+}
