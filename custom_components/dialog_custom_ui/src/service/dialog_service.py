@@ -22,7 +22,6 @@ from ..service.dialog_runtime import (
     delete_dialog_state_value,
     get_current_hass,
     get_voice_response,
-    r,
     store_command_data,
 )
 from ..utils.dialog_response import build_dialog_response
