@@ -15,7 +15,9 @@ from .alarm_persistence import AlarmPersistence
 from ..normalize import _normalize_value
 from .timer_manager import DialogTimerManager
 from ..utils import _get_entry, _get_manager, _get_options, _extract_count
+from ..storage.alarm_requests_storage import async_load_alarm_requests, async_save_alarm_requests
 from ..storage.settings_storage import get_cached_settings
+from ..storage.timer_requests_storage import async_load_timer_requests, async_save_timer_requests
 from ..const import DOMAIN, WS_GET_TIMER_ALARM_CONFIG, WS_SAVE_TIMER_ALARM_CONFIG
 from .timer_alarm_utils import (
     _ALARM_PREFIX,
@@ -30,6 +32,37 @@ from .timer_alarm_utils import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _build_voice_request_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
+    parent_type = _normalize_value(payload.get("parent_type")).lower()
+    if parent_type == "timer_start":
+        timer = _extract_timer_parts(payload.get("children_direct_type"))
+        if timer is None:
+            return None
+        timer_time = f"{timer['hour']:02d}:{timer['minut']:02d}:{timer['second']:02d}"
+        return {
+            "uuid": str(uuid.uuid4()),
+            "name": f"Таймер {timer_time}",
+            "action_type": "create_timer",
+            "device_id": _normalize_value(payload.get("device_id")),
+            "timer_time": timer_time,
+        }
+
+    if parent_type == "alarm_start":
+        alarm_time = _extract_alarm_time(payload.get("children_direct_type"))
+        if not alarm_time:
+            return None
+        return {
+            "uuid": str(uuid.uuid4()),
+            "name": f"Будильник {alarm_time}",
+            "action_type": "create_alarm",
+            "device_id": _normalize_value(payload.get("device_id")),
+            "status": "on",
+            "time": alarm_time,
+        }
+
+    return None
 
 
 class DialogTimerAlarmManager:
@@ -137,7 +170,36 @@ class DialogTimerAlarmManager:
         elif parent_type == "alarm_info":
             commands = await self.alarm_manager.async_handle_alarm_info(client_id, device_id, execution_command)
 
-        return await self._post_save_commands(options, commands)
+        if parent_type not in {"timer_start", "alarm_start"}:
+            return False
+
+        if isinstance(commands, dict) and _normalize_value(commands.get("actionType")).lower() == "error":
+            return False
+
+        await self._persist_voice_request(payload, commands)
+        await self._post_save_commands(options, commands)
+        return True
+
+    async def _persist_voice_request(self, payload: dict[str, Any], commands: dict[str, Any] | None) -> None:
+        if not isinstance(payload, dict):
+            return
+
+        if isinstance(commands, dict) and _normalize_value(commands.get("actionType")).lower() == "error":
+            return
+
+        request_payload = _build_voice_request_payload(payload)
+        if request_payload is None:
+            return
+
+        if request_payload.get("action_type") == "create_timer":
+            timer_requests = await async_load_timer_requests(self.hass)
+            timer_requests.append(request_payload)
+            await async_save_timer_requests(self.hass, timer_requests)
+            return
+
+        alarm_requests = await async_load_alarm_requests(self.hass)
+        alarm_requests.append(request_payload)
+        await async_save_alarm_requests(self.hass, alarm_requests)
 
     def get_timer_items(self) -> list[dict[str, Any]]:
         return self.timer_manager.get_timer_items()
