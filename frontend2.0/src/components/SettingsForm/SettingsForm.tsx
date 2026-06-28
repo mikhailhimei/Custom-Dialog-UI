@@ -134,7 +134,7 @@ export const GeneralSettingsForm = ({ data, onChange }: GeneralProps) => {
 
       <label className={styles.checkboxRow}>
         <input type="checkbox" checked={Boolean(data.api_commands_enabled)} onChange={(e) => updateField("api_commands_enabled", e.target.checked)} />
-        <span>Enable API /api/dialog/commands</span>
+        <span>Enable API (/api/dialog/commands, /api/dialog/events, /api/dialog/event)</span>
       </label>
 
       {data.api_commands_enabled && (
@@ -142,7 +142,7 @@ export const GeneralSettingsForm = ({ data, onChange }: GeneralProps) => {
           label="API Commands Token" 
           value={data.api_commands_token ?? ""} 
           onChange={(e) => updateField("api_commands_token", e.target.value)}
-          placeholder="Ключ доступа для /api/dialog/commands"
+          placeholder="Ключ доступа для API endpoints"
           type="password"
         />
       )}

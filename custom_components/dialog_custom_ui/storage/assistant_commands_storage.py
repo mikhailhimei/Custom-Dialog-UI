@@ -7,6 +7,8 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
+from .cms_cache import update_cms_cache_collection
+
 _STORAGE_VERSION = 1
 _STORAGE_KEY = "dialog_custom_ui_assistant_commands"
 
@@ -34,4 +36,6 @@ async def async_save_assistant_commands(
     assistant_commands: list[dict[str, Any]],
 ) -> None:
     store = _get_store(hass)
-    await store.async_save(_normalize_assistant_commands(assistant_commands))
+    normalized = _normalize_assistant_commands(assistant_commands)
+    await store.async_save(normalized)
+    update_cms_cache_collection(hass, "commands", normalized)

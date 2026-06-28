@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from urllib.parse import quote
 
 
 def _load_dotenv() -> None:
@@ -29,25 +28,11 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-def _redis_url(host: str, port: int, password: str) -> str:
-    if password:
-        return f"redis://:{quote(password, safe='')}@{host}:{port}/0"
-    return f"redis://{host}:{port}/0"
-
-
-MONGODB_HOST = os.getenv("MONGODB_HOST", "192.168.31.83")
-MONGODB_PORT = _env_int("MONGODB_PORT", 27017)
-MONGODB_DB = os.getenv("MONGODB_DB", "dialogs")
-MONGODB_URL = os.getenv("MONGODB_URL") or f"mongodb://{MONGODB_HOST}:{MONGODB_PORT}/"
 
 LLM_HOST = os.getenv("LLM_HOST", "192.168.31.83")
 LLM_PORT = _env_int("LLM_PORT", 11434)
 LLM_BASE_URL = (os.getenv("LLM_BASE_URL") or f"http://{LLM_HOST}:{LLM_PORT}").rstrip("/")
 
-REDIS_HOST = os.getenv("REDIS_HOST", "192.168.31.83")
-REDIS_PORT = _env_int("REDIS_PORT", 6980)
-REDIS_PASSWD = os.getenv("REDIS_PASSWD", "132143154D")
-REDIS_URL = os.getenv("REDIS_URL") or _redis_url(REDIS_HOST, REDIS_PORT, REDIS_PASSWD)
 
 COMMANDS_KEY = "COMMANDS_CMS"
 DIALOG_MESSAGE_KEY = "DIALOG_MESSAGE"

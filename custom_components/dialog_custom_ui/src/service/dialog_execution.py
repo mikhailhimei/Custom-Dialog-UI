@@ -28,6 +28,7 @@ from ..service.dialog_runtime import (
     miss_commands,
     resolve_next_action_uuid,
     resolve_default_response_type,
+    is_external_service_answer,
     set_current_node_state,
     set_dialog_state_value,
     should_store_current_node,
@@ -239,7 +240,7 @@ async def execute_top_level_command(hass, node, client_id, device_id, client_tex
             elif response_type != 'miss' and uuid and not end_status:
                 set_current_node_state(client_id, uuid, device_id, parent_type=node.get('actionType'))
         else:
-            if answer_type == 'redis':
+            if is_external_service_answer(answer_type):
                 response_text = get_voice_response(node, 'error', {"commands": client_text, "client_id": client_id}) or response_text
                 uuid = resolve_next_action_uuid(next_action, 'error', fallback_uuid=uuid)
 
@@ -304,7 +305,7 @@ async def execute_top_level_template(
                         set_current_node_state(client_id, node.get('uuid'), device_id, error_branch=True, parent_type=node.get('actionType'))
                 else:
                     set_current_node_state(client_id, uuid, device_id, parent_type=node.get('actionType'))
-        elif answer_type == 'redis':
+        elif is_external_service_answer(answer_type):
             response_text = get_voice_response(node, 'error', {"commands": client_text, "client_id": client_id}) or response_text
             uuid = resolve_next_action_uuid(next_action, 'error')
             if not uuid:
@@ -478,7 +479,7 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
                 delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
                 delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
         else:
-            if answer_type == 'redis':
+            if is_external_service_answer(answer_type):
                 response_text = (
                     get_voice_response(found, 'error', {"commands": client_text, "client_id": client_id})
                     or get_voice_response(active_node, 'error', {"commands": client_text, "client_id": client_id})

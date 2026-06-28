@@ -36,6 +36,8 @@ export const ScriptsPage = () => {
     
     scriptData,
 
+    loadScripts,
+
     saveScript,
     updateScript,
 
@@ -67,11 +69,13 @@ export const ScriptsPage = () => {
 
   const handlerUpdateSaveScript = async () =>{
     if (isEdit){
-      const uuid  = formData?.uuid
+      const uuid = formData?.uuid;
 
-      delete formData?.uuid
+      if (!uuid) return;
 
-      await updateScript(uuid, formData)
+      const { uuid: _uuid, ...payload } = formData;
+
+      await updateScript(uuid, payload)
     }else{
 
       await saveScript(formData)
@@ -113,7 +117,7 @@ export const ScriptsPage = () => {
       )}
 
       <div className={styles.list}>
-        {scripts?.map((script) => (
+        {scripts?.script_actions.map((script) => (
           <Card
             key={script.uuid}
             title={script.title}
@@ -127,9 +131,7 @@ export const ScriptsPage = () => {
       <Pagination
         page={scripts?.page || 1}
         totalPages={scripts?.total_pages || 1}
-        onChange={(page) => {
-          console.log(page);
-        }}
+        onChange={loadScripts}
       />
 
       <Modal
