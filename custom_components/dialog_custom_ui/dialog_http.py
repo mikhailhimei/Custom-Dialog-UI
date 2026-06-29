@@ -253,8 +253,6 @@ class DialogCommandsView(HomeAssistantView):
 
         options = _get_options(entry, get_cached_settings(self.hass))
         dialog_payload = _build_words_scripts_payload(payload, options)
-        if not _extract_command_text(dialog_payload):
-            return _json_response({"error": "command_required"}, status=400)
 
         try:
             set_current_hass(self.hass)
