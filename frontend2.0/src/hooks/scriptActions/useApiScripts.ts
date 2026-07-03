@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useDialogApi } from "../../context/DialogContext";
 
@@ -25,6 +25,7 @@ export function useApiScripts() {
   const [loading, setLoading] = useState(true);
   const [scripts, setScripts] =
     useState<ScriptsResponse | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const loadScripts = useCallback(async (page = 1) => {
     setLoading(true);
@@ -42,7 +43,12 @@ export function useApiScripts() {
   }, [api]);
 
   useEffect(() => {
-    loadScripts();
+    if (hasLoadedRef.current) {
+      return;
+    }
+
+    hasLoadedRef.current = true;
+    void loadScripts();
   }, [loadScripts]);
 
   const getScriptAction = async (

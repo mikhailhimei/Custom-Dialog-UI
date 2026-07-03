@@ -4,13 +4,19 @@ import ReactDOM from "react-dom/client";
 import { AppRoot } from "./app/AppRoot";
 import type { HassLike } from "./api/dialog-api";
 
-import "./styles/globals.css";
-
 const ELEMENT_NAME = "dialog-custom-ui-panel";
+const STYLE_ID = "dialog-custom-ui-style";
 
 class DialogCustomUiPanel extends HTMLElement {
   private root?: ReactDOM.Root;
   private hassValue?: HassLike | null;
+
+  private ensureShadowRoot(): ShadowRoot {
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+    }
+    return this.shadowRoot as ShadowRoot;
+  }
 
   set hass(hass: HassLike | null | undefined) {
     this.hassValue = hass;
@@ -22,7 +28,8 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   connectedCallback() {
-    this.injectStyles();
+    this.ensureShadowRoot();
+    void this.loadStyles();
     this.render();
   }
 
@@ -31,40 +38,62 @@ class DialogCustomUiPanel extends HTMLElement {
     this.root = undefined;
   }
 
-  /**
-   * 🔥 ВАЖНО: теперь мы НЕ используем <link>
-   */
-  private injectStyles() {
-  const STYLE_ID = "dialog-custom-ui-style";
+  private async loadStyles() {
+    const cssFileName = "dialog-custom-ui-panel.css";
+    const cssUrl = `/dialog_custom_ui_static/${cssFileName}?v=${Date.now()}`;
+    const shadow = this.ensureShadowRoot();
 
-  if (document.getElementById(STYLE_ID)) return;
+    if (shadow.getElementById(STYLE_ID)) {
+      return;
+    }
 
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-
-  // ⚠️ берем уже СКОМПИЛЕННЫЙ CSS из document
-  const css = Array.from(document.styleSheets)
-    .map((s) => {
-      try {
-        return Array.from(s.cssRules || [])
-          .map((r) => r.cssText)
-          .join("\n");
-      } catch {
-        return "";
+    try {
+      const response = await fetch(cssUrl, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`Failed to load panel styles: ${response.status}`);
       }
-    })
-    .join("\n");
 
-  style.textContent = css;
+      const css = await response.text();
+      if (!css) {
+        return;
+      }
 
-  document.head.appendChild(style);
-}
+      const style = document.createElement("style");
+      style.id = STYLE_ID;
+      style.setAttribute("data-dialog-ui", "true");
+      style.textContent = css;
+      shadow.appendChild(style);
+      return;
+    } catch (error) {
+      console.warn(
+        "[dialog_custom_ui] Failed to inject panel styles into shadow root, falling back to link element.",
+        error
+      );
+    }
+
+    let link = shadow.querySelector<HTMLLinkElement>(
+      `link[data-dialog-ui="true"]`
+    );
+
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = cssUrl;
+      link.setAttribute("data-dialog-ui", "true");
+      shadow.appendChild(link);
+      return;
+    }
+
+    link.href = cssUrl;
+  }
 
   private render() {
     if (!this.isConnected) return;
 
+    const shadow = this.ensureShadowRoot();
+
     if (!this.root) {
-      this.root = ReactDOM.createRoot(this);
+      this.root = ReactDOM.createRoot(shadow);
     }
 
     this.root.render(
