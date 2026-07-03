@@ -12,6 +12,7 @@ from .timer_alarm_utils import (
     _default_timezone_name,
     _duration_to_seconds,
     _format_datetime,
+    _parse_datetime,
     _safe_int,
     _seconds_to_duration,
     _seconds_to_minute_phrase,
@@ -189,7 +190,6 @@ class DialogTimerManager:
             remaining_seconds = _safe_int(entry.get("remaining_seconds"))
             paused = bool(entry.get("paused"))
             ends_at = float(entry.get("ends_at") or (now_ts + remaining_seconds))
-            remaining_view = remaining_seconds if paused else max(0, int(ends_at - now_ts))
             items.append(
                 {
                     "id": timer_id,
@@ -202,10 +202,6 @@ class DialogTimerManager:
                     "time": {
                         "count_timer": _seconds_to_duration(max(1, total_seconds)),
                         "date_end": _format_datetime(ends_at, timezone_name),
-                        "timezone": timezone_name,
-                        "time_zone": timezone_name,
-                        "remaining_seconds": remaining_view,
-                        "total_seconds": total_seconds,
                     },
                 }
             )
@@ -253,6 +249,11 @@ class DialogTimerManager:
         for timer_id, item in incoming_timers.items():
             time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
             duration = _duration_to_seconds(_normalize_value(time_data.get("count_timer")))
+            date_end = _normalize_value(time_data.get("date_end"))
+            if date_end:
+                end_dt = _parse_datetime(date_end, "")
+                if end_dt is not None:
+                    duration = max(0, int(end_dt.timestamp() - datetime.now().timestamp()))
             if duration <= 0:
                 duration = _safe_int(time_data.get("remaining_seconds")) or _safe_int(time_data.get("total_seconds"))
             if duration <= 0:

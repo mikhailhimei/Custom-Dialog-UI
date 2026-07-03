@@ -217,7 +217,6 @@ def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
             remaining_seconds = _safe_int(entry.get("remaining_seconds"))
             paused = bool(entry.get("paused"))
             ends_at = float(entry.get("ends_at") or (now_ts + remaining_seconds))
-            remaining_view = remaining_seconds if paused else max(0, int(ends_at - now_ts))
             items.append(
                 {
                     "id": _normalize_value(timer_id or entry.get("id")),
@@ -230,10 +229,6 @@ def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
                     "time": {
                         "count_timer": _seconds_to_duration(max(1, total_seconds)),
                         "date_end": _format_datetime(ends_at, timezone_name),
-                        "timezone": timezone_name,
-                        "time_zone": timezone_name,
-                        "remaining_seconds": remaining_view,
-                        "total_seconds": total_seconds,
                     },
                 }
             )
@@ -263,10 +258,7 @@ def _sort_item_key(item: dict[str, Any]) -> tuple[int, str, str]:
     now = dt_util.now()
     if item_type == "timer":
         time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
-        end_dt = _parse_datetime(
-            _normalize_value(time_data.get("date_end")),
-            _normalize_value(time_data.get("timezone") or time_data.get("time_zone")),
-        )
+        end_dt = _parse_datetime(_normalize_value(time_data.get("date_end")), "")
         ts = int(end_dt.timestamp()) if end_dt is not None else 10**18
     else:
         time_data = item.get("time") if isinstance(item.get("time"), dict) else {}

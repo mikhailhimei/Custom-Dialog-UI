@@ -19,6 +19,7 @@ SAVE_ALARM_REQUEST_SCHEMA = {
         vol.Required("device_id"): str,
         vol.Required("status"): str,
         vol.Required("time"): str,
+        vol.Optional("volume_start", default=0.3): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
     },
 }
 

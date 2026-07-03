@@ -8,7 +8,9 @@ from typing import Any
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
+from ....const import DOMAIN
 from ....normalize import _normalize_value
+from ....storage.settings_storage import get_cached_settings
 from ....storage.alarm_requests_storage import (
     async_load_alarm_requests,
     async_save_alarm_requests,
@@ -67,6 +69,13 @@ def _find(alarm_requests, uuid_value: str):
     return None
 
 
+def _coerce_volume_start(value: Any) -> float:
+    try:
+        return min(max(float(value), 0.0), 1.0)
+    except (TypeError, ValueError):
+        return 0.3
+
+
 def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | None = None) -> dict[str, Any]:
     return {
         "uuid": _normalize_value(uuid_value or data.get("uuid")),
@@ -75,12 +84,53 @@ def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | Non
         "device_id": _normalize_value(data.get("device_id")),
         "status": _normalize_value(data.get("status")),
         "time": _normalize_value(data.get("time")),
+        "volume_start": _coerce_volume_start(data.get("volume_start")),
     }
+
+
+def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_id: str) -> dict[str, Any]:
+    action_type = _normalize_value(alarm_request.get("action_type"))
+
+    return {
+        "id": _normalize_value(alarm_request.get("uuid")),
+        "type": "alarm",
+        "status": (
+            "off"
+            if action_type == "delete_alarm"
+            else (_normalize_value(alarm_request.get("status")) or "on")
+        ),
+        "clientId": shared_client_id,
+        "userId": shared_client_id,
+        "deviceId": _normalize_value(alarm_request.get("device_id")),
+        "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
+        "volume_start": _coerce_volume_start(alarm_request.get("volume_start")),
+    }
+
+
+async def _sync_alarm_requests_to_runtime(
+    hass: HomeAssistant,
+    alarm_requests: list[dict[str, Any]],
+) -> None:
+    settings = get_cached_settings(hass)
+    shared_client_id = _normalize_value(settings.get("client_id"))
+    incoming_alarms = {
+        _normalize_value(item.get("id")): item
+        for item in (_alarm_request_to_runtime_item(request, shared_client_id) for request in alarm_requests)
+        if _normalize_value(item.get("id")) and _normalize_value(item.get("status")).lower() != "deleted"
+    }
+
+    for value in hass.data.get(DOMAIN, {}).values():
+        manager = getattr(value, "timer_alarm_manager", None)
+        alarm_manager = getattr(manager, "alarm_manager", None)
+        if alarm_manager is None or not hasattr(alarm_manager, "apply_ui_items"):
+            continue
+        await alarm_manager.apply_ui_items(incoming_alarms)
 
 
 async def _save(hass, alarm_requests, connection, msg) -> bool:
     try:
         await async_save_alarm_requests(hass, alarm_requests)
+        await _sync_alarm_requests_to_runtime(hass, alarm_requests)
     except Exception:
         _ws_error(connection, msg, "save_failed", "Failed to save alarm requests")
         return False
@@ -96,6 +146,8 @@ async def _save(hass, alarm_requests, connection, msg) -> bool:
 @websocket_api.async_response
 async def _ws_get_alarm_requests_short(hass, connection, msg):
     alarm_requests = await async_load_alarm_requests(hass)
+
+    await _sync_alarm_requests_to_runtime(hass, alarm_requests)
 
     page = msg.get("page", 1)
     page_size = msg.get("page_size", 10)

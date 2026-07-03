@@ -175,7 +175,7 @@ async def audio_notification(
                             await _async_wait_until_finished(hass, target)
 
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
-                        if old_volume is not None and volume_level is not None:
+                        if wait_until_finished and old_volume is not None and volume_level is not None:
                             try:
                                 
                                 hass.async_create_task(
