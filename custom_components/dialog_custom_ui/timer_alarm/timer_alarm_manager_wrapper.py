@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .alarm_manager import DialogAlarmManager
-from .alarm_persistence import AlarmPersistence
 from ..normalize import _normalize_value
 from .timer_manager import DialogTimerManager
 from ..utils import _get_entry, _get_manager, _get_options, _extract_count
@@ -66,6 +65,63 @@ def _build_voice_request_payload(payload: dict[str, Any]) -> dict[str, Any] | No
     return None
 
 
+def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_id: str) -> dict[str, Any]:
+    return {
+        "id": _normalize_value(timer_request.get("uuid")),
+        "type": "timer",
+        "status": "on",
+        "clientId": shared_client_id,
+        "userId": shared_client_id,
+        "deviceId": _normalize_value(timer_request.get("device_id")),
+        "time": (
+            timer_request.get("timer_time")
+            if isinstance(timer_request.get("timer_time"), dict)
+            else {"count_timer": _normalize_value(timer_request.get("timer_time"))}
+        ),
+    }
+
+
+def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_id: str) -> dict[str, Any]:
+    return {
+        "id": _normalize_value(alarm_request.get("uuid")),
+        "type": "alarm",
+        "status": _normalize_value(alarm_request.get("status")) or "on",
+        "clientId": shared_client_id,
+        "userId": shared_client_id,
+        "deviceId": _normalize_value(alarm_request.get("device_id")),
+        "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
+        "volume_start": alarm_request.get("volume_start", 0.3),
+    }
+
+
+def _timer_item_to_request(item: dict[str, Any]) -> dict[str, Any]:
+    time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
+    timer_time = dict(time_data) if time_data else _normalize_value(item.get("timer_time"))
+    timer_id = _normalize_value(item.get("id")) or str(uuid.uuid4())
+    return {
+        "uuid": timer_id,
+        "name": _normalize_value(item.get("name")) or "Таймер",
+        "action_type": "create_timer",
+        "device_id": _normalize_value(item.get("deviceId") or item.get("device_id")),
+        "timer_time": timer_time,
+    }
+
+
+def _alarm_item_to_request(item: dict[str, Any]) -> dict[str, Any]:
+    time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
+    alarm_time = _normalize_value(time_data.get("time") or item.get("time")) or "08:00"
+    alarm_id = _normalize_value(item.get("id")) or str(uuid.uuid4())
+    return {
+        "uuid": alarm_id,
+        "name": _normalize_value(item.get("name")) or f"Будильник {alarm_time}",
+        "action_type": "create_alarm",
+        "device_id": _normalize_value(item.get("deviceId") or item.get("device_id")),
+        "status": _normalize_value(item.get("status")) or "on",
+        "time": alarm_time,
+        "volume_start": item.get("volume_start", 0.3),
+    }
+
+
 class DialogTimerAlarmManager:
     """In-memory timer/alarm manager owned by command coordinator."""
 
@@ -80,8 +136,6 @@ class DialogTimerAlarmManager:
         self._append_log = append_log
         self._post_save_commands = post_save_commands
 
-        self._persistence = AlarmPersistence(hass, storage_key_suffix)
-
         self.timer_manager = DialogTimerManager(
             hass,
             self._mark_updated,
@@ -91,7 +145,7 @@ class DialogTimerAlarmManager:
             hass,
             self._mark_updated,
             lambda: self._media_content_id_for("alarm"),
-            self._persistence,
+            None,
         )
 
         self._timers = self.timer_manager._timers
@@ -106,16 +160,14 @@ class DialogTimerAlarmManager:
         if self._restored:
             return
         
-        await self._persistence.connect()
-
         shared_client_id = _normalize_value(options.get("client_id"))
 
-        await self.alarm_manager.async_restore_from_persistence(shared_client_id)
-
-        self.alarm_manager.load_alarm_presets(_normalize_alarm_presets(options.get("timer_alarm_presets", [])))
-        raw_items = options.get("timer_alarm_items")
-        items = [item for item in raw_items if isinstance(item, dict)] if isinstance(raw_items, list) else []
-        normalized_items = [self._normalize_ui_item(item, shared_client_id) for item in items]
+        timer_requests = await async_load_timer_requests(self.hass)
+        alarm_requests = await async_load_alarm_requests(self.hass)
+        normalized_items = [
+            *[_timer_request_to_runtime_item(item, shared_client_id) for item in timer_requests],
+            *[_alarm_request_to_runtime_item(item, shared_client_id) for item in alarm_requests],
+        ]
         incoming_timers = {
             _normalize_value(item.get("id")): item
             for item in normalized_items
@@ -128,14 +180,12 @@ class DialogTimerAlarmManager:
         }
 
         await self.timer_manager.apply_ui_items(incoming_timers)
-        if not self.alarm_manager._alarms:
-            await self.alarm_manager.apply_ui_items(incoming_alarms)
+        await self.alarm_manager.apply_ui_items(incoming_alarms)
         self._restored = True
 
     async def async_stop(self) -> None:
         await self.timer_manager.async_stop()
         await self.alarm_manager.async_stop()
-        await self._persistence.disconnect()
         self._remove_runtime_state()
 
     async def async_handle_builtin(
@@ -273,15 +323,20 @@ class DialogTimerAlarmManager:
         self._last_updated = dt_util.now().isoformat()
         self._persist_items_to_entry()
         self._publish_runtime_state()
-        # Also trigger async save to Home Assistant storage (non-blocking)
-        self.hass.async_create_task(self._async_save_to_persistence())
+        self.hass.async_create_task(self._async_save_to_request_storages())
 
-    async def _async_save_to_persistence(self) -> None:
-        """Async save alarms to Home Assistant storage."""
+    async def _async_save_to_request_storages(self) -> None:
         try:
-            await self.alarm_manager._save_alarms_to_persistence()
+            await async_save_timer_requests(
+                self.hass,
+                [_timer_item_to_request(item) for item in self.get_timer_items()],
+            )
+            await async_save_alarm_requests(
+                self.hass,
+                [_alarm_item_to_request(item) for item in self.get_alarm_items()],
+            )
         except Exception as err:
-            _LOGGER.warning("Failed to save to persistence in mark_updated: %s", err)
+            _LOGGER.warning("Failed to save timer/alarm requests to split storages: %s", err)
 
     def _default_media_content_id(self) -> str:
         return self._media_content_id_for(self._active_builtin_type)
@@ -298,16 +353,9 @@ class DialogTimerAlarmManager:
         return configured or _FALLBACK_TIMER_MEDIA_CONTENT_ID
 
     def _persist_items_to_entry(self) -> None:
-        entry = _get_entry(self.hass)
-        if entry is None:
-            return
-        try:
-            options = dict(entry.options)
-            options["timer_alarm_items"] = self.serialize_persisted_items()
-            options["timer_alarm_presets"] = self.get_alarm_presets()
-            self.hass.config_entries.async_update_entry(entry, options=options)
-        except Exception as err:
-            _LOGGER.debug("Failed to persist timer/alarm items to entry options: %s", err)
+        # Runtime state is persisted in split storages:
+        # dialog_custom_ui_timer_requests and dialog_custom_ui_alarm_requests.
+        return
 
     def _publish_runtime_state(self) -> None:
         domain_data = self.hass.data.setdefault(DOMAIN, {})
@@ -413,7 +461,6 @@ async def _ws_get_timer_alarm_config(hass: HomeAssistant, connection: websocket_
         {
             "base_url": options["base_url"],
             "client_id": options["client_id"],
-            "interval": options["timeout"],
             "device_ids": options["timer_alarm_device_ids"],
             "default_media_content_id": options["timer_alarm_media_content_id"],
             "items": items,
@@ -450,7 +497,6 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
         return
 
     options = _get_options(entry, get_cached_settings(hass))
-    entry_options = dict(entry.options)
     shared_client_id = _normalize_value(options.get("client_id"))
     requested_items = [item for item in msg.get("timer_alarm_items", []) if isinstance(item, dict)]
     manager_targets = managers or ([manager] if manager is not None else [])
@@ -467,9 +513,14 @@ async def _ws_save_timer_alarm_config(hass: HomeAssistant, connection: websocket
         except Exception as err:  # pragma: no cover - defensive path
             _LOGGER.warning("Failed to apply UI timer/alarm update to runtime manager: %s", err)
 
-    entry_options["timer_alarm_items"] = target_manager.serialize_persisted_items()
-    entry_options["timer_alarm_presets"] = target_manager.get_alarm_presets()
-    hass.config_entries.async_update_entry(entry, options=entry_options)
+    await async_save_timer_requests(
+        hass,
+        [_timer_item_to_request(item) for item in target_manager.get_timer_items()],
+    )
+    await async_save_alarm_requests(
+        hass,
+        [_alarm_item_to_request(item) for item in target_manager.get_alarm_items()],
+    )
 
     connection.send_result(msg["id"], {"saved": True})
 

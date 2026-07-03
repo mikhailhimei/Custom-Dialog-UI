@@ -8,7 +8,9 @@ from typing import Any
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
+from ....const import DOMAIN
 from ....normalize import _normalize_value
+from ....storage.settings_storage import get_cached_settings
 from ....storage.timer_requests_storage import (
     async_load_timer_requests,
     async_save_timer_requests,
@@ -83,9 +85,47 @@ def _normalize_timer_request_payload(data: dict[str, Any], uuid_value: str | Non
     return timer_request
 
 
+def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_id: str) -> dict[str, Any]:
+    timer_time = timer_request.get("timer_time")
+    return {
+        "id": _normalize_value(timer_request.get("uuid")),
+        "type": "timer",
+        "status": "on",
+        "clientId": shared_client_id,
+        "userId": shared_client_id,
+        "deviceId": _normalize_value(timer_request.get("device_id")),
+        "time": (
+            timer_time
+            if isinstance(timer_time, dict)
+            else {"count_timer": _normalize_value(timer_time)}
+        ),
+    }
+
+
+async def _sync_timer_requests_to_runtime(
+    hass: HomeAssistant,
+    timer_requests: list[dict[str, Any]],
+) -> None:
+    settings = get_cached_settings(hass)
+    shared_client_id = _normalize_value(settings.get("client_id"))
+    incoming_timers = {
+        _normalize_value(item.get("id")): item
+        for item in (_timer_request_to_runtime_item(request, shared_client_id) for request in timer_requests)
+        if _normalize_value(item.get("id"))
+    }
+
+    for value in hass.data.get(DOMAIN, {}).values():
+        manager = getattr(value, "timer_alarm_manager", None)
+        timer_manager = getattr(manager, "timer_manager", None)
+        if timer_manager is None or not hasattr(timer_manager, "apply_ui_items"):
+            continue
+        await timer_manager.apply_ui_items(incoming_timers)
+
+
 async def _save(hass, timer_requests, connection, msg) -> bool:
     try:
         await async_save_timer_requests(hass, timer_requests)
+        await _sync_timer_requests_to_runtime(hass, timer_requests)
     except Exception:
         _ws_error(connection, msg, "save_failed", "Failed to save timer requests")
         return False
@@ -101,6 +141,8 @@ async def _save(hass, timer_requests, connection, msg) -> bool:
 @websocket_api.async_response
 async def _ws_get_timer_requests_short(hass, connection, msg):
     timer_requests = await async_load_timer_requests(hass)
+
+    await _sync_timer_requests_to_runtime(hass, timer_requests)
 
     page = msg.get("page", 1)
     page_size = msg.get("page_size", 10)
