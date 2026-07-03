@@ -1,0 +1,45 @@
+.header {
+  position: sticky;
+  top: 0;
+
+  display: flex;
+  align-items: center;
+
+  height: 56px;
+
+  padding: 0 16px;
+
+  background: #151518;
+
+  border-bottom: 1px solid #23262d;
+
+  z-index: 1000;
+}
+
+.backButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  border: none;
+  background: transparent;
+
+  color: #f3f4f6;
+
+  font-size: 15px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: color .15s;
+}
+
+.backButton:hover {
+  color: #fff;
+}
+
+@media (min-width: 769px) {
+  .header {
+    display: none;
+  }
+}

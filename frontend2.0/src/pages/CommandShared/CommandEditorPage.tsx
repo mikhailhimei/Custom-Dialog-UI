@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 
 import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
+import { MobileNavigation } from '../../components/MobileNavigation/MobileNavigation';
+import { MobileHeader } from '../../components/MobileHeader/MobileHeader'
 import { Modal } from '../../components/Modal/Modal';
 import { Pagination } from '../../components/Pagination/Pagination';
 import { Button } from '../../components/ui/Button/Button';
 import { Input } from '../../components/ui/Input/Input';
 import { Accordion } from '../../components/Accordion/Accordion';
 import { useDialogApi } from '../../context/DialogContext';
+import { useIsMobile } from "../../hooks/useIsMobile";
+
 
 import styles from "./CommandEditorPage.module.scss";
 
@@ -223,6 +227,7 @@ interface CommandEditorPageProps {
 }
 
 export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
+  const isMobile = useIsMobile();
   const api = useDialogApi();
   const navigate = useNavigate();
   const [activeDirectMode, setActiveDirectMode] = useState<DirectMode>(configKey === "directTemplate" ? "template" : "main");
@@ -375,8 +380,11 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
   const modalTitle = `${isEdit ? "Редактировать" : "Создать"}: ${activeConfig.label}`;
 
   return (
+    <>
+    <MobileHeader />
+      
     <div className={styles.page}>
-      <NavigationTabs />
+      { !isMobile ? <NavigationTabs /> : <></>}
 
       <div className={styles.header}>
         <div className={styles.headerTop}>
@@ -609,5 +617,7 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
         </div>
       )}
     </div>
+     <MobileNavigation />
+    </>
   );
 };

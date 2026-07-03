@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 
 import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
+import { useIsMobile } from "../../hooks/useIsMobile";
+import { MobileNavigation } from "../../components/MobileNavigation/MobileNavigation";
 
 import { Modal } from '../../components/Modal/Modal';
 import { Pagination } from '../../components/Pagination/Pagination';
@@ -18,6 +20,8 @@ import {
 import { useApiScripts } from '../../hooks/scriptActions/useApiScripts';
 
 export const ScriptsPage = () => {
+  const isMobile = useIsMobile();
+
   const [formData, setFormData] =
   useState<ScriptActionDetails>();
   
@@ -87,7 +91,7 @@ export const ScriptsPage = () => {
 
   return (
     <div className={styles.page}>
-  <NavigationTabs />
+  {isMobile ? <MobileNavigation /> : <NavigationTabs />}
 
   <div className={styles.header}>
     <div className={styles.heading}>
