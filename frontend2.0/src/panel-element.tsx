@@ -4,7 +4,7 @@ import ReactDOM from "react-dom/client";
 import { AppRoot } from "./app/AppRoot";
 import type { HassLike } from "./api/dialog-api";
 
-import "./styles/globals.scss";
+import "./styles/globals.css";
 
 const ELEMENT_NAME = "dialog-custom-ui-panel";
 
@@ -22,7 +22,7 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   connectedCallback() {
-    this.loadStyles();
+    this.injectStyles();
     this.render();
   }
 
@@ -31,35 +31,37 @@ class DialogCustomUiPanel extends HTMLElement {
     this.root = undefined;
   }
 
-  private loadStyles() {
-    // Load CSS from the static path registered by panel.py
-    const cssFileName = 'dialog-custom-ui-panel.css';
-    // Try to reuse the same version query parameter as the loaded module
-    // (if present) to avoid stale cached CSS. We look for a script tag
-    // that loads the panel JS and copy its search/query string.
-    const moduleScriptName = 'dialog-custom-ui-panel.js';
-    const script = Array.from(document.getElementsByTagName('script')).find((s) => s.src && s.src.includes(moduleScriptName));
-    const search = script && script.src ? (new URL(script.src, window.location.href)).search : '';
-    const cssUrl = `/dialog_custom_ui_static/${cssFileName}${search}`;
+  /**
+   * 🔥 ВАЖНО: теперь мы НЕ используем <link>
+   */
+  private injectStyles() {
+  const STYLE_ID = "dialog-custom-ui-style";
 
-    const existingLink = document.querySelector<HTMLLinkElement>(`link[href*="${cssFileName}"]`);
-    if (existingLink) {
-      if (existingLink.href !== new URL(cssUrl, window.location.href).href) {
-        existingLink.href = cssUrl;
+  if (document.getElementById(STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+
+  // ⚠️ берем уже СКОМПИЛЕННЫЙ CSS из document
+  const css = Array.from(document.styleSheets)
+    .map((s) => {
+      try {
+        return Array.from(s.cssRules || [])
+          .map((r) => r.cssText)
+          .join("\n");
+      } catch {
+        return "";
       }
-      return;
-    }
+    })
+    .join("\n");
 
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = cssUrl;
-    document.head.appendChild(link);
-  }
+  style.textContent = css;
+
+  document.head.appendChild(style);
+}
 
   private render() {
-    if (!this.isConnected) {
-      return;
-    }
+    if (!this.isConnected) return;
 
     if (!this.root) {
       this.root = ReactDOM.createRoot(this);
@@ -68,7 +70,7 @@ class DialogCustomUiPanel extends HTMLElement {
     this.root.render(
       <React.StrictMode>
         <AppRoot hass={this.hassValue} />
-      </React.StrictMode>,
+      </React.StrictMode>
     );
   }
 }

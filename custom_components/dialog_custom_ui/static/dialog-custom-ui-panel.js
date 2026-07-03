@@ -9265,20 +9265,30 @@ class lg extends HTMLElement {
     return this.hassValue;
   }
   connectedCallback() {
-    this.loadStyles(), this.render();
+    this.injectStyles(), this.render();
   }
   disconnectedCallback() {
     var i;
     (i = this.root) == null || i.unmount(), this.root = void 0;
   }
-  loadStyles() {
-    const i = "dialog-custom-ui-panel.css", s = "dialog-custom-ui-panel.js", u = Array.from(document.getElementsByTagName("script")).find((w) => w.src && w.src.includes(s)), f = u && u.src ? new URL(u.src, window.location.href).search : "", m = `/dialog_custom_ui_static/${i}${f}`, h = document.querySelector(`link[href*="${i}"]`);
-    if (h) {
-      h.href !== new URL(m, window.location.href).href && (h.href = m);
-      return;
-    }
-    const y = document.createElement("link");
-    y.rel = "stylesheet", y.href = m, document.head.appendChild(y);
+  /**
+   * 🔥 ВАЖНО: теперь мы НЕ используем <link>
+   */
+  injectStyles() {
+    const i = "dialog-custom-ui-style";
+    if (document.getElementById(i)) return;
+    const s = document.createElement("style");
+    s.id = i;
+    const u = Array.from(document.styleSheets).map((f) => {
+      try {
+        return Array.from(f.cssRules || []).map((m) => m.cssText).join(`
+`);
+      } catch {
+        return "";
+      }
+    }).join(`
+`);
+    s.textContent = u, document.head.appendChild(s);
   }
   render() {
     this.isConnected && (this.root || (this.root = Mm.createRoot(this)), this.root.render(
