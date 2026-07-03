@@ -8511,7 +8511,6 @@ function kd() {
       const X = {
         count_timer: Jv(b),
         date_end: Xv(b),
-        total_seconds: Math.max(1, Number(b) || 1) * 60
       };
       await l._save({ name: `Таймер ${b} мин`, action_type: "create_timer", device_id: F, timer_time: X }, "save_timer_request"), await R();
     },

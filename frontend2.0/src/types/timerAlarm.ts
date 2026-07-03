@@ -3,7 +3,7 @@ export interface TimerRequest {
   name: string;
   action_type: "create_timer" | "delete_timer";
   device_id: string;
-  timer_time: string | { count_timer?: string; date_end?: string; total_seconds?: number };
+  timer_time: string | { count_timer?: string; date_end?: string };
 }
 
 export interface AlarmRequest {

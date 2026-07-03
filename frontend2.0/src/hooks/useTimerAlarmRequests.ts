@@ -32,7 +32,7 @@ const toTimerSeconds = (timerTime: TimerRequest["timer_time"]): number => {
       }
     }
 
-    return Number(timerTime.total_seconds) || toTimerSeconds(timerTime.count_timer || "");
+    return toTimerSeconds(timerTime.count_timer || "");
   }
 
   return 0;
@@ -118,7 +118,6 @@ export function useTimerAlarmRequests() {
     const timerTime = {
       count_timer: formatTimerTime(minutes),
       date_end: getUtcFinishDate(minutes),
-      total_seconds: Math.max(1, Number(minutes) || 1) * 60,
     };
 
     await api._save({ name: `Таймер ${minutes} мин`, action_type: "create_timer", device_id: deviceId, timer_time: timerTime }, "save_timer_request");
