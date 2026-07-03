@@ -60,6 +60,7 @@ def _build_voice_request_payload(payload: dict[str, Any]) -> dict[str, Any] | No
             "device_id": _normalize_value(payload.get("device_id")),
             "status": "on",
             "time": alarm_time,
+            "volume_start": 0.3,
         }
 
     return None
@@ -84,12 +85,12 @@ class DialogTimerAlarmManager:
         self.timer_manager = DialogTimerManager(
             hass,
             self._mark_updated,
-            self._default_media_content_id,
+            lambda: self._media_content_id_for("timer"),
         )
         self.alarm_manager = DialogAlarmManager(
             hass,
             self._mark_updated,
-            self._default_media_content_id,
+            lambda: self._media_content_id_for("alarm"),
             self._persistence,
         )
 
@@ -265,6 +266,7 @@ class DialogTimerAlarmManager:
             "userId": _normalize_value(item.get("userId") or item.get("clientId") or shared_client_id),
             "deviceId": _normalize_value(item.get("deviceId") or item.get("device_id")),
             "time": item.get("time") if isinstance(item.get("time"), dict) else {},
+            "volume_start": item.get("volume_start", 0.3),
         }
 
     def _mark_updated(self) -> None:
@@ -282,11 +284,14 @@ class DialogTimerAlarmManager:
             _LOGGER.warning("Failed to save to persistence in mark_updated: %s", err)
 
     def _default_media_content_id(self) -> str:
+        return self._media_content_id_for(self._active_builtin_type)
+
+    def _media_content_id_for(self, item_type: str) -> str:
         entry = _get_entry(self.hass)
         if entry is None:
             return _FALLBACK_TIMER_MEDIA_CONTENT_ID
         options = _get_options(entry, get_cached_settings(self.hass))
-        key = "alarm_music" if self._active_builtin_type == "alarm" else "timer_music"
+        key = "alarm_music" if item_type == "alarm" else "timer_music"
         configured = _normalize_value(options.get(key) or options.get("timer_alarm_media_content_id"))
         if configured.startswith("media-source://media_source/local/"):
             configured = configured.split("media-source://media_source/local/", 1)[1]

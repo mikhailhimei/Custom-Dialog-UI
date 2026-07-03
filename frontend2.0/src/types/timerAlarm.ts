@@ -13,6 +13,7 @@ export interface AlarmRequest {
   device_id: string;
   status: string;
   time: string;
+  volume_start?: number;
 }
 
 export interface AlarmTimeWidget {

@@ -18,6 +18,13 @@ from .alarm_persistence import AlarmPersistence
 _LOGGER = logging.getLogger(__name__)
 
 
+def _coerce_volume_start(value: Any) -> float:
+    try:
+        return min(max(float(value), 0.0), 1.0)
+    except (TypeError, ValueError):
+        return 0.3
+
+
 class DialogAlarmManager:
     def __init__(
         self,
@@ -136,6 +143,7 @@ class DialogAlarmManager:
             "device_id": device_id,
             "status": "on",
             "time": alarm_time,
+            "volume_start": 0.3,
             "created_at": datetime.now().timestamp(),
         }
         self._remember_alarm_preset(alarm_time)
@@ -232,6 +240,7 @@ class DialogAlarmManager:
                     "deviceId": _normalize_value(entry.get("device_id")),
                     "ha_managed": True,
                     "time": {"time": _normalize_value(entry.get("time") or "08:00")},
+                    "volume_start": _coerce_volume_start(entry.get("volume_start")),
                 }
             )
         items.sort(key=lambda item: _normalize_value(item.get("id")))
@@ -272,6 +281,7 @@ class DialogAlarmManager:
                     "deviceId": _normalize_value(item.get("deviceId")),
                     "status": _normalize_value(item.get("status")) or "on",
                     "time": {"time": _normalize_value(time_data.get("time")) or "08:00"},
+                    "volume_start": _coerce_volume_start(item.get("volume_start")),
                 }
             )
         return result
@@ -290,6 +300,7 @@ class DialogAlarmManager:
             device_id = _normalize_value(item.get("deviceId"))
             status = _normalize_value(item.get("status")).lower()
             status = "off" if status == "off" else "on"
+            volume_start = _coerce_volume_start(item.get("volume_start"))
 
             if alarm_id in self._alarms:
                 alarm = self._alarms[alarm_id]
@@ -297,6 +308,7 @@ class DialogAlarmManager:
                 alarm["device_id"] = device_id
                 alarm["status"] = status
                 alarm["time"] = alarm_time
+                alarm["volume_start"] = volume_start
                 self._remember_alarm_preset(alarm_time)
                 if status == "on":
                     self._ensure_alarm_tick_task()
@@ -309,6 +321,7 @@ class DialogAlarmManager:
                 "device_id": device_id,
                 "status": status,
                 "time": alarm_time,
+                "volume_start": volume_start,
                 "created_at": datetime.now().timestamp(),
             }
             self._remember_alarm_preset(alarm_time)
@@ -356,7 +369,8 @@ class DialogAlarmManager:
 
     async def _run_alarm_action(self, alarm: dict[str, Any]) -> None:
         device_ref = _normalize_value(alarm.get("device_id"))
-        await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-0.7")
+        volume_start = _coerce_volume_start(alarm.get("volume_start"))
+        await audio_notification(self.hass, device_ref, self._default_media_content_id(), f"{volume_start}-0.7")
         alarm["status"] = "off"
         self._mark_updated()
 

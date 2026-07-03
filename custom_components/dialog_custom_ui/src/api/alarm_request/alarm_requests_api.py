@@ -67,6 +67,13 @@ def _find(alarm_requests, uuid_value: str):
     return None
 
 
+def _coerce_volume_start(value: Any) -> float:
+    try:
+        return min(max(float(value), 0.0), 1.0)
+    except (TypeError, ValueError):
+        return 0.3
+
+
 def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | None = None) -> dict[str, Any]:
     return {
         "uuid": _normalize_value(uuid_value or data.get("uuid")),
@@ -75,6 +82,7 @@ def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | Non
         "device_id": _normalize_value(data.get("device_id")),
         "status": _normalize_value(data.get("status")),
         "time": _normalize_value(data.get("time")),
+        "volume_start": _coerce_volume_start(data.get("volume_start")),
     }
 
 

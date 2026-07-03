@@ -130,8 +130,8 @@ export function useTimerAlarmRequests() {
     await loadTimers();
   };
 
-  const createAlarm = async (deviceId: string, time: string) => {
-    await api._save({ name: `Будильник ${time}`, action_type: "create_alarm", device_id: deviceId, status: "on", time }, "save_alarm_request");
+  const createAlarm = async (deviceId: string, time: string, volumeStart = 0.3) => {
+    await api._save({ name: `Будильник ${time}`, action_type: "create_alarm", device_id: deviceId, status: "on", time, volume_start: volumeStart }, "save_alarm_request");
     await loadAlarms();
   };
 

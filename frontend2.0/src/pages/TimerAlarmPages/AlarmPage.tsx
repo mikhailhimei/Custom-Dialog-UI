@@ -12,6 +12,7 @@ export const AlarmPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [deviceId, setDeviceId] = useState("");
   const [time, setTime] = useState("08:00");
+  const [volumeStart, setVolumeStart] = useState(0.3);
 
   const quickTimes = useMemo(() => {
     const values = alarmTimeWidgets.flatMap((widget) => widget.time || []);
@@ -23,7 +24,7 @@ export const AlarmPage = () => {
   const submit = async () => {
     if (!deviceId || !time) return;
 
-    await createAlarm(deviceId, time);
+    await createAlarm(deviceId, time, volumeStart);
     setModalOpen(false);
   };
 
@@ -61,6 +62,19 @@ export const AlarmPage = () => {
               <span className={styles.label}>Время</span>
               <input className={styles.input} type="time" value={alarm.time} onChange={(event) => updateAlarm(alarm, { time: event.target.value })} />
             </label>
+
+            <label className={styles.field}>
+              <span className={styles.label}>Стартовая громкость</span>
+              <input
+                className={styles.input}
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                value={alarm.volume_start ?? 0.3}
+                onChange={(event) => updateAlarm(alarm, { volume_start: Number(event.target.value) })}
+              />
+            </label>
           </div>
         )) : <div className={styles.empty}>Нет запущенных будильников.</div>}
       </div>
@@ -89,6 +103,19 @@ export const AlarmPage = () => {
           <label className={styles.field}>
             <span className={styles.label}>Время</span>
             <input className={styles.input} type="time" value={time} onChange={(event) => setTime(event.target.value)} />
+          </label>
+
+          <label className={styles.field}>
+            <span className={styles.label}>Стартовая громкость</span>
+            <input
+              className={styles.input}
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+              value={volumeStart}
+              onChange={(event) => setVolumeStart(Number(event.target.value))}
+            />
           </label>
         </div>
       </Modal>
