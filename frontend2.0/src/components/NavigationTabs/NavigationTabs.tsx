@@ -1,6 +1,6 @@
 import React from "react"
 import { NavLink } from "react-router-dom";
-
+import { useIsMobile } from "../../hooks/useIsMobile";
 import styles from "./NavigationTabs.module.scss";
 
 const tabs = [
@@ -23,6 +23,10 @@ const tabs = [
 ];
 
 export const NavigationTabs = () => {
+  const isMobile = useIsMobile()
+  
+  if (isMobile) return
+
   return (
     <div className={styles.tabs}>
   <NavLink

@@ -7,15 +7,11 @@ export const MobileHeader = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isCommands = location.pathname.startsWith("/commands");
-
-  if (!isCommands) return null;
-
   const handleBack = () => {
-    if (window.history.state?.idx > 0) {
-      navigate(-1);
+    if (location.pathname.includes('commands')) {
+      navigate('/scripts');
     } else {
-      navigate("/scripts");
+      navigate("/");
     }
   };
 

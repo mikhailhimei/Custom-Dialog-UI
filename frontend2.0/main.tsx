@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import { AppRoot } from "./src/app/AppRoot";
 
-import "./src/styles/globals.scss";
+import "./src/styles/globals.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!

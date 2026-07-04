@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { MobileHeader } from '../../components/MobileHeader/MobileHeader';
 import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { MobileNavigation } from "../../components/MobileNavigation/MobileNavigation";
@@ -23,8 +24,8 @@ export const ScriptsPage = () => {
   const isMobile = useIsMobile();
 
   const [formData, setFormData] =
-  useState<ScriptActionDetails>();
-  
+    useState<ScriptActionDetails>();
+
   const [selectedScript, setSelectedScript] =
     useState<ScriptActionDetails>();
 
@@ -37,7 +38,7 @@ export const ScriptsPage = () => {
   const {
     loading,
     scripts,
-    
+
     scriptData,
 
     loadScripts,
@@ -71,8 +72,8 @@ export const ScriptsPage = () => {
     setModalOpen(true);
   };
 
-  const handlerUpdateSaveScript = async () =>{
-    if (isEdit){
+  const handlerUpdateSaveScript = async () => {
+    if (isEdit) {
       const uuid = formData?.uuid;
 
       if (!uuid) return;
@@ -80,107 +81,111 @@ export const ScriptsPage = () => {
       const { uuid: _uuid, ...payload } = formData;
 
       await updateScript(uuid, payload)
-    }else{
+    } else {
 
       await saveScript(formData)
-      
-    } 
+
+    }
 
     setModalOpen(false)
   }
 
   return (
-    <div className={styles.page}>
-  {isMobile ? <MobileNavigation /> : <NavigationTabs />}
+    <>
+      <MobileHeader />
+      <div className={styles.page}>
+        <NavigationTabs />
 
-  <div className={styles.header}>
-    <div className={styles.heading}>
+        <div className={styles.header}>
+          <div className={styles.heading}>
 
-      <h1 className={styles.title}>
-        Создание запускающих скриптов
-      </h1>
+            <h1 className={styles.title}>
+              Создание запускающих скриптов
+            </h1>
 
-      <p className={styles.description}>
-        Создавайте и редактируйте
-        автоматизации и условия
-      </p>
-    </div>
+            <p className={styles.description}>
+              Создавайте и редактируйте
+              автоматизации и условия
+            </p>
+          </div>
 
-    <div className={styles.actions}>
-      <Button
-        variant="primary"
-        onClick={openCreateModal}
-      >
-        Добавить сценарий
-      </Button>
-    </div>
-  </div>
-
-      {loading && (
-        <div>Загрузка...</div>
-      )}
-
-      <div className={styles.list}>
-        {scripts?.script_actions.map((script) => (
-          <Card
-            key={script.uuid}
-            title={script.title}
-            onClick={() =>
-              openEditModal(script)
-            }
-          />
-        ))}
-      </div>
-
-      <Pagination
-        page={scripts?.page || 1}
-        totalPages={scripts?.total_pages || 1}
-        onChange={loadScripts}
-      />
-
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={
-          isEdit
-            ? "Редактировать сценарий"
-            : "Создать сценарий"
-        }
-        footer={
-          <>
-            {isEdit && (
-              <Button
-                variant="ghost"
-                onClick={async () => {
-                  if (!selectedScript?.uuid)
-                    return;
-
-                  await deleteScriptAction(
-                    selectedScript.uuid
-                  );
-
-                  setModalOpen(false);
-                }}
-              >
-                Удалить
-              </Button>
-            )}
-
+          <div className={styles.actions}>
             <Button
-              onClick={handlerUpdateSaveScript}
+              variant="primary"
+              onClick={openCreateModal}
             >
-              Сохранить
+              Добавить сценарий
             </Button>
-          </>
-        }
-      >
-        <ScriptForm
-          initialData={selectedScript}
-          isEdit={isEdit}
-          isOptionData = {scriptData()}
-          onChange={setFormData}
+          </div>
+        </div>
+
+        {loading && (
+          <div>Загрузка...</div>
+        )}
+
+        <div className={styles.list}>
+          {scripts?.script_actions.map((script) => (
+            <Card
+              key={script.uuid}
+              title={script.title}
+              onClick={() =>
+                openEditModal(script)
+              }
+            />
+          ))}
+        </div>
+
+        <Pagination
+          page={scripts?.page || 1}
+          totalPages={scripts?.total_pages || 1}
+          onChange={loadScripts}
         />
-      </Modal>
-    </div>
+
+        <Modal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={
+            isEdit
+              ? "Редактировать сценарий"
+              : "Создать сценарий"
+          }
+          footer={
+            <>
+              {isEdit && (
+                <Button
+                  variant="ghost"
+                  onClick={async () => {
+                    if (!selectedScript?.uuid)
+                      return;
+
+                    await deleteScriptAction(
+                      selectedScript.uuid
+                    );
+
+                    setModalOpen(false);
+                  }}
+                >
+                  Удалить
+                </Button>
+              )}
+
+              <Button
+                onClick={handlerUpdateSaveScript}
+              >
+                Сохранить
+              </Button>
+            </>
+          }
+        >
+          <ScriptForm
+            initialData={selectedScript}
+            isEdit={isEdit}
+            isOptionData={scriptData()}
+            onChange={setFormData}
+          />
+        </Modal>
+      </div>
+      <MobileNavigation />
+    </>
   );
 };
