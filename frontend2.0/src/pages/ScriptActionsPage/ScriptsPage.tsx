@@ -11,6 +11,7 @@ import { Pagination } from '../../components/Pagination/Pagination';
 import { ScriptForm } from '../../components/ScriptForm/ScriptForm';
 import { Card } from '../../components/Card/Card';
 import { Button } from '../../components/ui/Button/Button';
+import { BottomSlideButton } from "../../components/BottomSlideButton/BottomSlideButton";
 
 import styles from "./ScriptsPage.module.scss";
 
@@ -23,12 +24,12 @@ import { useApiScripts } from '../../hooks/scriptActions/useApiScripts';
 
 export const ScriptsPage = () => {
   const isMobile = useIsMobile();
-  
+
   const { ref, inView } = useInView({
-  threshold: 0,
-  rootMargin: "200px",
-});
-  
+    threshold: 1,
+    rootMargin: "0px",
+  });
+
   const [formData, setFormData] =
     useState<ScriptActionDetails>();
 
@@ -41,25 +42,7 @@ export const ScriptsPage = () => {
   const [isEdit, setIsEdit] =
     useState(false);
 
-  useEffect(() => {
-  if (
-    !isMobile ||
-    !inView ||
-    loading ||
-    !scripts ||
-    scripts.page >= scripts.total_pages
-  ) {
-    return;
-  }
-
-  loadScripts(scripts.page + 1, true);
-}, [
-  inView,
-  isMobile,
-  loading,
-  scripts,
-  loadScripts,
-]);
+  const [canLoadMore, setCanLoadMore] = useState(false);
 
   const {
     loading,
@@ -75,6 +58,37 @@ export const ScriptsPage = () => {
     getScriptAction,
     deleteScriptAction,
   } = useApiScripts();
+
+  useEffect(() => {
+    if (
+      !canLoadMore ||
+      !isMobile ||
+      !inView ||
+      loading ||
+      !scripts ||
+      scripts.page >= scripts.total_pages
+    ) {
+      return;
+    }
+
+    loadScripts(scripts.page + 1, true);
+  }, [
+    inView,
+    isMobile,
+    loading,
+    scripts,
+    loadScripts,
+  ]);
+
+  useEffect(() => {
+    if (
+      !loading &&
+      scripts &&
+      scripts.page === 1
+    ) {
+      setCanLoadMore(true);
+    }
+  }, [loading, scripts]);
 
   const openCreateModal = () => {
     setSelectedScript(undefined);
@@ -125,10 +139,6 @@ export const ScriptsPage = () => {
         <div className={styles.header}>
           <div className={styles.heading}>
 
-            <h1 className={styles.title}>
-              Создание запускающих скриптов
-            </h1>
-
             <p className={styles.description}>
               Создавайте и редактируйте
               автоматизации и условия
@@ -136,13 +146,25 @@ export const ScriptsPage = () => {
           </div>
 
           <div className={styles.actions}>
-            <Button
-              variant="primary"
-              onClick={openCreateModal}
-            >
-              Добавить сценарий
-            </Button>
+            {!isMobile ?
+              <Button
+                variant="primary"
+                onClick={openCreateModal}
+              >
+                Добавить сценарий
+              </Button>
+              :
+              <BottomSlideButton>
+                <Button
+                  variant="primary"
+                  onClick={openCreateModal}
+                >
+                  Добавить сценарий
+                </Button>
+              </BottomSlideButton>
+            }
           </div>
+
         </div>
 
         {loading && (
@@ -161,15 +183,14 @@ export const ScriptsPage = () => {
           ))}
         </div>
 
-        {isMobile && <div ref={ref} />}
-
-        {!isMobile && (
-  <Pagination
-    page={scripts?.page || 1}
-    totalPages={scripts?.total_pages || 1}
-    onChange={loadScripts}
-  />
-)}
+        {!isMobile ?
+          <Pagination
+            page={scripts?.page || 1}
+            totalPages={scripts?.total_pages || 1}
+            onChange={loadScripts}
+          /> :
+          <div ref={ref} style={{ height: 1 }} />
+        }
 
         <Modal
           open={modalOpen}

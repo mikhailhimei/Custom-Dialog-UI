@@ -1,0 +1,16 @@
+.container {
+    display: flex;
+    justify-content: center;
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 80px;
+
+  transition: transform 0.3s ease, bottom 0.3s ease;
+
+  z-index: 1000;
+}
+
+.visible {
+  bottom: 16px;
+}

@@ -15,7 +15,7 @@
 
   backdrop-filter: blur(8px);
 
-  z-index: 1000;
+  z-index: 2000;
 }
 
 .modal {
@@ -23,7 +23,7 @@
 
   max-width: 760px;
 
-  height: min(80vh, 900px);
+  height: min(80  vh, 900px);
 
   display: flex;
 
