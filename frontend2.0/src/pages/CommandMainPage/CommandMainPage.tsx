@@ -147,53 +147,50 @@ export const CommandMainPage = () => {
     loading,
     loadCommands,
     deleteCommand,
+    detailInformationCommand,
     saveCommand,
+    updateCommand,
+    editStatusCommand,
     commands
 
   } = useApiCommands("get_assistant_commands_short")
 
   const [canLoadMore, setCanLoadMore] = useState(false);
-  
-  useEffect(() => {
-      if (
-        !canLoadMore ||
-        !isMobile ||
-        !inView ||
-        loading ||
-        !commands ||
-        commands.page >= commands.total_pages
-      ) {
-        return;
-      }
-  
-      loadCommands("get_assistant_commands_short", commands.page + 1, true);
-    }, [
-      inView,
-      isMobile,
-      loading,
-      commands,
-      loadCommands,
-    ]);
-  
-  useEffect(() => {
-      if (
-        !loading &&
-        commands &&
-        commands.page === 1
-      ) {
-        setCanLoadMore(true);
-      }
-    }, [loading, commands]);
 
-    const component = useMemo(() => {
-        return formData["componentDialog"] as ComponentDialog | undefined;
-      }, [formData]);
+  useEffect(() => {
+    if (
+      !canLoadMore ||
+      !isMobile ||
+      !inView ||
+      loading ||
+      !commands ||
+      commands.page >= commands.total_pages
+    ) {
+      return;
+    }
 
-  // shortType: "get_assistant_commands_short",
-  //   detailType: "get_assistant_command",
-  //   saveType: "save_assistant_command",
-  //   updateType: "update_assistant_command",
-  //   deleteType: "delete_assistant_command",
+    loadCommands("get_assistant_commands_short", commands.page + 1, true);
+  }, [
+    inView,
+    isMobile,
+    loading,
+    commands,
+    loadCommands,
+  ]);
+
+  useEffect(() => {
+    if (
+      !loading &&
+      commands &&
+      commands.page === 1
+    ) {
+      setCanLoadMore(true);
+    }
+  }, [loading, commands]);
+
+  const component = useMemo(() => {
+    return formData["componentDialog"] as ComponentDialog | undefined;
+  }, [formData]);
 
   const openCreateModal = () => {
     setIsEdit(false);
@@ -204,69 +201,59 @@ export const CommandMainPage = () => {
   const openEditModal = async (command: ShortCommand) => {
     setIsEdit(true);
 
+    const response = await detailInformationCommand("get_assistant_command", command.uuid)
 
     setFormData(response.data);
+
     setModalOpen(true);
   };
 
-  // const updateComponent = (patch: Record<string, any>) => {
-  //   const componentKey = activeConfig.componentKey ?? "componentDialog";
+  const handlerEditStatus = async (uuid: string, status: boolean) => {
+    console.log(uuid, status)
+    const result = await editStatusCommand("update_status_assistant_command",uuid, status)
+    loadCommands("get_assistant_commands_short")
+  }
 
-  //   setFormData((current) => ({
-  //     ...current,
-  //     [componentKey]: {
-  //       ...(current[componentKey] ?? createComponent()),
-  //       ...patch,
-  //     },
-  //   }));
-  // };
+  const handlerDeleteCommand = async (uuid: string) => {
+    const result = await deleteCommand("delete_assistant_command", uuid)
+    loadCommands("get_assistant_commands_short")
+  }
 
-  // const updateComponentArray = (field: keyof ComponentDialog, index: number, patch: Record<string, string>) => {
-  //   const list = [...((component?.[field] as any[]) ?? [])];
-  //   list[index] = { ...list[index], ...patch };
-  //   updateComponent({ [field]: list });
-  // };
+  const handlerSaveCommand = async () => {
+    const result = await saveCommand("save_assistant_command", formData)
+    setModalOpen(false);
+  }
 
-  // const addComponentArrayItem = (field: keyof ComponentDialog, item: Record<string, string>) => {
-  //   updateComponent({ [field]: [...((component?.[field] as any[]) ?? []), item] });
-  // };
+  const handlerUpdateCommand = async () => {
+    const result = await updateCommand("update_assistant_command", formData)
+    setModalOpen(false);
+  }
 
-  // const removeComponentArrayItem = (field: keyof ComponentDialog, index: number) => {
-  //   updateComponent({ [field]: ((component?.[field] as any[]) ?? []).filter((_, itemIndex) => itemIndex !== index) });
-  // };
+  const updateComponent = (patch: Record<string, any>) => {
+    setFormData((current) => ({
+      ...current,
+      ["componentDialog"]: {
+        ...(current["componentDialog"] ?? createComponent()),
+        ...patch,
+      },
+    }));
+  };
 
-  // const updateSubDirectItem = (source: "direct" | "template", index: number, patch: Partial<SubDirectControlItem>) => {
-  //   const list = source === "direct" ? [...directItems] : [...templateItems];
-  //   list[index] = { ...list[index], ...patch };
+  const updateComponentArray = (field: keyof ComponentDialog, index: number, patch: Record<string, string>) => {
+    const list = [...((component?.[field] as any[]) ?? [])];
+    list[index] = { ...list[index], ...patch };
+    updateComponent({ [field]: list });
+  };
 
-  //   if (source === "direct") {
-  //     updateDirectControl({ subDirectControl: list });
-  //   } else {
-  //     setFormData((current) => ({ ...current, subDirectControl: list }));
-  //   }
-  // };
+  const addComponentArrayItem = (field: keyof ComponentDialog, item: Record<string, string>) => {
+    updateComponent({ [field]: [...((component?.[field] as any[]) ?? []), item] });
+  };
 
-  // const addSubDirectItem = (source: "direct" | "template") => {
-  //   const item = { subMappingType: "", title: null, subVoiceCommands: "" };
+  const removeComponentArrayItem = (field: keyof ComponentDialog, index: number) => {
+    updateComponent({ [field]: ((component?.[field] as any[]) ?? []).filter((_, itemIndex) => itemIndex !== index) });
+  };
 
-  //   if (source === "direct") {
-  //     updateDirectControl({ subDirectControl: [...directItems, item] });
-  //   } else {
-  //     setFormData((current) => ({ ...current, subDirectControl: [...templateItems, item] }));
-  //   }
-  // };
-
-  // const removeSubDirectItem = (source: "direct" | "template", index: number) => {
-  //   const filtered = (source === "direct" ? directItems : templateItems).filter((_, itemIndex) => itemIndex !== index);
-
-  //   if (source === "direct") {
-  //     updateDirectControl({ subDirectControl: filtered });
-  //   } else {
-  //     setFormData((current) => ({ ...current, subDirectControl: filtered }));
-  //   }
-  // };
-
-  const modalTitle = `${isEdit ? "Редактировать" : "Создать"}: Основная команда`;
+  const modalTitle = `${isEdit ? "Редактировать" : "Создать"}`;
 
   return (
     <>
@@ -274,6 +261,8 @@ export const CommandMainPage = () => {
 
       <div className={styles.page}>
         {!isMobile ? <NavigationTabs /> : <></>}
+
+        {loading && <div className={styles.state}>Загрузка...</div>}
 
         <div className={styles.header}>
           <div className={styles.headerTop}>
@@ -301,8 +290,6 @@ export const CommandMainPage = () => {
           </div>
         </div>
 
-        {loading && <div className={styles.state}>Загрузка...</div>}
-
         <div className={styles.commandList}>
           {commands?.data.map((command) => (
             <div key={command.uuid} className={styles.commandTab}>
@@ -327,7 +314,7 @@ export const CommandMainPage = () => {
           <Pagination
             page={commands?.page || 1}
             totalPages={commands?.total_pages || 1}
-            onChange={loadCommands}
+            onChange={(page) => loadCommands("get_assistant_commands_short", page)}
           /> :
           <div ref={ref} style={{ height: 1 }} />
         }
@@ -336,67 +323,67 @@ export const CommandMainPage = () => {
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           title={modalTitle}
-          footer={<Button onClick={saveCommand}>Сохранить</Button>}
+          footer={<Button onClick={!isEdit ? handlerSaveCommand : handlerUpdateCommand}>{!isEdit ? "Сохранить" : "Обновить"}</Button>}
         >
           <div className={styles.form}>
-              <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={formData.status ?? true} onChange={(event) => setFormData({ ...formData, status: event.target.checked })} />
-                Команда включена
-              </label>
-            
+            <label className={styles.checkboxRow}>
+              <input type="checkbox" checked={formData.status ?? true} onChange={(event) => setFormData({ ...formData, status: event.target.checked })} />
+              Команда включена
+            </label>
+
             <Input label="Название команды" value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} />
 
-                <label className={styles.checkboxRow}>
-                  <input type="checkbox" checked={component.endStatus} onChange={(event) => updateComponent({ endStatus: event.target.checked })} />
-                  Завершать диалог
-                </label>
+            <label className={styles.checkboxRow}>
+              <input type="checkbox" checked={component.endStatus} onChange={(event) => updateComponent({ endStatus: event.target.checked })} />
+              Завершать диалог
+            </label>
 
-            
-                <Input label="actionType" value={component.actionType ?? ""} onChange={(event) => updateComponent({ actionType: event.target.value })} />
-                <Input label="answerType" value={component.answerType ?? ""} onChange={(event) => updateComponent({ answerType: event.target.value })} />
 
-                <div className={styles.field}>
-                  <label>voiceCommands</label>
-                  <textarea
-                    className={styles.textarea}
-                    value={(component.voiceCommands ?? []).join("\n")}
-                    onChange={(event) => updateComponent({ voiceCommands: event.target.value.split("\n") })}
-                    rows={6}
-                  />
+            <Input label="actionType" value={component.actionType ?? ""} onChange={(event) => updateComponent({ actionType: event.target.value })} />
+            <Input label="answerType" value={component.answerType ?? ""} onChange={(event) => updateComponent({ answerType: event.target.value })} />
+
+            <div className={styles.field}>
+              <label>voiceCommands</label>
+              <textarea
+                className={styles.textarea}
+                value={(component.voiceCommands ?? []).join("\n")}
+                onChange={(event) => updateComponent({ voiceCommands: event.target.value.split("\n") })}
+                rows={6}
+              />
+            </div>
+
+            <Accordion title="nextDirectControl" defaultOpen>
+              {(component.nextDirectControl ?? []).map((item: { uuid: string }, index: number) => (
+                <div key={index} className={styles.arrayItem}>
+                  <Input label="uuid" value={item.uuid ?? ""} onChange={(event) => updateComponentArray("nextDirectControl", index, { uuid: event.target.value })} />
+                  <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("nextDirectControl", index)}>Удалить</Button>
                 </div>
+              ))}
+              <Button type="button" variant="secondary" onClick={() => addComponentArrayItem("nextDirectControl", { uuid: "" })}>Добавить ещё</Button>
+            </Accordion>
 
-                <Accordion title="nextDirectControl" defaultOpen>
-                  {(component.nextDirectControl ?? []).map((item: { uuid: string }, index: number) => (
-                    <div key={index} className={styles.arrayItem}>
-                      <Input label="uuid" value={item.uuid ?? ""} onChange={(event) => updateComponentArray("nextDirectControl", index, { uuid: event.target.value })} />
-                      <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("nextDirectControl", index)}>Удалить</Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="secondary" onClick={() => addComponentArrayItem("nextDirectControl", { uuid: "" })}>Добавить ещё</Button>
-                </Accordion>
+            <Accordion title="voiceResponseArray" defaultOpen>
+              {(component.voiceResponseArray ?? []).map((item: VoiceResponse, index: number) => (
+                <div key={index} className={styles.arrayItem}>
+                  <Input label="actionType" value={item.actionType ?? ""} onChange={(event) => updateComponentArray("voiceResponseArray", index, { actionType: event.target.value })} />
+                  <Input label="voiceResponse" value={item.voiceResponse ?? ""} onChange={(event) => updateComponentArray("voiceResponseArray", index, { voiceResponse: event.target.value })} />
+                  <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("voiceResponseArray", index)}>Удалить</Button>
+                </div>
+              ))}
+              <Button type="button" variant="secondary" onClick={() => addComponentArrayItem("voiceResponseArray", { actionType: "", voiceResponse: "" })}>Добавить ещё</Button>
+            </Accordion>
 
-                <Accordion title="voiceResponseArray" defaultOpen>
-                  {(component.voiceResponseArray ?? []).map((item: VoiceResponse, index: number) => (
-                    <div key={index} className={styles.arrayItem}>
-                      <Input label="actionType" value={item.actionType ?? ""} onChange={(event) => updateComponentArray("voiceResponseArray", index, { actionType: event.target.value })} />
-                      <Input label="voiceResponse" value={item.voiceResponse ?? ""} onChange={(event) => updateComponentArray("voiceResponseArray", index, { voiceResponse: event.target.value })} />
-                      <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("voiceResponseArray", index)}>Удалить</Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="secondary" onClick={() => addComponentArrayItem("voiceResponseArray", { actionType: "", voiceResponse: "" })}>Добавить ещё</Button>
-                </Accordion>
-
-                <Accordion title="nextAction" defaultOpen>
-                  {(component.nextAction ?? []).map((item: NextAction, index: number) => (
-                    <div key={index} className={styles.arrayItem}>
-                      <Input label="actionTypeComponent" value={item.actionTypeComponent ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { actionTypeComponent: event.target.value })} />
-                      <Input label="actionType" value={item.actionType ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { actionType: event.target.value })} />
-                      <Input label="uuid" value={item.uuid ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { uuid: event.target.value })} />
-                      <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("nextAction", index)}>Удалить</Button>
-                    </div>
-                  ))}
-                  <Button type="button" variant="secondary" onClick={() => addComponentArrayItem("nextAction", { actionTypeComponent: "", actionType: "", uuid: "" })}>Добавить ещё</Button>
-                </Accordion>
+            <Accordion title="nextAction" defaultOpen>
+              {(component.nextAction ?? []).map((item: NextAction, index: number) => (
+                <div key={index} className={styles.arrayItem}>
+                  <Input label="actionTypeComponent" value={item.actionTypeComponent ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { actionTypeComponent: event.target.value })} />
+                  <Input label="actionType" value={item.actionType ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { actionType: event.target.value })} />
+                  <Input label="uuid" value={item.uuid ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { uuid: event.target.value })} />
+                  <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("nextAction", index)}>Удалить</Button>
+                </div>
+              ))}
+              <Button type="button" variant="secondary" onClick={() => addComponentArrayItem("nextAction", { actionTypeComponent: "", actionType: "", uuid: "" })}>Добавить ещё</Button>
+            </Accordion>
 
           </div>
         </Modal>
@@ -406,8 +393,8 @@ export const CommandMainPage = () => {
             <div className={styles.bottomSheet} onClick={(event) => event.stopPropagation()}>
               <div className={styles.sheetHandle} />
               <h3>{actionsCommand.title}</h3>
-                <Button fullWidth onClick={() => enableCommand(actionsCommand)}>Включить</Button>
-              <Button fullWidth variant="ghost" onClick={() => deleteCommand(actionsCommand.uuid)}>Удалить</Button>
+              <Button fullWidth onClick={() => handlerEditStatus(actionsCommand.uuid, Boolean(actionsCommand.status))}> Включить</Button>
+              <Button fullWidth variant="ghost" onClick={() => handlerDeleteCommand(actionsCommand.uuid)}>Удалить</Button>
             </div>
           </div>
         )}

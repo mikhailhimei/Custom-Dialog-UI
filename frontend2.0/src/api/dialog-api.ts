@@ -48,6 +48,14 @@ export class DialogApi {
     });
   }
 
+  async _update_status(uuid: string, type: string, status: any){
+    return this.hass.connection.sendMessagePromise({
+      type: `dialog_custom_ui/${type}`,
+      uuid: uuid,
+      status: status,
+    });
+  }
+
   async _delete(uuid: string, type: string) {
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,

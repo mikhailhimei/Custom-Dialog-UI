@@ -5,96 +5,100 @@ import { useDialogApi } from "../../context/DialogContext";
 import { ShortResponse, ShortCommand } from "../../../types"
 
 import {
-  ScriptActionDetails,
-  ScriptsResponse,
+    ScriptActionDetails,
+    ScriptsResponse,
 } from "../../types/scripts";
 
 const normalizeShortResponse = (response: any): ShortResponse => ({
-  data: Array.isArray(response?.data) ? response.data : [],
-  page: response?.page ?? 1,
-  page_size: response?.page_size ?? 10,
-  total_pages: response?.total_pages ?? 1,
-  total_items: response?.total_items ?? 0,
+    data: Array.isArray(response?.data) ? response.data : [],
+    page: response?.page ?? 1,
+    page_size: response?.page_size ?? 10,
+    total_pages: response?.total_pages ?? 1,
+    total_items: response?.total_items ?? 0,
 });
 
-export function useApiCommands(activeConfig) {
-  const api = useDialogApi();
+export function useApiCommands(storageName: string) {
+    const api = useDialogApi();
 
-  const [commands, setCommands] = useState<ShortResponse | null>(null);
-    
-  const [loading, setLoading] = useState(true);
+    const [commands, setCommands] = useState<ShortResponse | null>(null);
 
-  const hasLoadedRef = useRef(false);
+    const [loading, setLoading] = useState(true);
 
-  const loadCommands = async (activeConfig, page = 1, append = false) => {
-    setLoading(true);
+    const hasLoadedRef = useRef(false);
 
-    try {
-      const response = normalizeShortResponse(await api._getShort(`${activeConfig}`, page));
-      setCommands(prev => {
-        if (!append || !prev) {
-          return response;
+    const loadCommands = async (storageName: string, page: number = 1, append: boolean = false) => {
+        setLoading(true);
+
+        try {
+            const response = normalizeShortResponse(await api._getShort(`${storageName}`, page));
+            setCommands(prev => {
+                if (!append || !prev) {
+                    return response;
+                }
+
+                return {
+                    ...response,
+                    data: [
+                        ...prev.data,
+                        ...response.data,
+                    ],
+                };
+            });
+        } finally {
+            setLoading(false);
         }
-
-        return {
-          ...response,
-          data: [
-            ...prev.data,
-            ...response.data,
-          ],
-        };
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
     useEffect(() => {
-    if (hasLoadedRef.current) {
-      return;
-    }
+        if (hasLoadedRef.current) {
+            return;
+        }
 
-    hasLoadedRef.current = true;
-    void loadCommands(activeConfig);
-  }, [loadCommands]);
+        hasLoadedRef.current = true;
+        void loadCommands(storageName);
+    }, [loadCommands]);
 
-  const enableCommand = async (activeConfig, command: ShortCommand) => {
-    const response = await api._update(command.uuid, activeConfig.updateType, { status: true });
-    return response
-  };
+    const editStatusCommand = async (storageName: string, uuid: string, status: boolean) => {
+        const response = await api._update_status(storageName, uuid, status);
+        return response
+    };
 
-    const saveCommand = async (activeConfig) => {
-    let result = []
-    if (isEdit && formData.uuid) {
+    const saveCommand = async (storageName: string, formData: any) => {
+        const result = await api._save(formData, storageName);
+        return result
+    };
+
+    const updateCommand = async (storageName: string, formData: any) => {
+        console.log(formData)
+        if (!formData.uuid) return
+
         const { uuid, ...payload } = formData;
-        result = await api._update(uuid, activeConfig.updateType, payload);
-    } else {
-        result = await api._save(formData, activeConfig.saveType);
+
+        const result = await api._update(uuid, storageName, payload)
+
+        return result
     }
 
-    return result
-  };
+    const deleteCommand = async (storageName: string, uuid: string) => {
+        const result = await api._delete(uuid, storageName);
+        return result
+    };
 
-  const deleteCommand = async (activeConfig, uuid: string) => {
-    const result = await api._delete(uuid, activeConfig.deleteType);
-    return result
-  };
-
-  const detailCommand = async (activeConfig, uuid: string) => {
-    const response: any = await api._getDetail(uuid, activeConfig.detailType);
-    return response
-  }
+    const detailInformationCommand = async (storageName: string, uuid: string) => {
+        const response: any = await api._getDetail(uuid, storageName);
+        return response
+    }
 
 
+    return {
+        loading,
+        commands,
 
-  return {
-    loading,
-    commands,
-
-    loadCommands,
-    enableCommand,
-    saveCommand,
-    deleteCommand,
-    detailCommand
-  };
+        loadCommands,
+        saveCommand,
+        deleteCommand,
+        updateCommand,
+        editStatusCommand,
+        detailInformationCommand
+    };
 }
