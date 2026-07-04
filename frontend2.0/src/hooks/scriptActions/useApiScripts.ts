@@ -27,7 +27,7 @@ export function useApiScripts() {
     useState<ScriptsResponse | null>(null);
   const hasLoadedRef = useRef(false);
 
-  const loadScripts = useCallback(async (page = 1) => {
+  const loadScripts = useCallback(async (page = 1, append = false) => {
     setLoading(true);
 
     try {
@@ -36,7 +36,19 @@ export function useApiScripts() {
         page
       );
 
-      setScripts(normalizeScriptsResponse(response));
+      setScripts(prev => {
+      if (!append || !prev) {
+        return response;
+      }
+
+      return {
+        ...response,
+        script_actions: [
+          ...prev.script_actions,
+          ...response.script_actions,
+        ],
+      };
+    });
     } finally {
       setLoading(false);
     }
