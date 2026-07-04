@@ -27,32 +27,37 @@ export function useApiScripts() {
     useState<ScriptsResponse | null>(null);
   const hasLoadedRef = useRef(false);
 
-  const loadScripts = useCallback(async (page = 1, append = false) => {
+  const loadScripts = useCallback(
+  async (page = 1, append = false) => {
     setLoading(true);
 
     try {
-      const response = await api._getShort(
-        "get_script_actions_short",
-        page
+      const response = normalizeScriptsResponse(
+        await api._getShort(
+          "get_script_actions_short",
+          page
+        )
       );
 
       setScripts(prev => {
-      if (!append || !prev) {
-        return response;
-      }
+        if (!append || !prev) {
+          return response;
+        }
 
-      return {
-        ...response,
-        script_actions: [
-          ...prev.script_actions,
-          ...response.script_actions,
-        ],
-      };
-    });
+        return {
+          ...response,
+          script_actions: [
+            ...prev.script_actions,
+            ...response.script_actions,
+          ],
+        };
+      });
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  },
+  [api]
+);
 
   useEffect(() => {
     if (hasLoadedRef.current) {
