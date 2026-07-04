@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { MobileHeader } from '../../components/MobileHeader/MobileHeader';
 import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
@@ -23,6 +23,8 @@ import { useApiScripts } from '../../hooks/scriptActions/useApiScripts';
 export const ScriptsPage = () => {
   const isMobile = useIsMobile();
 
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   const [formData, setFormData] =
     useState<ScriptActionDetails>();
 
@@ -34,6 +36,27 @@ export const ScriptsPage = () => {
 
   const [isEdit, setIsEdit] =
     useState(false);
+
+  useEffect(() => {
+  if (!isMobile) return;
+
+  const observer = new IntersectionObserver(([entry]) => {
+    if (
+      entry.isIntersecting &&
+      !loading &&
+      scripts &&
+      scripts.page < scripts.total_pages
+    ) {
+      loadScripts(scripts.page + 1, true);
+    }
+  });
+
+  if (loadMoreRef.current) {
+    observer.observe(loadMoreRef.current);
+  }
+
+  return () => observer.disconnect();
+}, [isMobile, loading, scripts, loadScripts]);
 
   const {
     loading,
@@ -135,11 +158,15 @@ export const ScriptsPage = () => {
           ))}
         </div>
 
-        <Pagination
-          page={scripts?.page || 1}
-          totalPages={scripts?.total_pages || 1}
-          onChange={loadScripts}
-        />
+        {isMobile && <div ref={loadMoreRef} />}
+
+        {!isMobile && (
+  <Pagination
+    page={scripts?.page || 1}
+    totalPages={scripts?.total_pages || 1}
+    onChange={loadScripts}
+  />
+)}
 
         <Modal
           open={modalOpen}
