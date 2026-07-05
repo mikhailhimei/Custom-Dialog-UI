@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { Accordion } from "../../components/Accordion/Accordion";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
 import { Button } from "../../components/ui/Button/Button";
 import {
   GeneralSettingsForm,
@@ -148,6 +149,7 @@ export const SettingsPage = () => {
 
   return (
     <div className={styles.page}>
+      
       <NavigationTabs />
 
       <h1>Настройки</h1>

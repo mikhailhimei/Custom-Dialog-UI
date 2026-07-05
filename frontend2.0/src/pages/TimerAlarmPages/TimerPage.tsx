@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import { Modal } from "../../components/Modal/Modal";
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { Button } from "../../components/ui/Button/Button";
 import { useTimerAlarmRequests } from "../../hooks/useTimerAlarmRequests";
