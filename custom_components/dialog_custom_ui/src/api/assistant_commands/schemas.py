@@ -22,7 +22,9 @@ from ....const import (
     WS_SEARCH_ASSISTANT_SUB_DIRECT_CONTROLS,
     WS_SEARCH_ASSISTANT_SUB_DIRECT_CONTROL_SAMPLES,
     WS_UPDATE_ASSISTANT_COMMAND,
+    WS_UPDATE_ASSISTANT_COMMAND_STATUS,
     WS_UPDATE_ASSISTANT_SUB_COMMAND,
+    WS_UPDATE_ASSISTANT_SUB_COMMAND_STATUS,
     WS_UPDATE_ASSISTANT_SUB_DIRECT_CONTROL,
     WS_UPDATE_ASSISTANT_SUB_DIRECT_CONTROL_SAMPLE,
 )
@@ -36,6 +38,12 @@ UPDATE_ASSISTANT_COMMAND_SCHEMA = {
     vol.Required("type"): WS_UPDATE_ASSISTANT_COMMAND,
     vol.Required("uuid"): str,
     vol.Required("data"): dict,
+}
+
+UPDATE_ASSISTANT_COMMAND_STATUS_SCHEMA = {
+    vol.Required("type"): WS_UPDATE_ASSISTANT_COMMAND_STATUS,
+    vol.Required("uuid"): str,
+    vol.Required("status"): bool,
 }
 
 GET_ASSISTANT_COMMANDS_SHORT_SCHEMA = {
@@ -68,6 +76,12 @@ UPDATE_ASSISTANT_SUB_COMMAND_SCHEMA = {
     vol.Required("type"): WS_UPDATE_ASSISTANT_SUB_COMMAND,
     vol.Required("uuid"): str,
     vol.Required("data"): dict,
+}
+
+UPDATE_ASSISTANT_SUB_COMMAND_STATUS_SCHEMA = {
+    vol.Required("type"): WS_UPDATE_ASSISTANT_SUB_COMMAND_STATUS,
+    vol.Required("uuid"): str,
+    vol.Required("status"): bool,
 }
 
 GET_ASSISTANT_SUB_COMMANDS_SHORT_SCHEMA = {

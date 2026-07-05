@@ -64,7 +64,7 @@ export const CommandSubPage = () => {
     //   shortType: "get_assistant_sub_commands_short",
     // detailType: "get_assistant_sub_command",
     // saveType: "save_assistant_sub_command",
-    // updateType: "update_assistant_sub_command",
+    // updateType: "update_assistant_sub_command_status",
     // deleteType: "delete_assistant_sub_command",
 
   const [canLoadMore, setCanLoadMore] = useState(false);
@@ -117,7 +117,7 @@ export const CommandSubPage = () => {
   };
 
   const handlerEditStatus = async (uuid: string, status: boolean) => {
-    const result = await editStatusCommand("update_assistant_sub_command", uuid, status)
+    const result = await editStatusCommand("update_assistant_sub_command_status", uuid, status)
     loadCommands("get_assistant_sub_commands_short")
   }
 
@@ -132,7 +132,7 @@ export const CommandSubPage = () => {
   }
 
   const handlerUpdateCommand = async () => {
-    const result = await updateCommand("update_assistant_sub_command", formData)
+    const result = await updateCommand("update_assistant_sub_command_status", formData)
     setModalOpen(false);
   }
 

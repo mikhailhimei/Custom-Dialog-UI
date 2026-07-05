@@ -4,6 +4,7 @@ import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
 import { Accordion } from "../Accordion/Accordion";
+import { CommandSearchInput } from "../CommandSearchInput";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
 
 import styles from "./CommandEditorModal.module.scss";
@@ -14,7 +15,7 @@ const createComponent = (): ComponentDialog => ({
   actionType: "",
   answerType: "default",
   voiceCommands: [""],
-  nextDirectControl: [{ uuid: "" }],
+  nextDirectControl: [{ uuid: "", actionType: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
   nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "" }],
 });
@@ -190,12 +191,28 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
         <Accordion title="nextDirectControl" defaultOpen>
           {(component.nextDirectControl ?? []).map((item, index) => (
             <div key={index} className={styles.arrayItem}>
-              <Input
+              <CommandSearchInput
                 label="uuid"
                 value={item.uuid}
+                onChange={(value) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    uuid: value,
+                  })
+                }
+                onSelect={(option) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    uuid: option.uuid,
+                    actionType: option.actionType ?? "",
+                  })
+                }
+              />
+
+              <Input
+                label="actionType"
+                value={item.actionType ?? ""}
                 onChange={(event) =>
                   updateComponentArray("nextDirectControl", index, {
-                    uuid: event.target.value,
+                    actionType: event.target.value,
                   })
                 }
               />
@@ -218,6 +235,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
             onClick={() =>
               addComponentArrayItem("nextDirectControl", {
                 uuid: "",
+                actionType: "",
               })
             }
           >

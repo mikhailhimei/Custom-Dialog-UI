@@ -36,7 +36,7 @@ export type ComponentDialog = {
   answerType: string;
   forwardText?: boolean;
   voiceCommands: string[];
-  nextDirectControl: { uuid: string }[];
+  nextDirectControl: { uuid: string; actionType?: string }[];
   voiceResponseArray: VoiceResponse[];
   nextAction: NextAction[];
   [key: string]: any;
