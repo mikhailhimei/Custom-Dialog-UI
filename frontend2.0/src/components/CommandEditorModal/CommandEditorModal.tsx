@@ -15,9 +15,9 @@ const createComponent = (): ComponentDialog => ({
   actionType: "",
   answerType: "default",
   voiceCommands: [""],
-  nextDirectControl: [{ uuid: "", actionType: "" }],
+  nextDirectControl: [{ uuid: "", actionType: "", title: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
-  nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "" }],
+  nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "", title: "" }],
 });
 
 interface CommandEditorModalProps {
@@ -194,6 +194,8 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
               <CommandSearchInput
                 label="uuid"
                 value={item.uuid}
+                selectedTitle={item.title}
+                searchSource="sub_direct_controls"
                 onChange={(value) =>
                   updateComponentArray("nextDirectControl", index, {
                     uuid: value,
@@ -202,7 +204,8 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 onSelect={(option) =>
                   updateComponentArray("nextDirectControl", index, {
                     uuid: option.uuid,
-                    actionType: option.actionType ?? "",
+                    actionType: option.actionType ?? option.mappingType ?? "",
+                    title: option.title ?? "",
                   })
                 }
               />
@@ -236,6 +239,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
               addComponentArrayItem("nextDirectControl", {
                 uuid: "",
                 actionType: "",
+                title: "",
               })
             }
           >
@@ -315,12 +319,20 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 }
               />
 
-              <Input
+              <CommandSearchInput
                 label="uuid"
                 value={item.uuid}
-                onChange={(event) =>
+                selectedTitle={item.title}
+                onChange={(value) =>
                   updateComponentArray("nextAction", index, {
-                    uuid: event.target.value,
+                    uuid: value,
+                  })
+                }
+                onSelect={(option) =>
+                  updateComponentArray("nextAction", index, {
+                    uuid: option.uuid,
+                    actionType: option.actionType ?? "",
+                    title: option.title ?? "",
                   })
                 }
               />
@@ -345,6 +357,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 actionTypeComponent: "",
                 actionType: "",
                 uuid: "",
+                title: "",
               })
             }
           >

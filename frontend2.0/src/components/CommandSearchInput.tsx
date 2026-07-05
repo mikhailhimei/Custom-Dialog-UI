@@ -5,15 +5,20 @@ import { Input } from "./ui/Input/Input";
 
 import styles from "./CommandSearchInput.module.scss";
 
-type CommandSearchOption = {
+export type CommandSearchOption = {
   title: string;
   uuid: string;
   actionType?: string;
+  mappingType?: string;
 };
+
+type SearchSource = "assistant_commands" | "sub_direct_controls";
 
 type Props = {
   label?: string;
   value: string;
+  selectedTitle?: string;
+  searchSource?: SearchSource;
   onChange: (value: string) => void;
   onSelect?: (option: CommandSearchOption) => void;
 };
@@ -21,6 +26,8 @@ type Props = {
 export const CommandSearchInput = ({
   label = "uuid",
   value,
+  selectedTitle,
+  searchSource = "assistant_commands",
   onChange,
   onSelect,
 }: Props) => {
@@ -44,7 +51,9 @@ export const CommandSearchInput = ({
     const timeoutId = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response: any = await api.searchAssistantCommands(query);
+        const response: any = searchSource === "sub_direct_controls"
+          ? await api.searchAssistantSubDirectControls(query)
+          : await api.searchAssistantCommands(query);
         if (requestIdRef.current !== requestId) return;
 
         const data = Array.isArray(response?.data) ? response.data : [];
@@ -58,7 +67,7 @@ export const CommandSearchInput = ({
     }, 250);
 
     return () => window.clearTimeout(timeoutId);
-  }, [api, query]);
+  }, [api, query, searchSource]);
 
   const handleSelect = (option: CommandSearchOption) => {
     onChange(option.uuid);
@@ -68,8 +77,12 @@ export const CommandSearchInput = ({
 
   return (
     <div className={styles.wrapper}>
+      <div className={styles.labelRow}>
+        <span className={styles.label}>{label}</span>
+        {selectedTitle && <span className={styles.selectedTitle}>{selectedTitle}</span>}
+      </div>
+
       <Input
-        label={label}
         value={value}
         autoComplete="off"
         placeholder="Начните вводить title или uuid"
@@ -90,6 +103,7 @@ export const CommandSearchInput = ({
             >
               <span className={styles.title}>{option.title || "Без названия"}</span>
               <span className={styles.uuid}>{option.uuid}</span>
+              {option.mappingType && <span className={styles.uuid}>mappingType: {option.mappingType}</span>}
             </button>
           ))}
         </div>
