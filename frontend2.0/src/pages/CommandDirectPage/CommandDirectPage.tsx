@@ -47,7 +47,6 @@ export const CommandDirectPage = () => {
   const [actionsCommand, setActionsCommand] = useState<ShortCommand | null>(null);
 
   const directControl = formData.directControl;
-  const templateItems = Array.isArray(formData.subDirectControl) ? formData.subDirectControl : [];
   const directItems = Array.isArray(directControl?.subDirectControl) ? directControl.subDirectControl : [];
   const directModes: Array<{ key: string; label: string }> = [
     { key: "main", label: "Основной" },
@@ -144,18 +143,6 @@ export const CommandDirectPage = () => {
     setModalOpen(false);
   }
 
-  // directMain: {
-  //   key: "directMain",
-  //   label: "Прямая команда",
-  //   kind: "direct",
-  //   shortType: "get_assistant_sub_direct_controls_short",
-  //   detailType: "get_assistant_sub_direct_control",
-  //   saveType: "save_assistant_sub_direct_control",
-  //   updateType: "update_assistant_sub_direct_control",
-  //   deleteType: "delete_assistant_sub_direct_control",
-  //   hasStatus: true,
-  // },
-
   return (
     <>
       <MobileHeader />
@@ -167,9 +154,6 @@ export const CommandDirectPage = () => {
 
         <div className={styles.header}>
           <div className={styles.headerTop}>
-            <div className={styles.heading}>
-              <p className={styles.description}>Создавайте и редактируйте голосовые команды ассистента.</p>
-            </div>
             <div className={styles.innerTabs}>
               {directModes.map((mode) => (
                 <button
@@ -185,7 +169,11 @@ export const CommandDirectPage = () => {
                 </button>
               ))}
             </div>
-
+            <div className={styles.heading}>
+              <p className={styles.description}>Создавайте и редактируйте голосовые команды ассистента.</p>
+            </div>
+            
+            
             {!isMobile ?
               <Button
                 variant="primary"

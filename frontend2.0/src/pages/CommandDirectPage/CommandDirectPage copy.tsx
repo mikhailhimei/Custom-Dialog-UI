@@ -253,77 +253,8 @@ export const CommandDirectPage = () => {
           footer={<Button onClick={saveCommand}>Сохранить</Button>}
         >
           <div className={styles.form}>
-            {activeConfig.hasStatus && (
-              <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={formData.status ?? true} onChange={(event) => setFormData({ ...formData, status: event.target.checked })} />
-                Команда включена
-              </label>
-            )}
-
+            
             <Input label="Название команды" value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} />
-
-            <Input label="directControl.mappingType" value={directControl.mappingType ?? ""} onChange={(event) => updateDirectControl({ mappingType: event.target.value })} />
-            <Input label="directControl.valueType" value={directControl.valueType ?? ""} onChange={(event) => updateDirectControl({ valueType: event.target.value })} />
-
-            <div className={styles.field}>
-              <label>voiceCommands</label>
-              <textarea
-                className={styles.textarea}
-                value={Array.isArray(directControl.voiceCommands) ? directControl.voiceCommands.join("\n") : ""}
-                onChange={(event) => updateDirectControl({ voiceCommands: event.target.value.split("\n").filter(Boolean) })}
-                rows={5}
-              />
-            </div>
-
-            <label className={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                checked={Boolean(directControl.manual)}
-                onChange={(event) => updateDirectControl({ manual: event.target.checked, subDirectControl: event.target.checked ? [] : "" })}
-              />
-              manual
-            </label>
-
-            {directControl.manual ? (
-              <Accordion title="directControl.subDirectControl" defaultOpen>
-                {directItems.map((item, index) => (
-                  <div key={index} className={styles.arrayItem}>
-                    <Input label="subMappingType" value={item.subMappingType ?? ""} onChange={(event) => updateSubDirectItem("direct", index, { subMappingType: event.target.value })} />
-                    <div className={styles.field}>
-                      <label>subVoiceCommands</label>
-                      <textarea className={styles.textarea} value={item.subVoiceCommands ?? ""} onChange={(event) => updateSubDirectItem("direct", index, { subVoiceCommands: event.target.value })} rows={3} />
-                    </div>
-                    <Button type="button" variant="ghost" onClick={() => removeSubDirectItem("direct", index)}>Удалить</Button>
-                  </div>
-                ))}
-                <Button type="button" variant="secondary" onClick={() => addSubDirectItem("direct")}>Добавить ещё</Button>
-              </Accordion>
-            ) : (
-              <Input label="directControl.subDirectControl" value={typeof directControl.subDirectControl === "string" ? directControl.subDirectControl : ""} onChange={(event) => updateDirectControl({ subDirectControl: event.target.value })} />
-            )}
-
-            {activeConfig.kind === "assistantSettings" && (
-              <>
-                <Input label="actionType" value={formData.actionType ?? ""} onChange={(event) => setFormData({ ...formData, actionType: event.target.value })} />
-
-                <div className={styles.field}>
-                  <label>message</label>
-                  <textarea
-                    className={styles.textarea}
-                    value={formData.message ?? ""}
-                    onChange={(event) => setFormData({ ...formData, message: event.target.value || null })}
-                    rows={4}
-                  />
-                </div>
-
-                <label className={styles.checkboxRow}>
-                  <input type="checkbox" checked={Boolean(formData.endStatus)} onChange={(event) => setFormData({ ...formData, endStatus: event.target.checked })} />
-                  endStatus
-                </label>
-              </>
-            )}
-
-            {activeConfig.kind === "template" && (
               <Accordion title="subDirectControl" defaultOpen>
                 {templateItems.map((item, index) => (
                   <div key={index} className={styles.arrayItem}>
@@ -337,7 +268,6 @@ export const CommandDirectPage = () => {
                 ))}
                 <Button type="button" variant="secondary" onClick={() => addSubDirectItem("template")}>Добавить ещё</Button>
               </Accordion>
-            )}
           </div>
         </Modal>
 

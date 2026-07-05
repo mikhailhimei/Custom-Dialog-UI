@@ -1,35 +1,33 @@
-import React from "react";
+import React, { useMemo } from "react";
+
+import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
 import { Accordion } from "../Accordion/Accordion";
-import { Modal } from "../Modal/Modal";
+import { Textarea } from "../ui/Textarea/Textarea"
+
+import { CommandDetails } from "../../types/commandTypes";
 
 import styles from "../../pages/CommandShared/CommandEditorPage.module.scss";
 
-import { CommandDetails } from "../../types/commandTypes";
+const createDirectControl = () => ({
+  mappingType: "",
+  valueType: "",
+  voiceCommands: [""],
+  manual: false,
+  subDirectControl: "",
+});
 
 type Props = {
   open: boolean;
   onClose: () => void;
 
   title: string;
+
   formData: CommandDetails;
-  setFormData: (data: CommandDetails) => void;
-
-  directControl: any;
-  directItems: any[];
-
-  updateDirectControl: (patch: any) => void;
-  updateSubDirectItem: (
-    mode: string,
-    index: number,
-    patch: any
-  ) => void;
-  removeSubDirectItem: (
-    mode: string,
-    index: number
-  ) => void;
-  addSubDirectItem: (mode: string) => void;
+  setFormData: React.Dispatch<
+    React.SetStateAction<CommandDetails>
+  >;
 
   onSave: () => void;
 };
@@ -40,16 +38,58 @@ export const CommandDirectModal: React.FC<Props> = ({
   title,
   formData,
   setFormData,
-  directControl,
-  directItems,
-  updateDirectControl,
-  updateSubDirectItem,
-  removeSubDirectItem,
-  addSubDirectItem,
   onSave,
 }) => {
-  console.log(directControl)
-  if (!directControl) return
+  const directControl = useMemo(() => {
+    return formData.directControl ?? createDirectControl();
+  }, [formData]);
+
+  const updateDirectControl = (patch: Record<string, any>) => {
+    setFormData((current) => ({
+      ...current,
+      directControl: {
+        ...(current.directControl ?? createDirectControl()),
+        ...patch,
+      },
+    }));
+  };
+
+  const updateSubDirectControl = (
+    index: number,
+    patch: Record<string, string>
+  ) => {
+    const list = [...((directControl.subDirectControl as any[]) ?? [])];
+
+    list[index] = {
+      ...list[index],
+      ...patch,
+    };
+
+    updateDirectControl({
+      subDirectControl: list,
+    });
+  };
+
+  const addSubDirectControl = () => {
+    updateDirectControl({
+      subDirectControl: [
+        ...((directControl.subDirectControl as any[]) ?? []),
+        {
+          subMappingType: "",
+          subVoiceCommands: "",
+        },
+      ],
+    });
+  };
+
+  const removeSubDirectControl = (index: number) => {
+    updateDirectControl({
+      subDirectControl: (
+        (directControl.subDirectControl as any[]) ?? []
+      ).filter((_, itemIndex) => itemIndex !== index),
+    });
+  };
+
   return (
     <Modal
       open={open}
@@ -57,16 +97,11 @@ export const CommandDirectModal: React.FC<Props> = ({
       title={title}
       footer={
         <>
-          <Button
-            variant="ghost"
-            onClick={onClose}
-          >
+          <Button variant="ghost" onClick={onClose}>
             Отмена
           </Button>
 
-          <Button onClick={onSave}>
-            Сохранить
-          </Button>
+          <Button onClick={onSave}>Сохранить</Button>
         </>
       }
     >
@@ -75,11 +110,11 @@ export const CommandDirectModal: React.FC<Props> = ({
           <input
             type="checkbox"
             checked={formData.status ?? true}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                status: e.target.checked,
-              })
+            onChange={(event) =>
+              setFormData((current) => ({
+                ...current,
+                status: event.target.checked,
+              }))
             }
           />
           Команда включена
@@ -88,54 +123,42 @@ export const CommandDirectModal: React.FC<Props> = ({
         <Input
           label="Название команды"
           value={formData.title}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              title: e.target.value,
+          onChange={(event) =>
+            setFormData((current) => ({
+              ...current,
+              title: event.target.value,
+            }))
+          }
+        />
+
+        <Input
+          label="mappingType"
+          value={directControl.mappingType}
+          onChange={(event) =>
+            updateDirectControl({
+              mappingType: event.target.value,
             })
           }
         />
 
         <Input
-          label="directControl.mappingType"
-          value={directControl.mappingType ?? ""}
-          onChange={(e) =>
+          label="valueType"
+          value={directControl.valueType}
+          onChange={(event) =>
             updateDirectControl({
-              mappingType: e.target.value,
-            })
-          }
-        />
-
-        <Input
-          label="directControl.valueType"
-          value={directControl.valueType ?? ""}
-          onChange={(e) =>
-            updateDirectControl({
-              valueType: e.target.value,
+              valueType: event.target.value,
             })
           }
         />
 
         <div className={styles.field}>
-          <label>voiceCommands</label>
-
-          <textarea
-            className={styles.textarea}
-            rows={5}
-            value={
-              Array.isArray(
-                directControl.voiceCommands
-              )
-                ? directControl.voiceCommands.join(
-                    "\n"
-                  )
-                : ""
-            }
-            onChange={(e) =>
+          <Textarea
+            label="voiceCommands"
+            rows={6}
+            value={(directControl.voiceCommands ?? []).join("\n")}
+            onChange={(event) =>
               updateDirectControl({
-                voiceCommands: e.target.value
-                  .split("\n")
-                  .filter(Boolean),
+                voiceCommands: event.target.value.split("\n"),
               })
             }
           />
@@ -144,14 +167,11 @@ export const CommandDirectModal: React.FC<Props> = ({
         <label className={styles.checkboxRow}>
           <input
             type="checkbox"
-            checked={Boolean(
-              directControl.manual
-            )}
-            onChange={(e) =>
+            checked={directControl.manual}
+            onChange={(event) =>
               updateDirectControl({
-                manual: e.target.checked,
-                subDirectControl:
-                  e.target.checked ? [] : "",
+                manual: event.target.checked,
+                subDirectControl: event.target.checked ? [] : "",
               })
             }
           />
@@ -159,70 +179,39 @@ export const CommandDirectModal: React.FC<Props> = ({
         </label>
 
         {directControl.manual ? (
-          <Accordion
-            title="directControl.subDirectControl"
-            defaultOpen
-          >
-            {directItems.map(
+          <Accordion title="subDirectControl" defaultOpen>
+            {((directControl.subDirectControl as any[]) ?? []).map(
               (item, index) => (
-                <div
-                  key={index}
-                  className={styles.arrayItem}
-                >
+                <div key={index} className={styles.arrayItem}>
                   <Input
                     label="subMappingType"
-                    value={
-                      item.subMappingType ?? ""
-                    }
-                    onChange={(e) =>
-                      updateSubDirectItem(
-                        "direct",
-                        index,
-                        {
-                          subMappingType:
-                            e.target.value,
-                        }
-                      )
+                    value={item.subMappingType}
+                    onChange={(event) =>
+                      updateSubDirectControl(index, {
+                        subMappingType: event.target.value,
+                      })
                     }
                   />
 
-                  <div
-                    className={styles.field}
-                  >
-                    <label>
-                      subVoiceCommands
-                    </label>
+                  <div className={styles.field}>
+                    <label>subVoiceCommands</label>
 
                     <textarea
-                      className={
-                        styles.textarea
-                      }
+                      className={styles.textarea}
                       rows={3}
-                      value={
-                        item.subVoiceCommands ??
-                        ""
-                      }
-                      onChange={(e) =>
-                        updateSubDirectItem(
-                          "direct",
-                          index,
-                          {
-                            subVoiceCommands:
-                              e.target.value,
-                          }
-                        )
+                      value={item.subVoiceCommands}
+                      onChange={(event) =>
+                        updateSubDirectControl(index, {
+                          subVoiceCommands: event.target.value,
+                        })
                       }
                     />
                   </div>
 
                   <Button
+                    type="button"
                     variant="ghost"
-                    onClick={() =>
-                      removeSubDirectItem(
-                        "direct",
-                        index
-                      )
-                    }
+                    onClick={() => removeSubDirectControl(index)}
                   >
                     Удалить
                   </Button>
@@ -231,29 +220,24 @@ export const CommandDirectModal: React.FC<Props> = ({
             )}
 
             <Button
+              type="button"
               variant="secondary"
-              onClick={() =>
-                addSubDirectItem(
-                  "direct"
-                )
-              }
+              onClick={addSubDirectControl}
             >
               Добавить ещё
             </Button>
           </Accordion>
         ) : (
           <Input
-            label="directControl.subDirectControl"
+            label="subDirectControl"
             value={
-              typeof directControl.subDirectControl ===
-              "string"
+              typeof directControl.subDirectControl === "string"
                 ? directControl.subDirectControl
                 : ""
             }
-            onChange={(e) =>
+            onChange={(event) =>
               updateDirectControl({
-                subDirectControl:
-                  e.target.value,
+                subDirectControl: event.target.value,
               })
             }
           />
