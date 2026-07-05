@@ -85,7 +85,7 @@ UPDATE_ASSISTANT_SUB_COMMAND_STATUS_SCHEMA = {
     vol.Required("status"): bool,
 }
 
-UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS = {
+UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS_SCHEMA = {
     vol.Required("type"): WS_UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS,
     vol.Required("uuid"): str,
     vol.Required("status"): bool,
