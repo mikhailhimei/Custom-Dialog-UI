@@ -8,7 +8,7 @@ import { Accordion } from "../Accordion/Accordion";
 
 import { CommandDetails } from "../../types/commandTypes";
 
-import styles from "../../pages/CommandShared/CommandEditorPage.module.scss";
+import styles from "@/pages/CommandPage/CommandEditorPage.module.scss";
 
 type Props = {
   open: boolean;
@@ -119,7 +119,7 @@ export const CommandDirectTemplateModal: React.FC<Props> = ({
               <Textarea
                 label="subVoiceCommands"
                 rows={3}
-                value={(item.subVoiceCommands ?? []).join("\n")}
+                value={(typeof item.subVoiceCommands == 'object' ? item.subVoiceCommands : []).join("\n")}
                 onChange={(event) =>
                     updateItem(index, {
                     subVoiceCommands: event.target.value

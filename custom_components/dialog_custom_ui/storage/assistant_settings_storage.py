@@ -13,7 +13,9 @@ _STORAGE_VERSION = 1
 _STORAGE_KEY = "dialog_custom_ui_assistant_settings"
 _DEFAULT_ASSISTANT_SETTINGS: list[dict[str, Any]] = [
     {
-        "type": "default",
+        "actionType": "default",
+        "endStatus": False,
+        "title": "Если ничего не нашел",
         "voiceResponse": "Извините я вас не поняла",
     },
 ]

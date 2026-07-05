@@ -12,7 +12,7 @@ import { CommandSearchInput } from "../CommandSearchInput";
 import { CommandDetails } from "../../types/commandTypes";
 import { VALUE_TYPE_OPTIONS } from "../../constants/commandSelectOptions";
 
-import styles from "../../pages/CommandShared/CommandEditorPage.module.scss";
+import styles from "@/pages/CommandPage/CommandEditorPage.module.scss";
 
 const createDirectControl = () => ({
   mappingType: "",
@@ -110,7 +110,7 @@ export const CommandDirectModal: React.FC<Props> = ({
       }
     >
       <div className={styles.form}>
-        <ToggleSwitch
+        {/* <ToggleSwitch
           label="Команда включена"
           checked={formData.status ?? true}
           onChange={(event) =>
@@ -119,7 +119,7 @@ export const CommandDirectModal: React.FC<Props> = ({
               status: event.target.checked,
             }))
           }
-        />
+        /> */}
 
         <Input
           label="Название команды"

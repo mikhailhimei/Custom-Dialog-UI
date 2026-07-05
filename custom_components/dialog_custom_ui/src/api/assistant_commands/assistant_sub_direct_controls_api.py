@@ -35,6 +35,7 @@ def async_register_assistant_sub_direct_controls_websockets(hass: HomeAssistant)
     websocket_api.async_register_command(hass, _ws_update_assistant_sub_direct_control)
     websocket_api.async_register_command(hass, _ws_delete_assistant_sub_direct_control)
     websocket_api.async_register_command(hass, _ws_search_assistant_sub_direct_controls)
+    websocket_api.async_register_command(hass, _ws_get_assistant_sub_direct_controls_status)
 
 
 def _ws_error(connection, msg, code: str, message: str) -> None:
@@ -169,6 +170,30 @@ async def _save(hass, assistant_sub_direct_controls, connection, msg) -> bool:
 
     return True
 
+
+@websocket_api.websocket_command(UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_get_assistant_sub_direct_controls_status(hass, connection, msg):
+    assistant_sub_direct_controls = await async_load_assistant_sub_direct_controls(hass)
+    uuid_value = _normalize_value(msg["uuid"])
+    existing = _find(assistant_sub_direct_controls, uuid_value)
+
+    if existing is None:
+        _ws_error(connection, msg, "not_found", "Assistant sub command not found")
+        return
+
+    updated = deepcopy(existing)
+    updated["status"] = msg["status"]
+    assistant_sub_direct_controls = [
+        updated if _normalize_value(item.get("uuid")) == uuid_value else item
+        for item in assistant_sub_direct_controls
+    ]
+
+    if not await _save(hass, assistant_sub_direct_controls, connection, msg):
+        return
+
+    connection.send_result(msg["id"], {"updated": True, "data": updated})
 
 @websocket_api.websocket_command(GET_ASSISTANT_SUB_DIRECT_CONTROLS_SHORT_SCHEMA)
 @websocket_api.async_response

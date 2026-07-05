@@ -2,27 +2,27 @@ import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 import { useNavigate } from "react-router-dom";
 
-import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
-import { MobileNavigation } from "../../components/MobileNavigation/MobileNavigation";
-import { MobileHeader } from "../../components/MobileHeader/MobileHeader";
-import { Pagination } from "../../components/Pagination/Pagination";
-import { Button } from "../../components/ui/Button/Button";
-import { BottomSlideButton } from "../../components/BottomSlideButton/BottomSlideButton";
-import { CommandDirectTemplateModal } from "../../components/CommandDirectTemplateModal/CommandDirectTemplateModal";
-import { CommandActionsSheet } from "../../components/CommandActionsSheet/CommandActionsSheet";
+import { NavigationTabs } from "@/components/NavigationTabs/NavigationTabs";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
+import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
+import { Pagination } from "@/components/Pagination/Pagination";
+import { Button } from "@/components/ui/Button/Button";
+import { BottomSlideButton } from "@/components/BottomSlideButton/BottomSlideButton";
+import { CommandDirectTemplateModal } from "@/components/CommandDirectTemplateModal/CommandDirectTemplateModal";
+import { CommandActionsSheet } from "@/components/CommandActionsSheet/CommandActionsSheet";
 
-import { useApiCommands } from "../../hooks/command/useApiCommands";
-import { useIsMobile } from "../../hooks/useIsMobile";
+import { useApiCommands } from "@/hooks/command/useApiCommands";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 import {
   ShortCommand,
   CommandDetails,
-} from "../../types/commandTypes";
+} from "@/types/commandTypes";
 
-import styles from "../CommandShared/CommandEditorPage.module.scss";
+import styles from "../CommandEditorPage.module.scss";
 
 const createEmptyCommand = (): CommandDetails => ({
-  status: true,
+  status: false,
   title: "",
   directTemplate: {
     subDirectControl: [],

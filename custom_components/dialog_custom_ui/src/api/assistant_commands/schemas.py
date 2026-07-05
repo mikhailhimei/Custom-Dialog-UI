@@ -84,6 +84,12 @@ UPDATE_ASSISTANT_SUB_COMMAND_STATUS_SCHEMA = {
     vol.Required("status"): bool,
 }
 
+UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS = {
+    vol.Required("type"): WS_UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS,
+    vol.Required("uuid"): str,
+    vol.Required("status"): bool,
+}
+
 GET_ASSISTANT_SUB_COMMANDS_SHORT_SCHEMA = {
     vol.Required("type"): WS_GET_ASSISTANT_SUB_COMMANDS_SHORT,
     vol.Optional("page", default=1): vol.All(vol.Coerce(int), vol.Range(min=1)),

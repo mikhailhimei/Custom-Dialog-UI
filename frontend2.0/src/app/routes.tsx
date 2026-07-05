@@ -6,11 +6,11 @@ import {
 } from "react-router-dom";
 
 import { ScriptsPage } from "../pages/ScriptActionsPage/ScriptsPage";
-import { CommandMainPage } from "../pages/CommandMainPage/CommandMainPage";
-import { CommandSubPage } from "../pages/CommandSubPage/CommandSubPage";
-import { CommandDirectPage } from "../pages/CommandDirectPage/CommandDirectPage";
-import { CommandDirectTemplatePage } from "../pages/CommandDirectTemplatePage/CommandDirectTemplatePage";
-import { CommandSettingsPage } from "../pages/CommandSettingsPage/CommandSettingsPage";
+import { CommandMainPage } from "../pages/CommandPage/CommandMainPage/CommandMainPage";
+import { CommandSubPage } from "../pages/CommandPage/CommandSubPage/CommandSubPage";
+import { CommandDirectPage } from "../pages/CommandPage/CommandDirectPage/CommandDirectPage";
+import { CommandDirectTemplatePage } from "../pages/CommandPage/CommandDirectTemplatePage/CommandDirectTemplatePage";
+import { CommandSettingsPage } from "../pages/CommandPage/CommandSettingsPage/CommandSettingsPage";
 import { SettingsPage } from "../pages/SettingsPage/SettingsPage"
 import { TimerPage } from "../pages/TimerAlarmPages/TimerPage";
 import { AlarmPage } from "../pages/TimerAlarmPages/AlarmPage";

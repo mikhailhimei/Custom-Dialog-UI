@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { Accordion } from "../../components/Accordion/Accordion";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { Button } from "../../components/ui/Button/Button";
 import {
   GeneralSettingsForm,
@@ -124,6 +125,7 @@ const getDiff = (current: Settings, initial: Settings): SettingsSavePayload => {
 };
 
 export const SettingsPage = () => {
+  const isMobile = useIsMobile();
   const [settingsData, setSettingsData] = useState<Settings>(EMPTY_SETTINGS);
   const [initialData, setInitialData] = useState<Settings>(EMPTY_SETTINGS);
 
@@ -188,6 +190,8 @@ export const SettingsPage = () => {
       </Accordion>
 
       <Button onClick={handleSave}>Сохранить</Button>
+
+      <MobileNavigation />
     </div>
   );
 };

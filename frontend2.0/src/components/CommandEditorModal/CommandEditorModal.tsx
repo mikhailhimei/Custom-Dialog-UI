@@ -107,7 +107,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
       }
     >
       <div className={styles.form}>
-        <ToggleSwitch
+        {/* <ToggleSwitch
           label="Команда включена"
           checked={formData.status ?? true}
           onChange={(event) =>
@@ -116,7 +116,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
               status: event.target.checked,
             })
           }
-        />
+        /> */}
 
         <Input
           label="Название команды"
