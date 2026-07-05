@@ -1,0 +1,53 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f5f7fa;
+  font-size: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #c8ced8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 140px;
+  padding: 12px 14px;
+  border: 1px solid #2a2f3a;
+  border-radius: 12px;
+  background: #11141b;
+  color: #f5f7fa;
+  resize: vertical;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.arrayItem {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #252b36;
+  border-radius: 12px;
+  background: #12161f;
+  margin-bottom: 12px;
+}
+
+.rawPreview {
+  overflow: auto;
+  padding: 16px;
+  border-radius: 12px;
+  background: #11141b;
+  color: #c8ced8;
+}
