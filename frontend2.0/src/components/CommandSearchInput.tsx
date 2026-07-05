@@ -12,7 +12,7 @@ export type CommandSearchOption = {
   mappingType?: string;
 };
 
-type SearchSource = "assistant_commands" | "sub_direct_controls";
+type SearchSource = "assistant_commands" | "sub_direct_controls" | "sub_direct_control_samples";
 
 type Props = {
   label?: string;
@@ -53,7 +53,9 @@ export const CommandSearchInput = ({
       try {
         const response: any = searchSource === "sub_direct_controls"
           ? await api.searchAssistantSubDirectControls(query)
-          : await api.searchAssistantCommands(query);
+          : searchSource === "sub_direct_control_samples"
+            ? await api.searchAssistantSubDirectControlSamples(query)
+            : await api.searchAssistantCommands(query);
         if (requestIdRef.current !== requestId) return;
 
         const data = Array.isArray(response?.data) ? response.data : [];

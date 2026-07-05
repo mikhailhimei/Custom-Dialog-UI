@@ -8,9 +8,16 @@ import { Modal } from '../../components/Modal/Modal';
 import { Pagination } from '../../components/Pagination/Pagination';
 import { Button } from '../../components/ui/Button/Button';
 import { Input } from '../../components/ui/Input/Input';
+import { SelectInput } from '../../components/ui/SelectInput';
+import { CommandSearchInput } from '../../components/CommandSearchInput';
 import { Accordion } from '../../components/Accordion/Accordion';
 import { useDialogApi } from '../../context/DialogContext';
 import { useIsMobile } from "../../hooks/useIsMobile";
+import {
+  ACTION_TYPE_COMPONENT_OPTIONS,
+  ANSWER_TYPE_OPTIONS,
+  VALUE_TYPE_OPTIONS,
+} from "../../constants/commandSelectOptions";
 
 
 import styles from "./CommandEditorPage.module.scss";
@@ -41,6 +48,7 @@ type NextAction = {
   actionTypeComponent: string;
   actionType: string;
   uuid: string;
+  title?: string;
 };
 
 type SubDirectControlItem = {
@@ -56,7 +64,7 @@ type ComponentDialog = {
   answerType: string;
   forwardText?: boolean;
   voiceCommands: string[];
-  nextDirectControl: { uuid: string }[];
+  nextDirectControl: { uuid: string; actionType?: string; title?: string }[];
   voiceResponseArray: VoiceResponse[];
   nextAction: NextAction[];
   [key: string]: any;
@@ -474,7 +482,7 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
               )}
 
               <Input label="actionType" value={component.actionType ?? ""} onChange={(event) => updateComponent({ actionType: event.target.value })} />
-              <Input label="answerType" value={component.answerType ?? ""} onChange={(event) => updateComponent({ answerType: event.target.value })} />
+              <SelectInput label="answerType" value={component.answerType ?? ""} options={ANSWER_TYPE_OPTIONS} onChange={(event) => updateComponent({ answerType: event.target.value })} />
 
               <div className={styles.field}>
                 <label>voiceCommands</label>
@@ -510,7 +518,7 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
               <Accordion title="nextAction" defaultOpen>
                 {(component.nextAction ?? []).map((item: NextAction, index: number) => (
                   <div key={index} className={styles.arrayItem}>
-                    <Input label="actionTypeComponent" value={item.actionTypeComponent ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { actionTypeComponent: event.target.value })} />
+                    <SelectInput label="actionTypeComponent" value={item.actionTypeComponent ?? ""} options={ACTION_TYPE_COMPONENT_OPTIONS} onChange={(event) => updateComponentArray("nextAction", index, { actionTypeComponent: event.target.value })} />
                     <Input label="actionType" value={item.actionType ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { actionType: event.target.value })} />
                     <Input label="uuid" value={item.uuid ?? ""} onChange={(event) => updateComponentArray("nextAction", index, { uuid: event.target.value })} />
                     <Button type="button" variant="ghost" onClick={() => removeComponentArrayItem("nextAction", index)}>Удалить</Button>
@@ -524,7 +532,7 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
           {activeConfig.kind === "direct" && directControl && (
             <>
               <Input label="directControl.mappingType" value={directControl.mappingType ?? ""} onChange={(event) => updateDirectControl({ mappingType: event.target.value })} />
-              <Input label="directControl.valueType" value={directControl.valueType ?? ""} onChange={(event) => updateDirectControl({ valueType: event.target.value })} />
+              <SelectInput label="directControl.valueType" value={directControl.valueType ?? ""} options={VALUE_TYPE_OPTIONS} onChange={(event) => updateDirectControl({ valueType: event.target.value })} />
 
               <div className={styles.field}>
                 <label>voiceCommands</label>
@@ -560,7 +568,7 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
                   <Button type="button" variant="secondary" onClick={() => addSubDirectItem("direct")}>Добавить ещё</Button>
                 </Accordion>
               ) : (
-                <Input label="directControl.subDirectControl" value={typeof directControl.subDirectControl === "string" ? directControl.subDirectControl : ""} onChange={(event) => updateDirectControl({ subDirectControl: event.target.value })} />
+                <CommandSearchInput label="directControl.subDirectControl" value={typeof directControl.subDirectControl === "string" ? directControl.subDirectControl : ""} selectedTitle={directControl.subDirectControlTitle} searchSource="sub_direct_control_samples" onChange={(value) => updateDirectControl({ subDirectControl: value })} onSelect={(option) => updateDirectControl({ subDirectControl: option.uuid, subDirectControlTitle: option.title ?? "" })} />
               )}
             </>
           )}

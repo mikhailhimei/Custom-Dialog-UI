@@ -70,6 +70,13 @@ export class DialogApi {
     });
   }
 
+  async searchAssistantSubDirectControlSamples(query: string) {
+    return this.hass.connection.sendMessagePromise({
+      type: "dialog_custom_ui/search_assistant_sub_direct_control_samples",
+      query,
+    });
+  }
+
   async _delete(uuid: string, type: string) {
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,
