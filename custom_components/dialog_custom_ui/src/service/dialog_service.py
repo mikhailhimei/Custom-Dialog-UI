@@ -23,6 +23,7 @@ from ..service.dialog_runtime import (
     get_current_hass,
     get_voice_response,
     store_command_data,
+    get_service_response
 )
 from ..utils.dialog_response import build_dialog_response
 from ..utils.text_normalize import normalize_numbers
@@ -412,7 +413,7 @@ def resolve_sub_direct(outlier_words, direct_blocks):
 
     return results
 
-async def handle_top_level_command(hass, top_level_nodes, client_text, client_id, device_id, dialog_settings, sub_direct_control, llm, llm_search):
+async def handle_top_level_command(hass, top_level_nodes, client_text, client_id, device_id, dialog_settings):
     exact_candidates = find_top_level_candidates(
         top_level_nodes,
         client_text,
@@ -461,72 +462,7 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
         return await execute_top_level_command(hass, main_node, client_id, device_id, client_text, command_data)
 
     dialog_cms_response = build_dialog_response(dialog_settings, "default_main")
-    if llm is None:
-        llm_enabled = bool(
-            dialog_cms_response.get("llm") or dialog_cms_response.get("LLM")
-        )
-    else:
-        llm_enabled = llm
-
-    default_search_response = build_dialog_response(dialog_settings, "default_search")
-    default_search_exists = bool(default_search_response.get("LLM"))
-    direct_entries = []
     
-    if llm_search is None:
-        default_main_end_status = bool(dialog_cms_response.get("endStatus"))
-
-    else:
-        default_main_end_status = llm_search
-
-    if not llm_enabled:
-        if default_search_exists and not default_main_end_status:
-            search_result = await _get_search_llm_response(client_text, dialog_settings)
-            if search_result:
-                return search_result
-
-        return build_text_response(
-            dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
-            dialog_cms_response.get("endStatus", True),
-        )
-
-    if default_search_exists and not default_main_end_status:
-        command_task = _resolve_llm_top_level_node(client_text, top_level_nodes, dialog_settings)
-        search_task = _get_search_llm_response(client_text, dialog_settings)
-        selected_node, search_result = await asyncio.gather(command_task, search_task)
-        if selected_node:
-            command_data = [build_command_data(
-                '',
-                selected_node.get('actionType'),
-                {"commands": client_text},
-                client_id,
-                device_id,
-                [],
-                True,
-            )]
-            return await execute_top_level_command(hass, selected_node, client_id, device_id, client_text, command_data) 
-
-        if search_result:
-            return search_result
-
-        return build_text_response(
-            dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
-            dialog_cms_response.get("endStatus", True),
-        )
-
-    selected_node = await _resolve_llm_top_level_node(client_text, top_level_nodes, dialog_settings)
-    
-    if selected_node:
-        command_data = [build_command_data(
-                '',
-                selected_node.get('actionType'),
-                {"commands": client_text},
-                client_id,
-                device_id,
-                [],
-                True,
-            )]
-        return await execute_top_level_command(hass, selected_node, client_id, device_id, client_text, command_data)
-
     return build_text_response(
         dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
         dialog_cms_response.get("endStatus", True),
@@ -540,9 +476,7 @@ async def words_scripts(client_command):
     client_new_dialog = client_command['session']['new']
     client_id = client_command['session']['user']['user_id']
     device_id = client_command['session']['application']['application_id']
-    llm = client_command.get("llm")
-    llm_search = client_command.get("llm_search")
-
+    
     top_level_nodes, sub_level_nodes, sub_direct_control = prepare_dialog_nodes()
 
     dialog_settings = get_dialog_settings_list()
@@ -573,8 +507,5 @@ async def words_scripts(client_command):
         client_text,
         client_id,
         device_id,
-        dialog_settings,
-        sub_direct_control,
-        llm,
-        llm_search
+        dialog_settings
     )

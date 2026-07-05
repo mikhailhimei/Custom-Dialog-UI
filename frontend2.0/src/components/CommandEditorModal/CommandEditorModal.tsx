@@ -3,8 +3,15 @@ import React, { useMemo } from "react";
 import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
+import { SelectInput } from "../ui/SelectInput";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../Accordion/Accordion";
+import { CommandSearchInput } from "../CommandSearchInput";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
+import {
+  ACTION_TYPE_COMPONENT_OPTIONS,
+  ANSWER_TYPE_OPTIONS,
+} from "../../constants/commandSelectOptions";
 
 import styles from "./CommandEditorModal.module.scss";
 
@@ -14,9 +21,9 @@ const createComponent = (): ComponentDialog => ({
   actionType: "",
   answerType: "default",
   voiceCommands: [""],
-  nextDirectControl: [{ uuid: "" }],
+  nextDirectControl: [{ uuid: "", actionType: "", title: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
-  nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "" }],
+  nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "", title: "" }],
 });
 
 interface CommandEditorModalProps {
@@ -100,19 +107,16 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
       }
     >
       <div className={styles.form}>
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={formData.status ?? true}
-            onChange={(event) =>
-              setFormData({
-                ...formData,
-                status: event.target.checked,
-              })
-            }
-          />
-          Команда включена
-        </label>
+        {/* <ToggleSwitch
+          label="Команда включена"
+          checked={formData.status ?? true}
+          onChange={(event) =>
+            setFormData({
+              ...formData,
+              status: event.target.checked,
+            })
+          }
+        /> */}
 
         <Input
           label="Название команды"
@@ -125,32 +129,26 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
           }
         />
 
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={component.endStatus}
-            onChange={(event) =>
-              updateComponent({
-                endStatus: event.target.checked,
-              })
-            }
-          />
-          Завершать диалог
-        </label>
+        <ToggleSwitch
+          label="Завершать диалог"
+          checked={component.endStatus}
+          onChange={(event) =>
+            updateComponent({
+              endStatus: event.target.checked,
+            })
+          }
+        />
 
         {formatData == 'subComponentDialog' ?
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={component.forwardText}
-            onChange={(event) =>
-              updateComponent({
-                forwardText: event.target.checked,
-              })
-            }
-          />
-          forwardText
-        </label> : <></>}
+        <ToggleSwitch
+          label="forwardText"
+          checked={component.forwardText}
+          onChange={(event) =>
+            updateComponent({
+              forwardText: event.target.checked,
+            })
+          }
+        /> : <></>}
 
         <Input
           label="actionType"
@@ -162,9 +160,10 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
           }
         />
 
-        <Input
+        <SelectInput
           label="answerType"
           value={component.answerType}
+          options={ANSWER_TYPE_OPTIONS}
           onChange={(event) =>
             updateComponent({
               answerType: event.target.value,
@@ -190,12 +189,31 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
         <Accordion title="nextDirectControl" defaultOpen>
           {(component.nextDirectControl ?? []).map((item, index) => (
             <div key={index} className={styles.arrayItem}>
-              <Input
+              <CommandSearchInput
                 label="uuid"
                 value={item.uuid}
+                selectedTitle={item.title}
+                searchSource="sub_direct_controls"
+                onChange={(value) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    uuid: value,
+                  })
+                }
+                onSelect={(option) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    uuid: option.uuid,
+                    actionType: option.actionType ?? option.mappingType ?? "",
+                    title: option.title ?? "",
+                  })
+                }
+              />
+
+              <Input
+                label="actionType"
+                value={item.actionType ?? ""}
                 onChange={(event) =>
                   updateComponentArray("nextDirectControl", index, {
-                    uuid: event.target.value,
+                    actionType: event.target.value,
                   })
                 }
               />
@@ -218,6 +236,8 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
             onClick={() =>
               addComponentArrayItem("nextDirectControl", {
                 uuid: "",
+                actionType: "",
+                title: "",
               })
             }
           >
@@ -277,9 +297,10 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
         <Accordion title="nextAction" defaultOpen>
           {(component.nextAction ?? []).map((item, index) => (
             <div key={index} className={styles.arrayItem}>
-              <Input
+              <SelectInput
                 label="actionTypeComponent"
                 value={item.actionTypeComponent}
+                options={ACTION_TYPE_COMPONENT_OPTIONS}
                 onChange={(event) =>
                   updateComponentArray("nextAction", index, {
                     actionTypeComponent: event.target.value,
@@ -297,12 +318,20 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 }
               />
 
-              <Input
+              <CommandSearchInput
                 label="uuid"
                 value={item.uuid}
-                onChange={(event) =>
+                selectedTitle={item.title}
+                onChange={(value) =>
                   updateComponentArray("nextAction", index, {
-                    uuid: event.target.value,
+                    uuid: value,
+                  })
+                }
+                onSelect={(option) =>
+                  updateComponentArray("nextAction", index, {
+                    uuid: option.uuid,
+                    actionType: option.actionType ?? "",
+                    title: option.title ?? "",
                   })
                 }
               />
@@ -327,6 +356,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 actionTypeComponent: "",
                 actionType: "",
                 uuid: "",
+                title: "",
               })
             }
           >

@@ -1,20 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useInView } from "react-intersection-observer";
 
-import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
-import { MobileNavigation } from '../../components/MobileNavigation/MobileNavigation';
-import { MobileHeader } from '../../components/MobileHeader/MobileHeader'
-import { Pagination } from '../../components/Pagination/Pagination';
-import { Button } from '../../components/ui/Button/Button';
-import { BottomSlideButton } from '../../components/BottomSlideButton/BottomSlideButton';
-import { useIsMobile } from "../../hooks/useIsMobile";
-import { CommandSettingEditorModal } from '../../components/CommandSettingEditorModal/CommandSettingEditorModal';
-import { CommandActionsSheet } from '../../components/CommandActionsSheet/CommandActionsSheet';
-import { useApiCommands } from '../../hooks/command/useApiCommands';
-import { ShortCommand, CommandDetails, ComponentDialog } from '../../types/commandTypes';
+import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
+import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
+import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
+import { Pagination } from '@/components/Pagination/Pagination';
+import { Button } from '@/components/ui/Button/Button';
+import { BottomSlideButton } from '@/components/BottomSlideButton/BottomSlideButton';
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { CommandSettingEditorModal } from '@/components/CommandSettingEditorModal/CommandSettingEditorModal';
+import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
+import { useApiCommands } from '@/hooks/command/useApiCommands';
+import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
 
 
-import styles from "../CommandShared/CommandEditorPage.module.scss";
+import styles from "../CommandEditorPage.module.scss";
 
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
@@ -28,7 +28,7 @@ const createComponent = (): ComponentDialog => ({
 
 const createEmptyCommand = (): CommandDetails => {
   return {
-    status: true,
+    status: false,
     title: "",
     ["componentDialog"]: {
       ...createComponent(),

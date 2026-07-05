@@ -42,7 +42,7 @@ def fetch_all(endpoint: str):
 def normalize(item, attributes):
     attr = item.get(attributes) or {}
     
-    if(not item.get('uuid') and not item.get('status')):
+    if(not item.get('uuid')):
         return None
     
     raw_voice = attr.get("voiceCommands")
@@ -79,7 +79,7 @@ def normalize(item, attributes):
 def normalizeDirectControl(item, attributes):
     attr = item.get(attributes) or {}
     
-    if(not item.get('uuid') and not item.get('status')):
+    if(not item.get('uuid')):
         return None
 
     subDirectControl = []

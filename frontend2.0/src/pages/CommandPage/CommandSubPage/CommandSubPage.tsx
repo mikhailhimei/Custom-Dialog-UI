@@ -1,22 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useInView } from "react-intersection-observer";
-import { useNavigate } from "react-router-dom";
 
-import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
-import { MobileNavigation } from '../../components/MobileNavigation/MobileNavigation';
-import { MobileHeader } from '../../components/MobileHeader/MobileHeader'
-import { Pagination } from '../../components/Pagination/Pagination';
-import { Button } from '../../components/ui/Button/Button';
-import { BottomSlideButton } from '../../components/BottomSlideButton/BottomSlideButton';
-import { useIsMobile } from "../../hooks/useIsMobile";
-import { CommandDirectModal } from '../../components/CommandDirectModal/CommandDirectModal';
-
-import { CommandActionsSheet } from '../../components/CommandActionsSheet/CommandActionsSheet';
-import { useApiCommands } from '../../hooks/command/useApiCommands';
-import { ShortCommand, CommandDetails, ComponentDialog } from '../../types/commandTypes';
+import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
+import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
+import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
+import { Pagination } from '@/components/Pagination/Pagination';
+import { Button } from '@/components/ui/Button/Button';
+import { BottomSlideButton } from '@/components/BottomSlideButton/BottomSlideButton';
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
+import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
+import { useApiCommands } from '@/hooks/command/useApiCommands';
+import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
 
 
-import styles from "../CommandShared/CommandEditorPage.module.scss";
+import styles from "../CommandEditorPage.module.scss";
 
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
@@ -30,7 +28,7 @@ const createComponent = (): ComponentDialog => ({
 
 const createEmptyCommand = (): CommandDetails => {
   return {
-    status: true,
+    status: false,
     title: "",
     ["subComponentDialog"]: {
       ...createComponent(),
@@ -39,23 +37,12 @@ const createEmptyCommand = (): CommandDetails => {
   };
 };
 
-export const CommandDirectPage = () => {
+export const CommandSubPage = () => {
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [formData, setFormData] = useState<CommandDetails>(() => createEmptyCommand());
   const [actionsCommand, setActionsCommand] = useState<ShortCommand | null>(null);
-
-  const directControl = formData.directControl;
-  const directItems = Array.isArray(directControl?.subDirectControl) ? directControl.subDirectControl : [];
-  const directModes: Array<{ key: string; label: string }> = [
-    { key: "main", label: "Основной" },
-    { key: "template", label: "Шаблон" },
-  ];
-  const [activeDirectMode, setActiveDirectMode] = useState<string>("main");
-
-  const navigate = useNavigate();
-
 
   const { ref, inView } = useInView({
     threshold: 1,
@@ -72,7 +59,13 @@ export const CommandDirectPage = () => {
     editStatusCommand,
     commands
 
-  } = useApiCommands("get_assistant_sub_direct_controls_short")
+  } = useApiCommands("get_assistant_sub_commands_short")
+
+    //   shortType: "get_assistant_sub_commands_short",
+    // detailType: "get_assistant_sub_command",
+    // saveType: "save_assistant_sub_command",
+    // updateType: "update_assistant_sub_command_status",
+    // deleteType: "delete_assistant_sub_command",
 
   const [canLoadMore, setCanLoadMore] = useState(false);
 
@@ -88,7 +81,7 @@ export const CommandDirectPage = () => {
       return;
     }
 
-    loadCommands("get_assistant_sub_direct_controls_short", commands.page + 1, true);
+    loadCommands("get_assistant_sub_commands_short", commands.page + 1, true);
   }, [
     inView,
     isMobile,
@@ -116,7 +109,7 @@ export const CommandDirectPage = () => {
   const openEditModal = async (command: ShortCommand) => {
     setIsEdit(true);
 
-    const response = await detailInformationCommand("get_assistant_sub_direct_control", command.uuid)
+    const response = await detailInformationCommand("get_assistant_sub_command", command.uuid)
 
     setFormData(response.data);
 
@@ -124,22 +117,22 @@ export const CommandDirectPage = () => {
   };
 
   const handlerEditStatus = async (uuid: string, status: boolean) => {
-    const result = await editStatusCommand("update_assistant_sub_direct_control", uuid, status)
-    loadCommands("get_assistant_sub_direct_controls_short")
+    const result = await editStatusCommand("update_assistant_sub_command_status", uuid, status)
+    loadCommands("get_assistant_sub_commands_short")
   }
 
   const handlerDeleteCommand = async (uuid: string) => {
-    const result = await deleteCommand("delete_assistant_sub_direct_control", uuid)
-    loadCommands("get_assistant_sub_direct_controls_short")
+    const result = await deleteCommand("delete_assistant_sub_command", uuid)
+    loadCommands("get_assistant_sub_commands_short")
   }
 
   const handlerSaveCommand = async () => {
-    const result = await saveCommand("save_assistant_sub_direct_control", formData)
+    const result = await saveCommand("save_assistant_sub_command", formData)
     setModalOpen(false);
   }
 
   const handlerUpdateCommand = async () => {
-    const result = await updateCommand("update_assistant_sub_direct_control", formData)
+    const result = await updateCommand("update_assistant_sub_command_status", formData)
     setModalOpen(false);
   }
 
@@ -154,26 +147,10 @@ export const CommandDirectPage = () => {
 
         <div className={styles.header}>
           <div className={styles.headerTop}>
-            <div className={styles.innerTabs}>
-              {directModes.map((mode) => (
-                <button
-                  key={mode.key}
-                  type="button"
-                  className={`${styles.innerTab} ${activeDirectMode === mode.key ? styles.activeInnerTab : ""}`}
-                  onClick={() => {
-                    setActiveDirectMode(mode.key);
-                    navigate(`/commands/direct/${mode.key === "main" ? "main" : "template"}`);
-                  }}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
             <div className={styles.heading}>
               <p className={styles.description}>Создавайте и редактируйте голосовые команды ассистента.</p>
             </div>
-            
-            
+
             {!isMobile ?
               <Button
                 variant="primary"
@@ -218,24 +195,20 @@ export const CommandDirectPage = () => {
           <Pagination
             page={commands?.page || 1}
             totalPages={commands?.total_pages || 1}
-            onChange={(page) => loadCommands("get_assistant_sub_direct_controls_short", page)}
+            onChange={(page) => loadCommands("get_assistant_sub_commands_short", page)}
           /> :
           <div ref={ref} style={{ height: 1 }} />
         }
 
-        <CommandDirectModal
+        <CommandEditorModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={"modalTitle"}
+          isEdit={isEdit}
           formData={formData}
+          formatData='subComponentDialog'
           setFormData={setFormData}
-          directControl={directControl}
-          directItems={directItems}
-          updateDirectControl={handlerUpdateCommand}
-          updateSubDirectItem={handlerUpdateCommand}
-          removeSubDirectItem={handlerDeleteCommand}
-          addSubDirectItem={handlerSaveCommand}
-          onSave={isEdit ? handlerUpdateCommand : handlerSaveCommand}
+          onClose={() => setModalOpen(false)}
+          onSave={handlerSaveCommand}
+          onUpdate={handlerUpdateCommand}
         />
 
 

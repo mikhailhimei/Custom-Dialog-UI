@@ -3,12 +3,16 @@ import React, { useMemo } from "react";
 import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
+import { SelectInput } from "../ui/SelectInput";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../Accordion/Accordion";
 import { Textarea } from "../ui/Textarea/Textarea"
+import { CommandSearchInput } from "../CommandSearchInput";
 
 import { CommandDetails } from "../../types/commandTypes";
+import { VALUE_TYPE_OPTIONS } from "../../constants/commandSelectOptions";
 
-import styles from "../../pages/CommandShared/CommandEditorPage.module.scss";
+import styles from "@/pages/CommandPage/CommandEditorPage.module.scss";
 
 const createDirectControl = () => ({
   mappingType: "",
@@ -106,19 +110,16 @@ export const CommandDirectModal: React.FC<Props> = ({
       }
     >
       <div className={styles.form}>
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={formData.status ?? true}
-            onChange={(event) =>
-              setFormData((current) => ({
-                ...current,
-                status: event.target.checked,
-              }))
-            }
-          />
-          Команда включена
-        </label>
+        {/* <ToggleSwitch
+          label="Команда включена"
+          checked={formData.status ?? true}
+          onChange={(event) =>
+            setFormData((current) => ({
+              ...current,
+              status: event.target.checked,
+            }))
+          }
+        /> */}
 
         <Input
           label="Название команды"
@@ -141,9 +142,10 @@ export const CommandDirectModal: React.FC<Props> = ({
           }
         />
 
-        <Input
+        <SelectInput
           label="valueType"
           value={directControl.valueType}
+          options={VALUE_TYPE_OPTIONS}
           onChange={(event) =>
             updateDirectControl({
               valueType: event.target.value,
@@ -164,19 +166,16 @@ export const CommandDirectModal: React.FC<Props> = ({
           />
         </div>
 
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={directControl.manual}
-            onChange={(event) =>
-              updateDirectControl({
-                manual: event.target.checked,
-                subDirectControl: event.target.checked ? [] : "",
-              })
-            }
-          />
-          manual
-        </label>
+        <ToggleSwitch
+          label="manual"
+          checked={directControl.manual}
+          onChange={(event) =>
+            updateDirectControl({
+              manual: event.target.checked,
+              subDirectControl: event.target.checked ? [] : "",
+            })
+          }
+        />
 
         {directControl.manual ? (
           <Accordion title="subDirectControl" defaultOpen>
@@ -228,16 +227,24 @@ export const CommandDirectModal: React.FC<Props> = ({
             </Button>
           </Accordion>
         ) : (
-          <Input
+          <CommandSearchInput
             label="subDirectControl"
             value={
               typeof directControl.subDirectControl === "string"
                 ? directControl.subDirectControl
                 : ""
             }
-            onChange={(event) =>
+            selectedTitle={directControl.subDirectControlTitle}
+            searchSource="sub_direct_control_samples"
+            onChange={(value) =>
               updateDirectControl({
-                subDirectControl: event.target.value,
+                subDirectControl: value,
+              })
+            }
+            onSelect={(option) =>
+              updateDirectControl({
+                subDirectControl: option.uuid,
+                subDirectControlTitle: option.title ?? "",
               })
             }
           />

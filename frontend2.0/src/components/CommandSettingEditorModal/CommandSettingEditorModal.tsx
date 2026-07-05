@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../Accordion/Accordion";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
 
@@ -100,19 +101,16 @@ export const CommandSettingEditorModal: React.FC<CommandEditorModalProps> = ({
       }
     >
       <div className={styles.form}>
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={formData.status ?? true}
-            onChange={(event) =>
-              setFormData({
-                ...formData,
-                status: event.target.checked,
-              })
-            }
-          />
-          Команда включена
-        </label>
+        {/* <ToggleSwitch
+          label="Команда включена"
+          checked={formData.status ?? true}
+          onChange={(event) =>
+            setFormData({
+              ...formData,
+              status: event.target.checked,
+            })
+          }
+        /> */}
 
         <Input
           label="Название команды"
@@ -125,18 +123,15 @@ export const CommandSettingEditorModal: React.FC<CommandEditorModalProps> = ({
           }
         />
 
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={component.endStatus}
-            onChange={(event) =>
-              updateComponent({
-                endStatus: event.target.checked,
-              })
-            }
-          />
-          Завершать диалог
-        </label>
+        <ToggleSwitch
+          label="Завершать диалог"
+          checked={component.endStatus}
+          onChange={(event) =>
+            updateComponent({
+              endStatus: event.target.checked,
+            })
+          }
+        />
 
         <Input
           label="actionType"

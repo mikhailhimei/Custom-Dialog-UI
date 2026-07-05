@@ -2,12 +2,15 @@ import React, { useMemo, useState } from "react";
 
 import { Modal } from "../../components/Modal/Modal";
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
 import { Button } from "../../components/ui/Button/Button";
 import { useTimerAlarmRequests } from "../../hooks/useTimerAlarmRequests";
 
 import styles from "./TimerAlarmPages.module.scss";
 
 export const AlarmPage = () => {
+  const isMobile = useIsMobile();
   const { alarmTimeWidgets, alarms, createAlarm, deleteAlarm, devices, loading, updateAlarm } = useTimerAlarmRequests();
   const [modalOpen, setModalOpen] = useState(false);
   const [deviceId, setDeviceId] = useState("");
@@ -119,6 +122,8 @@ export const AlarmPage = () => {
           </label>
         </div>
       </Modal>
+
+      <MobileNavigation />
     </div>
   );
 };

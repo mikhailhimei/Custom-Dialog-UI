@@ -2,6 +2,7 @@ import React from "react";
 
 import { RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
 import { Input } from "../ui/Input/Input";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 
 import styles from "./SettingsForm.module.scss";
 
@@ -122,20 +123,11 @@ export const GeneralSettingsForm = ({ data, onChange }: GeneralProps) => {
         </select>
       </label>
 
-      <label className={styles.checkboxRow}>
-        <input type="checkbox" checked={Boolean(data.is_admin)} onChange={(e) => updateField("is_admin", e.target.checked)} />
-        <span>Is admin</span>
-      </label>
+      <ToggleSwitch label="Is admin" checked={Boolean(data.is_admin)} onChange={(e) => updateField("is_admin", e.target.checked)} />
 
-      <label className={styles.checkboxRow}>
-        <input type="checkbox" checked={Boolean(data.active_remout)} onChange={(e) => updateField("active_remout", e.target.checked)} />
-        <span>Active remout</span>
-      </label>
+      <ToggleSwitch label="Active remout" checked={Boolean(data.active_remout)} onChange={(e) => updateField("active_remout", e.target.checked)} />
 
-      <label className={styles.checkboxRow}>
-        <input type="checkbox" checked={Boolean(data.api_commands_enabled)} onChange={(e) => updateField("api_commands_enabled", e.target.checked)} />
-        <span>Enable API (/api/dialog/commands, /api/dialog/events, /api/dialog/event)</span>
-      </label>
+      <ToggleSwitch label="Enable API (/api/dialog/commands, /api/dialog/events, /api/dialog/event)" checked={Boolean(data.api_commands_enabled)} onChange={(e) => updateField("api_commands_enabled", e.target.checked)} />
 
       {data.api_commands_enabled && (
         <Input 

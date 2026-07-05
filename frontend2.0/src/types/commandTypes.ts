@@ -7,6 +7,7 @@ type NextAction = {
   actionTypeComponent: string;
   actionType: string;
   uuid: string;
+  title?: string;
 };
 
 type SubDirectControlItem = {
@@ -36,7 +37,7 @@ export type ComponentDialog = {
   answerType: string;
   forwardText?: boolean;
   voiceCommands: string[];
-  nextDirectControl: { uuid: string }[];
+  nextDirectControl: { uuid: string; actionType?: string; title?: string }[];
   voiceResponseArray: VoiceResponse[];
   nextAction: NextAction[];
   [key: string]: any;

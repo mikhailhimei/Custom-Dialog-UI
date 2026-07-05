@@ -14,6 +14,11 @@ export default defineConfig(({ command, mode }) => ({
     port: 5173,
     strictPort: false,
   },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   build: {
     outDir: staticDir,
     emptyOutDir: false,

@@ -11,6 +11,15 @@ from ....storage.assistant_commands_storage import async_load_assistant_commands
 from ....storage.assistant_sub_commands_storage import async_load_assistant_sub_commands
 
 
+def _get_action_type(item: dict[str, Any]) -> str:
+    component = item.get("componentDialog")
+    if not isinstance(component, dict):
+        component = item.get("subComponentDialog")
+    if not isinstance(component, dict):
+        return _normalize_value(item.get("actionType"))
+    return _normalize_value(component.get("actionType"))
+
+
 def _matches_query(item: dict[str, Any], query: str) -> bool:
     return (
         query in _normalize_value(item.get("title")).lower()
@@ -31,6 +40,7 @@ async def async_search_assistant_commands(
         {
             "title": _normalize_value(item.get("title")),
             "uuid": _normalize_value(item.get("uuid")),
+            "actionType": _get_action_type(item),
         }
         for item in [*assistant_commands, *assistant_sub_commands]
         if _matches_query(item, query)

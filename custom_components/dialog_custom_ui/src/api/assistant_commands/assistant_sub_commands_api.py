@@ -22,6 +22,7 @@ from .schemas import (
     GET_ASSISTANT_SUB_COMMANDS_SHORT_SCHEMA,
     SAVE_ASSISTANT_SUB_COMMAND_SCHEMA,
     SEARCH_ASSISTANT_SUB_COMMANDS_SCHEMA,
+    UPDATE_ASSISTANT_SUB_COMMAND_STATUS_SCHEMA,
     UPDATE_ASSISTANT_SUB_COMMAND_SCHEMA,
 )
 
@@ -34,6 +35,7 @@ def async_register_assistant_sub_commands_websockets(hass: HomeAssistant) -> Non
     websocket_api.async_register_command(hass, _ws_get_assistant_sub_command)
     websocket_api.async_register_command(hass, _ws_save_assistant_sub_command)
     websocket_api.async_register_command(hass, _ws_update_assistant_sub_command)
+    websocket_api.async_register_command(hass, _ws_update_assistant_sub_command_status)
     websocket_api.async_register_command(hass, _ws_delete_assistant_sub_command)
     websocket_api.async_register_command(hass, _ws_search_assistant_sub_commands)
 
@@ -200,6 +202,31 @@ async def _ws_update_assistant_sub_command(hass, connection, msg):
     uuid_norm = _normalize_value(msg["uuid"])
     assistant_sub_commands = [
         updated if _normalize_value(item.get("uuid")) == uuid_norm else item
+        for item in assistant_sub_commands
+    ]
+
+    if not await _save(hass, assistant_sub_commands, connection, msg):
+        return
+
+    connection.send_result(msg["id"], {"updated": True, "data": updated})
+
+
+@websocket_api.websocket_command(UPDATE_ASSISTANT_SUB_COMMAND_STATUS_SCHEMA)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def _ws_update_assistant_sub_command_status(hass, connection, msg):
+    assistant_sub_commands = await async_load_assistant_sub_commands(hass)
+    uuid_value = _normalize_value(msg["uuid"])
+    existing = _find(assistant_sub_commands, uuid_value)
+
+    if existing is None:
+        _ws_error(connection, msg, "not_found", "Assistant sub command not found")
+        return
+
+    updated = deepcopy(existing)
+    updated["status"] = msg["status"]
+    assistant_sub_commands = [
+        updated if _normalize_value(item.get("uuid")) == uuid_value else item
         for item in assistant_sub_commands
     ]
 

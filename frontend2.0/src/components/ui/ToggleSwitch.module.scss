@@ -1,0 +1,69 @@
+.switchRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #f5f7fa;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex: 0 0 auto;
+  border: 1px solid #2a3342;
+  border-radius: 999px;
+  background: #252b36;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c8ced8;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.input:checked + .track {
+  border-color: #4d8dff;
+  background: linear-gradient(135deg, #2f7dff, #31c48d);
+  box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.18);
+}
+
+.input:checked + .track .thumb {
+  transform: translateX(20px);
+  background: #ffffff;
+}
+
+.input:focus-visible + .track {
+  outline: 2px solid #8fb4ff;
+  outline-offset: 2px;
+}
+
+.input:disabled + .track,
+.input:disabled ~ .label {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.label {
+  line-height: 1.3;
+}

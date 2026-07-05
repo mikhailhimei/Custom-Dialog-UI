@@ -1,0 +1,28 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  color: #c8ced8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #2a2f3a;
+  border-radius: 12px;
+  background: #11141b;
+  color: #f5f7fa;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #4d8dff;
+  box-shadow: 0 0 0 2px rgba(77, 141, 255, 0.2);
+}

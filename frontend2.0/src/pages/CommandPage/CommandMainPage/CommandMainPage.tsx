@@ -1,20 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useInView } from "react-intersection-observer";
 
-import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
-import { MobileNavigation } from '../../components/MobileNavigation/MobileNavigation';
-import { MobileHeader } from '../../components/MobileHeader/MobileHeader'
-import { Pagination } from '../../components/Pagination/Pagination';
-import { Button } from '../../components/ui/Button/Button';
-import { BottomSlideButton } from '../../components/BottomSlideButton/BottomSlideButton';
-import { useIsMobile } from "../../hooks/useIsMobile";
-import { CommandEditorModal } from '../../components/CommandEditorModal/CommandEditorModal';
-import { CommandActionsSheet } from '../../components/CommandActionsSheet/CommandActionsSheet';
-import { useApiCommands } from '../../hooks/command/useApiCommands';
-import { ShortCommand, CommandDetails, ComponentDialog } from '../../types/commandTypes';
+import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
+import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
+import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
+import { Pagination } from '@/components/Pagination/Pagination';
+import { Button } from '@/components/ui/Button/Button';
+import { BottomSlideButton } from '@/components/BottomSlideButton/BottomSlideButton';
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
+import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
+import { useApiCommands } from '@/hooks/command/useApiCommands';
+import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
 
 
-import styles from "../CommandShared/CommandEditorPage.module.scss";
+import styles from "../CommandEditorPage.module.scss";
 
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
@@ -28,16 +28,16 @@ const createComponent = (): ComponentDialog => ({
 
 const createEmptyCommand = (): CommandDetails => {
   return {
-    status: true,
+    status: false,
     title: "",
-    ["subComponentDialog"]: {
+    ["componentDialog"]: {
       ...createComponent(),
       ...({ forwardText: false }),
     },
   };
 };
 
-export const CommandSubPage = () => {
+export const CommandMainPage = () => {
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
@@ -59,13 +59,7 @@ export const CommandSubPage = () => {
     editStatusCommand,
     commands
 
-  } = useApiCommands("get_assistant_sub_commands_short")
-
-    //   shortType: "get_assistant_sub_commands_short",
-    // detailType: "get_assistant_sub_command",
-    // saveType: "save_assistant_sub_command",
-    // updateType: "update_assistant_sub_command",
-    // deleteType: "delete_assistant_sub_command",
+  } = useApiCommands("get_assistant_commands_short")
 
   const [canLoadMore, setCanLoadMore] = useState(false);
 
@@ -81,7 +75,7 @@ export const CommandSubPage = () => {
       return;
     }
 
-    loadCommands("get_assistant_sub_commands_short", commands.page + 1, true);
+    loadCommands("get_assistant_commands_short", commands.page + 1, true);
   }, [
     inView,
     isMobile,
@@ -109,7 +103,7 @@ export const CommandSubPage = () => {
   const openEditModal = async (command: ShortCommand) => {
     setIsEdit(true);
 
-    const response = await detailInformationCommand("get_assistant_sub_command", command.uuid)
+    const response = await detailInformationCommand("get_assistant_command", command.uuid)
 
     setFormData(response.data);
 
@@ -117,22 +111,23 @@ export const CommandSubPage = () => {
   };
 
   const handlerEditStatus = async (uuid: string, status: boolean) => {
-    const result = await editStatusCommand("update_assistant_sub_command", uuid, status)
-    loadCommands("get_assistant_sub_commands_short")
+    console.log(uuid, status)
+    const result = await editStatusCommand("update_assistant_command_status", uuid, status)
+    loadCommands("get_assistant_commands_short")
   }
 
   const handlerDeleteCommand = async (uuid: string) => {
-    const result = await deleteCommand("delete_assistant_sub_command", uuid)
-    loadCommands("get_assistant_sub_commands_short")
+    const result = await deleteCommand("delete_assistant_command", uuid)
+    loadCommands("get_assistant_commands_short")
   }
 
   const handlerSaveCommand = async () => {
-    const result = await saveCommand("save_assistant_sub_command", formData)
+    const result = await saveCommand("save_assistant_command", formData)
     setModalOpen(false);
   }
 
   const handlerUpdateCommand = async () => {
-    const result = await updateCommand("update_assistant_sub_command", formData)
+    const result = await updateCommand("update_assistant_command", formData)
     setModalOpen(false);
   }
 
@@ -195,7 +190,7 @@ export const CommandSubPage = () => {
           <Pagination
             page={commands?.page || 1}
             totalPages={commands?.total_pages || 1}
-            onChange={(page) => loadCommands("get_assistant_sub_commands_short", page)}
+            onChange={(page) => loadCommands("get_assistant_commands_short", page)}
           /> :
           <div ref={ref} style={{ height: 1 }} />
         }
@@ -204,7 +199,7 @@ export const CommandSubPage = () => {
           open={modalOpen}
           isEdit={isEdit}
           formData={formData}
-          formatData='subComponentDialog'
+          formatData = {"componentDialog"}
           setFormData={setFormData}
           onClose={() => setModalOpen(false)}
           onSave={handlerSaveCommand}
