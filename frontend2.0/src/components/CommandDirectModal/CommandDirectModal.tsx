@@ -4,6 +4,7 @@ import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
 import { SelectInput } from "../ui/SelectInput";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../Accordion/Accordion";
 import { Textarea } from "../ui/Textarea/Textarea"
 import { CommandSearchInput } from "../CommandSearchInput";
@@ -109,19 +110,16 @@ export const CommandDirectModal: React.FC<Props> = ({
       }
     >
       <div className={styles.form}>
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={formData.status ?? true}
-            onChange={(event) =>
-              setFormData((current) => ({
-                ...current,
-                status: event.target.checked,
-              }))
-            }
-          />
-          Команда включена
-        </label>
+        <ToggleSwitch
+          label="Команда включена"
+          checked={formData.status ?? true}
+          onChange={(event) =>
+            setFormData((current) => ({
+              ...current,
+              status: event.target.checked,
+            }))
+          }
+        />
 
         <Input
           label="Название команды"
@@ -168,19 +166,16 @@ export const CommandDirectModal: React.FC<Props> = ({
           />
         </div>
 
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={directControl.manual}
-            onChange={(event) =>
-              updateDirectControl({
-                manual: event.target.checked,
-                subDirectControl: event.target.checked ? [] : "",
-              })
-            }
-          />
-          manual
-        </label>
+        <ToggleSwitch
+          label="manual"
+          checked={directControl.manual}
+          onChange={(event) =>
+            updateDirectControl({
+              manual: event.target.checked,
+              subDirectControl: event.target.checked ? [] : "",
+            })
+          }
+        />
 
         {directControl.manual ? (
           <Accordion title="subDirectControl" defaultOpen>

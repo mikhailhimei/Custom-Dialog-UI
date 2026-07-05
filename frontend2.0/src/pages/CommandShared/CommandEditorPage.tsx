@@ -9,6 +9,7 @@ import { Pagination } from '../../components/Pagination/Pagination';
 import { Button } from '../../components/ui/Button/Button';
 import { Input } from '../../components/ui/Input/Input';
 import { SelectInput } from '../../components/ui/SelectInput';
+import { ToggleSwitch } from '../../components/ui/ToggleSwitch';
 import { CommandSearchInput } from '../../components/CommandSearchInput';
 import { Accordion } from '../../components/Accordion/Accordion';
 import { useDialogApi } from '../../context/DialogContext';
@@ -459,26 +460,17 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
       >
         <div className={styles.form}>
           {activeConfig.hasStatus && (
-            <label className={styles.checkboxRow}>
-              <input type="checkbox" checked={formData.status ?? true} onChange={(event) => setFormData({ ...formData, status: event.target.checked })} />
-              Команда включена
-            </label>
+            <ToggleSwitch label="Команда включена" checked={formData.status ?? true} onChange={(event) => setFormData({ ...formData, status: event.target.checked })} />
           )}
 
           <Input label="Название команды" value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} />
 
           {activeConfig.kind === "dialog" && component && (
             <>
-              <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={component.endStatus} onChange={(event) => updateComponent({ endStatus: event.target.checked })} />
-                Завершать диалог
-              </label>
+              <ToggleSwitch label="Завершать диалог" checked={component.endStatus} onChange={(event) => updateComponent({ endStatus: event.target.checked })} />
 
               {activeConfig.hasForwardText && (
-                <label className={styles.checkboxRow}>
-                  <input type="checkbox" checked={Boolean(component.forwardText)} onChange={(event) => updateComponent({ forwardText: event.target.checked })} />
-                  forwardText
-                </label>
+                <ToggleSwitch label="forwardText" checked={Boolean(component.forwardText)} onChange={(event) => updateComponent({ forwardText: event.target.checked })} />
               )}
 
               <Input label="actionType" value={component.actionType ?? ""} onChange={(event) => updateComponent({ actionType: event.target.value })} />
@@ -544,14 +536,11 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
                 />
               </div>
 
-              <label className={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={Boolean(directControl.manual)}
-                  onChange={(event) => updateDirectControl({ manual: event.target.checked, subDirectControl: event.target.checked ? [] : "" })}
-                />
-                manual
-              </label>
+              <ToggleSwitch
+                label="manual"
+                checked={Boolean(directControl.manual)}
+                onChange={(event) => updateDirectControl({ manual: event.target.checked, subDirectControl: event.target.checked ? [] : "" })}
+              />
 
               {directControl.manual ? (
                 <Accordion title="directControl.subDirectControl" defaultOpen>
@@ -587,10 +576,7 @@ export const CommandEditorPage = ({ configKey }: CommandEditorPageProps) => {
                 />
               </div>
 
-              <label className={styles.checkboxRow}>
-                <input type="checkbox" checked={Boolean(formData.endStatus)} onChange={(event) => setFormData({ ...formData, endStatus: event.target.checked })} />
-                endStatus
-              </label>
+              <ToggleSwitch label="endStatus" checked={Boolean(formData.endStatus)} onChange={(event) => setFormData({ ...formData, endStatus: event.target.checked })} />
             </>
           )}
 

@@ -4,6 +4,7 @@ import { Modal } from "../Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
 import { SelectInput } from "../ui/SelectInput";
+import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../Accordion/Accordion";
 import { CommandSearchInput } from "../CommandSearchInput";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
@@ -106,19 +107,16 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
       }
     >
       <div className={styles.form}>
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={formData.status ?? true}
-            onChange={(event) =>
-              setFormData({
-                ...formData,
-                status: event.target.checked,
-              })
-            }
-          />
-          Команда включена
-        </label>
+        <ToggleSwitch
+          label="Команда включена"
+          checked={formData.status ?? true}
+          onChange={(event) =>
+            setFormData({
+              ...formData,
+              status: event.target.checked,
+            })
+          }
+        />
 
         <Input
           label="Название команды"
@@ -131,32 +129,26 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
           }
         />
 
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={component.endStatus}
-            onChange={(event) =>
-              updateComponent({
-                endStatus: event.target.checked,
-              })
-            }
-          />
-          Завершать диалог
-        </label>
+        <ToggleSwitch
+          label="Завершать диалог"
+          checked={component.endStatus}
+          onChange={(event) =>
+            updateComponent({
+              endStatus: event.target.checked,
+            })
+          }
+        />
 
         {formatData == 'subComponentDialog' ?
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={component.forwardText}
-            onChange={(event) =>
-              updateComponent({
-                forwardText: event.target.checked,
-              })
-            }
-          />
-          forwardText
-        </label> : <></>}
+        <ToggleSwitch
+          label="forwardText"
+          checked={component.forwardText}
+          onChange={(event) =>
+            updateComponent({
+              forwardText: event.target.checked,
+            })
+          }
+        /> : <></>}
 
         <Input
           label="actionType"
