@@ -22,6 +22,7 @@ from .schemas import (
     SAVE_ASSISTANT_SUB_DIRECT_CONTROL_SCHEMA,
     SEARCH_ASSISTANT_SUB_DIRECT_CONTROLS_SCHEMA,
     UPDATE_ASSISTANT_SUB_DIRECT_CONTROL_SCHEMA,
+    UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS_SCHEMA
 )
 
 _REQUIRED_FIELDS = ("status", "title", "uuid")
@@ -171,7 +172,7 @@ async def _save(hass, assistant_sub_direct_controls, connection, msg) -> bool:
     return True
 
 
-@websocket_api.websocket_command(UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS)
+@websocket_api.websocket_command(UPDATE_ASSISTANT_SUB_DIRECT_CONTROLS_STATUS_SCHEMA)
 @websocket_api.require_admin
 @websocket_api.async_response
 async def _ws_get_assistant_sub_direct_controls_status(hass, connection, msg):
