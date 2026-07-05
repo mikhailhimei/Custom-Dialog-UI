@@ -23,6 +23,7 @@ interface CommandEditorModalProps {
   open: boolean;
   isEdit: boolean;
   formData: CommandDetails;
+  formatData: string;
   setFormData: React.Dispatch<React.SetStateAction<CommandDetails>>;
   onClose: () => void;
   onSave: () => void;
@@ -33,20 +34,22 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
   open,
   isEdit,
   formData,
+  formatData,
   setFormData,
   onClose,
   onSave,
   onUpdate,
 }) => {
+
   const component = useMemo(() => {
-    return formData.componentDialog ?? createComponent();
+    if (formData[formatData]) return formData[formatData] ?? createComponent();
   }, [formData]);
 
   const updateComponent = (patch: Record<string, any>) => {
     setFormData((current) => ({
       ...current,
-      componentDialog: {
-        ...(current.componentDialog ?? createComponent()),
+      [formatData]: {
+        ...(current[formatData] ?? createComponent()),
         ...patch,
       },
     }));
@@ -135,6 +138,20 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
           Завершать диалог
         </label>
 
+        {formatData == 'subComponentDialog' ?
+        <label className={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={component.forwardText}
+            onChange={(event) =>
+              updateComponent({
+                forwardText: event.target.checked,
+              })
+            }
+          />
+          forwardText
+        </label> : <></>}
+
         <Input
           label="actionType"
           value={component.actionType}
@@ -161,7 +178,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
           <textarea
             className={styles.textarea}
             rows={6}
-            value={(component.voiceCommands ?? []).join("\n")}
+            value={(component.voiceCommands == null ? [] : typeof component.voiceCommands != 'object' ? component?.voiceCommands.split(';') : component?.voiceCommands).join("\n")}
             onChange={(event) =>
               updateComponent({
                 voiceCommands: event.target.value.split("\n"),

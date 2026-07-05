@@ -199,6 +199,7 @@ export const CommandMainPage = () => {
           open={modalOpen}
           isEdit={isEdit}
           formData={formData}
+          formatData = {"componentDialog"}
           setFormData={setFormData}
           onClose={() => setModalOpen(false)}
           onSave={handlerSaveCommand}

@@ -9,8 +9,7 @@ import { Pagination } from '../../components/Pagination/Pagination';
 import { Button } from '../../components/ui/Button/Button';
 import { BottomSlideButton } from '../../components/BottomSlideButton/BottomSlideButton';
 import { useIsMobile } from "../../hooks/useIsMobile";
-import { CommandDirectModal } from '../../components/CommandDirectModal/CommandDirectModal';
-
+import { CommandEditorModal } from '../../components/CommandEditorModal/CommandEditorModal';
 import { CommandActionsSheet } from '../../components/CommandActionsSheet/CommandActionsSheet';
 import { useApiCommands } from '../../hooks/command/useApiCommands';
 import { ShortCommand, CommandDetails, ComponentDialog } from '../../types/commandTypes';
@@ -74,6 +73,30 @@ export const CommandDirectPage = () => {
     commands
 
   } = useApiCommands("get_assistant_sub_direct_controls_short")
+
+  //   key: "directMain",
+  // label: "Прямая команда",
+  // kind: "direct",
+  // shortType: "get_assistant_sub_direct_controls_short",
+  // detailType: "get_assistant_sub_direct_control",
+  // saveType: "save_assistant_sub_direct_control",
+  // updateType: "update_assistant_sub_direct_control",
+  // deleteType: "delete_assistant_sub_direct_control",
+  // hasStatus: true,
+
+  //   if (config.kind === "direct") {
+  //   return {
+  //     status: true,
+  //     title: "",
+  //     directControl: {
+  //       mappingType: "",
+  //       valueType: "all",
+  //       voiceCommands: [],
+  //       manual: false,
+  //       subDirectControl: "",
+  //     },
+  //   };
+  // }
 
   const [canLoadMore, setCanLoadMore] = useState(false);
 
@@ -143,18 +166,6 @@ export const CommandDirectPage = () => {
     const result = await updateCommand("update_assistant_sub_direct_control", formData)
     setModalOpen(false);
   }
-
-  // directMain: {
-  //   key: "directMain",
-  //   label: "Прямая команда",
-  //   kind: "direct",
-  //   shortType: "get_assistant_sub_direct_controls_short",
-  //   detailType: "get_assistant_sub_direct_control",
-  //   saveType: "save_assistant_sub_direct_control",
-  //   updateType: "update_assistant_sub_direct_control",
-  //   deleteType: "delete_assistant_sub_direct_control",
-  //   hasStatus: true,
-  // },
 
   return (
     <>
@@ -235,20 +246,100 @@ export const CommandDirectPage = () => {
           <div ref={ref} style={{ height: 1 }} />
         }
 
-        <CommandDirectModal
+        <Modal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
-          title={"modalTitle"}
-          formData={formData}
-          setFormData={setFormData}
-          directControl={directControl}
-          directItems={directItems}
-          updateDirectControl={handlerUpdateCommand}
-          updateSubDirectItem={handlerUpdateCommand}
-          removeSubDirectItem={handlerDeleteCommand}
-          addSubDirectItem={handlerSaveCommand}
-          onSave={isEdit ? handlerUpdateCommand : handlerSaveCommand}
-        />
+          title={modalTitle}
+          footer={<Button onClick={saveCommand}>Сохранить</Button>}
+        >
+          <div className={styles.form}>
+            {activeConfig.hasStatus && (
+              <label className={styles.checkboxRow}>
+                <input type="checkbox" checked={formData.status ?? true} onChange={(event) => setFormData({ ...formData, status: event.target.checked })} />
+                Команда включена
+              </label>
+            )}
+
+            <Input label="Название команды" value={formData.title} onChange={(event) => setFormData({ ...formData, title: event.target.value })} />
+
+            <Input label="directControl.mappingType" value={directControl.mappingType ?? ""} onChange={(event) => updateDirectControl({ mappingType: event.target.value })} />
+            <Input label="directControl.valueType" value={directControl.valueType ?? ""} onChange={(event) => updateDirectControl({ valueType: event.target.value })} />
+
+            <div className={styles.field}>
+              <label>voiceCommands</label>
+              <textarea
+                className={styles.textarea}
+                value={Array.isArray(directControl.voiceCommands) ? directControl.voiceCommands.join("\n") : ""}
+                onChange={(event) => updateDirectControl({ voiceCommands: event.target.value.split("\n").filter(Boolean) })}
+                rows={5}
+              />
+            </div>
+
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={Boolean(directControl.manual)}
+                onChange={(event) => updateDirectControl({ manual: event.target.checked, subDirectControl: event.target.checked ? [] : "" })}
+              />
+              manual
+            </label>
+
+            {directControl.manual ? (
+              <Accordion title="directControl.subDirectControl" defaultOpen>
+                {directItems.map((item, index) => (
+                  <div key={index} className={styles.arrayItem}>
+                    <Input label="subMappingType" value={item.subMappingType ?? ""} onChange={(event) => updateSubDirectItem("direct", index, { subMappingType: event.target.value })} />
+                    <div className={styles.field}>
+                      <label>subVoiceCommands</label>
+                      <textarea className={styles.textarea} value={item.subVoiceCommands ?? ""} onChange={(event) => updateSubDirectItem("direct", index, { subVoiceCommands: event.target.value })} rows={3} />
+                    </div>
+                    <Button type="button" variant="ghost" onClick={() => removeSubDirectItem("direct", index)}>Удалить</Button>
+                  </div>
+                ))}
+                <Button type="button" variant="secondary" onClick={() => addSubDirectItem("direct")}>Добавить ещё</Button>
+              </Accordion>
+            ) : (
+              <Input label="directControl.subDirectControl" value={typeof directControl.subDirectControl === "string" ? directControl.subDirectControl : ""} onChange={(event) => updateDirectControl({ subDirectControl: event.target.value })} />
+            )}
+
+            {activeConfig.kind === "assistantSettings" && (
+              <>
+                <Input label="actionType" value={formData.actionType ?? ""} onChange={(event) => setFormData({ ...formData, actionType: event.target.value })} />
+
+                <div className={styles.field}>
+                  <label>message</label>
+                  <textarea
+                    className={styles.textarea}
+                    value={formData.message ?? ""}
+                    onChange={(event) => setFormData({ ...formData, message: event.target.value || null })}
+                    rows={4}
+                  />
+                </div>
+
+                <label className={styles.checkboxRow}>
+                  <input type="checkbox" checked={Boolean(formData.endStatus)} onChange={(event) => setFormData({ ...formData, endStatus: event.target.checked })} />
+                  endStatus
+                </label>
+              </>
+            )}
+
+            {activeConfig.kind === "template" && (
+              <Accordion title="subDirectControl" defaultOpen>
+                {templateItems.map((item, index) => (
+                  <div key={index} className={styles.arrayItem}>
+                    <Input label="subMappingType" value={item.subMappingType ?? ""} onChange={(event) => updateSubDirectItem("template", index, { subMappingType: event.target.value })} />
+                    <div className={styles.field}>
+                      <label>subVoiceCommands</label>
+                      <textarea className={styles.textarea} value={item.subVoiceCommands ?? ""} onChange={(event) => updateSubDirectItem("template", index, { subVoiceCommands: event.target.value })} rows={3} />
+                    </div>
+                    <Button type="button" variant="ghost" onClick={() => removeSubDirectItem("template", index)}>Удалить</Button>
+                  </div>
+                ))}
+                <Button type="button" variant="secondary" onClick={() => addSubDirectItem("template")}>Добавить ещё</Button>
+              </Accordion>
+            )}
+          </div>
+        </Modal>
 
 
         <CommandActionsSheet
