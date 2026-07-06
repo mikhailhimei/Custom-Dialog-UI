@@ -1,97 +1,55 @@
-
-
 .dropdown {
   position: relative;
   width: 100%;
 }
 
-.button {
+.select {
   width: 100%;
-  padding: 16px 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  padding: 16px 48px 16px 20px;
 
   border: 1px solid #2d2d36;
   border-radius: 18px;
 
   background: rgba(24, 24, 32, 0.9);
-  color: white;
+  color: #fff;
 
   font-size: 16px;
   cursor: pointer;
 
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  backdrop-filter: blur(12px);
 
   transition:
-    border-color 0.3s ease,
-    transform 0.2s ease;
-
-  backdrop-filter: blur(12px);
+    border-color 0.2s ease,
+    background 0.2s ease;
 
   &:hover {
     border-color: #8b5cf6;
   }
 
-  &:active {
-    transform: scale(0.98);
+  &:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+  }
+
+  option {
+    background: #181820;
+    color: #fff;
   }
 }
 
 .arrow {
-  transition: transform 0.3s ease;
-}
-
-.menu {
   position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  z-index: 1000;
+  top: 50%;
+  right: 18px;
 
-  width: 100%;
-  max-height: 250px;
-
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  border-radius: 18px;
-  border: 1px solid #2d2d36;
-
-  background: rgba(24, 24, 32, 0.98);
-
-  opacity: 0;
-  visibility: hidden;
+  transform: translateY(-50%);
   pointer-events: none;
 
-  transform: translateY(-10px) scale(0.98);
-
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    visibility 0.2s ease;
-}
-
-.active {
-  .menu {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: all;
-
-    transform: translateY(0) scale(1);
-  }
-}
-
-.item {
-  padding: 16px 20px;
-
-  color: #d4d4d8;
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
-
-  &:hover {
-    background: rgba(139, 92, 246, 0.15);
-    color: white;
-  }
+  color: #a1a1aa;
+  font-size: 12px;
 }

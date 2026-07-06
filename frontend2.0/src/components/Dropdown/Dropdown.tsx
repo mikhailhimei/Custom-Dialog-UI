@@ -20,25 +20,27 @@ export function Dropdown({
   onSelect,
 }: DropdownProps) {
   return (
-    <select
-      className={styles.select}
-      value={value}
-      onChange={(event) =>
-        onSelect?.(event.target.value)
-      }
-    >
-      <option value="" disabled>
-        {placeholder}
-      </option>
-
-      {options.map((option) => (
-        <option
-          key={option.value}
-          value={option.value}
-        >
-          {option.label}
+    <div className={styles.dropdown}>
+      <select
+        className={styles.select}
+        value={value}
+        onChange={(e) => onSelect?.(e.target.value)}
+      >
+        <option value="" disabled>
+          {placeholder}
         </option>
-      ))}
-    </select>
+
+        {options.map((option) => (
+          <option
+            key={option.value}
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
+
+      <span className={styles.arrow}>▼</span>
+    </div>
   );
 }
