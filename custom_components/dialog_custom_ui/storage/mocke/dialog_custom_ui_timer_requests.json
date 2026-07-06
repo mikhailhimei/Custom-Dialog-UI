@@ -2,13 +2,5 @@
   "version": 1,
   "minor_version": 1,
   "key": "dialog_custom_ui_timer_requests",
-  "data": [
-    {
-      "uuid": "06826a53-0cb8-40f4-be8e-bce2fac3ba29",
-      "name": "Таймер 5 мин",
-      "action_type": "delete_timer",
-      "device_id": "media_player.home_assistant_voice_0ab77d_media_player",
-      "timer_time": ""
-    }
-  ]
+  "data": []
 }

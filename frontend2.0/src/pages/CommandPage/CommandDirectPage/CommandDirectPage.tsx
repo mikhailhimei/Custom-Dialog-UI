@@ -114,7 +114,7 @@ export const CommandDirectPage = () => {
   };
 
   const handlerEditStatus = async (uuid: string, status: boolean) => {
-    const result = await editStatusCommand(" update_assistant_sub_direct_controls_status", uuid, status)
+    const result = await editStatusCommand("update_assistant_sub_direct_controls_status", uuid, status)
     loadCommands("get_assistant_sub_direct_controls_short")
   }
 

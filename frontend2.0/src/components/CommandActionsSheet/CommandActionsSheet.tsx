@@ -25,7 +25,7 @@ export const CommandActionsSheet = ({
         <Button
           fullWidth
           onClick={() => {
-            onToggleStatus(command.uuid, Boolean(command.status));
+            onToggleStatus(command.uuid, !Boolean(command.status));
             onClose();
           }}
         >

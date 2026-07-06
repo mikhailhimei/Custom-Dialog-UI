@@ -113,10 +113,13 @@ export const ScriptForm = ({
         value={form.script_entity_id}
 
         onSelect={(value) =>
+        {
+          console.log(value)
           updateForm({
             ...form,
             script_entity_id: value,
           })
+        }
         }
       />
 

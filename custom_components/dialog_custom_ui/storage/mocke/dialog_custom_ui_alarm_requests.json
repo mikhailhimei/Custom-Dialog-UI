@@ -5,12 +5,13 @@
   "data": {
     "alarm_requests": [
       {
-        "uuid": "4e5bcd4c-f022-4cf7-a5d7-e2f65696c07b",
-        "name": "Будильник 08:00",
-        "action_type": "delete_alarm",
-        "device_id": "media_player.home_assistant_voice_0ab77d_media_player",
+        "uuid": "01b6227e-e202-4998-aedc-3156b9dd12c0",
+        "name": "Будильник 12:13",
+        "action_type": "create_alarm",
+        "device_id": "media_player.home_assistant_voice_0ab77d",
         "status": "off",
-        "time": "08:00"
+        "time": "12:13",
+        "volume_start": 0.3
       }
     ],
     "alarm_time_widgets": []

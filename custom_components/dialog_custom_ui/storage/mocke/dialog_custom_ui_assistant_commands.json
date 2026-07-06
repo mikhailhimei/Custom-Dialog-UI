@@ -5,7 +5,7 @@
   "data": [
     {
       "_id": "69e73531f9572978e5d4b1a9",
-      "status": true,
+      "status": false,
       "title": "Перезапуск лица",
       "uuid": "t9gr-ksom-qkvf-crxf",
       "componentDialog": {
@@ -13,8 +13,14 @@
         "actionType": "face_restart",
         "forwardText": false,
         "answerType": "default",
-        "voiceCommands": [],
-        "nextDirectControl": [],
+        "voiceCommands": [
+          "рес"
+        ],
+        "nextDirectControl": [
+          {
+            "uuid": "s"
+          }
+        ],
         "voiceResponseArray": [],
         "nextAction": []
       }
@@ -38,7 +44,7 @@
     {
       "_id": "69e73531f9572978e5d4b1ab",
       "status": true,
-      "title": "Стиралка",
+      "title": "Стиралка2",
       "uuid": "7214-82jp-s2tu-ql58",
       "componentDialog": {
         "endStatus": false,
@@ -252,7 +258,7 @@
         "forwardText": false,
         "answerType": "default",
         "voiceCommands": [
-          "Привет"
+          "Привет23123"
         ],
         "nextDirectControl": [
           {
@@ -262,7 +268,7 @@
         "voiceResponseArray": [
           {
             "actionType": "default_next_step",
-            "voiceResponse": "Аов"
+            "voiceResponse": "Аов2"
           }
         ],
         "nextAction": [
@@ -382,7 +388,7 @@
         "voiceResponseArray": [
           {
             "actionType": "default_next_step",
-            "voiceResponse": "Сколько насыпать?"
+            "voiceResponse": "Сколько насыпать??"
           },
           {
             "actionType": "default",

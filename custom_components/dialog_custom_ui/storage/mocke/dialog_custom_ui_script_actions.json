@@ -21,8 +21,7 @@
         {
           "parent_type": "voice_edit"
         }
-      ],
-      "parent_type": "voice_edit"
+      ]
     },
     {
       "uuid": "scenario_1779730986026_3360577d",
@@ -147,8 +146,7 @@
         {
           "parent_type": "status_door"
         }
-      ],
-      "parent_type": "status_door"
+      ]
     },
     {
       "uuid": "scenario_1774679744122_82a035b6",
@@ -179,8 +177,7 @@
         {
           "parent_type": "face_start"
         }
-      ],
-      "parent_type": "face_start"
+      ]
     },
     {
       "uuid": "scenario_1774680125731_7dcadd7e",
@@ -190,8 +187,7 @@
         {
           "parent_type": "face_stop"
         }
-      ],
-      "parent_type": "face_stop"
+      ]
     },
     {
       "uuid": "scenario_1774680246398_50b96a08",
@@ -201,8 +197,7 @@
         {
           "parent_type": "face_restart"
         }
-      ],
-      "parent_type": "face_restart"
+      ]
     },
     {
       "uuid": "scenario_1774807540101_47af5c06",
@@ -253,8 +248,7 @@
         {
           "parent_type": "what_temperature"
         }
-      ],
-      "parent_type": "what_temperature"
+      ]
     },
     {
       "uuid": "scenario_1775650374779_0cc8f086",
@@ -264,8 +258,7 @@
         {
           "parent_type": "stop"
         }
-      ],
-      "parent_type": "stop"
+      ]
     }
   ]
 }

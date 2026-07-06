@@ -17,12 +17,14 @@
       "token": "Bearer erqwlkrqelkjqweklqwjeqwlejkqwwww"
     },
     "timer_alarm": {
-      "global_music_timer": "",
-      "global_music_alarm": ""
+      "global_music_timer": "morning-meadow-birdsongs-looping_zyb7nhnu.mp3",
+      "global_music_alarm": "morning-meadow-birdsongs-looping_zyb7nhnu.mp3"
     },
     "client_id": "4CDC6871493B1FB5532185457BA7864FB65F366F93C431FD8D8F847894B9287D",
     "theme": "dark",
-    "is_admin": false,
-    "active_remout": false
+    "is_admin": true,
+    "active_remout": false,
+    "api_commands_enabled": true,
+    "api_commands_token": "erqwlkrqelkjqweklqwjeqwlejkqwwww"
   }
 }
