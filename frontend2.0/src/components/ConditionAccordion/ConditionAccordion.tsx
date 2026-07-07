@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+
 import { Accordion } from '../ui/Accordion/Accordion';
-import { Condition } from '@/types/scripts'
+import { Condition } from '@/types/scripts';
 import { Input } from '@/components/ui/Input/Input';
 import { Button } from '@/components/ui/Button/Button';
+
+import styles from './ConditionAccordion.module.scss';
+
 
 interface Props {
   condition: Condition;
@@ -10,8 +14,9 @@ interface Props {
   defaultOpen?: boolean;
   onChange: (value: Condition) => void;
   onDelete: () => void;
-  totalCount: number
+  totalCount: number;
 }
+
 
 export const ConditionAccordion = ({
   condition,
@@ -22,9 +27,8 @@ export const ConditionAccordion = ({
   totalCount,
 }: Props) => {
 
-  const [showChildrenType, setShowChildrenType] = useState(
-    Boolean(condition.children_type)
-  );
+  const [showChildrenType, setShowChildrenType] =
+    useState(Boolean(condition.children_type));
 
   const [showChildrenDirectType, setShowChildrenDirectType] =
     useState(Boolean(condition.children_direct_type));
@@ -55,7 +59,8 @@ export const ConditionAccordion = ({
       title={`Условие ${index + 1}`}
       defaultOpen={defaultOpen}
     >
-      <div>
+
+      <div className={styles.field}>
         <Input
           label="parent_type"
           value={condition.parent_type}
@@ -69,7 +74,8 @@ export const ConditionAccordion = ({
       </div>
 
 
-      <div>
+      <div className={styles.field}>
+
         {!showChildrenType && (
           <Button
             onClick={() =>
@@ -80,15 +86,11 @@ export const ConditionAccordion = ({
           </Button>
         )}
 
+
         {showChildrenType && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: 8,
-            }}
-          >
-            <div style={{ flex: 1 }}>
+          <div className={styles.row}>
+
+            <div className={styles.inputWrapper}>
               <Input
                 label="children_type"
                 value={condition.children_type || ''}
@@ -101,15 +103,19 @@ export const ConditionAccordion = ({
               />
             </div>
 
+
             <Button onClick={hideChildrenType}>
               ×
             </Button>
+
           </div>
         )}
+
       </div>
 
 
-      <div>
+      <div className={styles.field}>
+
         {!showChildrenDirectType && (
           <Button
             onClick={() =>
@@ -120,15 +126,11 @@ export const ConditionAccordion = ({
           </Button>
         )}
 
+
         {showChildrenDirectType && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: 8,
-            }}
-          >
-            <div style={{ flex: 1 }}>
+          <div className={styles.row}>
+
+            <div className={styles.inputWrapper}>
               <Input
                 label="children_direct_type"
                 value={
@@ -144,24 +146,25 @@ export const ConditionAccordion = ({
               />
             </div>
 
+
             <Button onClick={hideChildrenDirectType}>
               ×
             </Button>
+
           </div>
         )}
+
       </div>
 
-      {totalCount > 1 ?
+
+      {totalCount > 1 && (
         <Button
           onClick={onDelete}
-          style={{
-            width: '100%',
-            marginBottom: 12,
-          }}
+          className={styles.deleteButton}
         >
           🗑 Удалить условие
         </Button>
-        : <></>}
+      )}
 
     </Accordion>
   );

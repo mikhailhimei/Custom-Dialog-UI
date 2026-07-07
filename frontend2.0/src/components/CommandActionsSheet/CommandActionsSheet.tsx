@@ -11,6 +11,7 @@ export const CommandActionsSheet = ({
   command,
   onClose,
   onToggleStatus,
+  onEdit,
   onDelete,
 }: Props) => {
   const isMobile = useIsMobile();
@@ -30,6 +31,17 @@ export const CommandActionsSheet = ({
           }}
         >
           {command.status ? "Выключить" : "Включить"}
+        </Button>
+
+        <Button
+          fullWidth
+          variant="secondary"
+          onClick={() => {
+            onEdit(command.uuid);
+            onClose();
+          }}
+        >
+          Изменить
         </Button>
 
         <Button

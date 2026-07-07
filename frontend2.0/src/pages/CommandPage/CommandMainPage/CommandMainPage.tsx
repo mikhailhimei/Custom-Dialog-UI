@@ -6,6 +6,7 @@ import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation
 import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
 import { Pagination } from '@/components/ui/Pagination/Pagination';
 import { Button } from '@/components/ui/Button/Button';
+import { Card } from '@/components/Card/Card'
 import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
@@ -100,10 +101,10 @@ export const CommandMainPage = () => {
     setModalOpen(true);
   };
 
-  const openEditModal = async (command: ShortCommand) => {
+  const openEditModal = async (uuid) => {
     setIsEdit(true);
 
-    const response = await detailInformationCommand("get_assistant_command", command.uuid)
+    const response = await detailInformationCommand("get_assistant_command", uuid)
 
     setFormData(response.data);
 
@@ -168,21 +169,27 @@ export const CommandMainPage = () => {
 
         <div className={styles.commandList}>
           {commands?.data.map((command) => (
-            <div key={command.uuid} className={styles.commandTab}>
-              <button type="button" className={styles.commandButton} onClick={() => openEditModal(command)}>
-                <span>{command.title}</span>
-                <small>{command.status === false ? "Выключена" : "Включена"}</small>
-              </button>
+            <Card 
+              key={command.uuid}
+              title={command.title}
+              subTitle={command.status === false ? "Выключена" : "Включена"}
+              onClick={() => setActionsCommand(command)}
+            />
+            // <div key={command.uuid} className={styles.commandTab}>
+            //   <button type="button" className={styles.commandButton} onClick={() => openEditModal(command)}>
+            //     <span>{command.title}</span>
+            //     <small>{command.status === false ? "Выключена" : "Включена"}</small>
+            //   </button>
 
-              <button
-                type="button"
-                className={styles.moreButton}
-                aria-label={`Действия команды ${command.title}`}
-                onClick={() => setActionsCommand(command)}
-              >
-                ⋯
-              </button>
-            </div>
+            //   <button
+            //     type="button"
+            //     className={styles.moreButton}
+            //     aria-label={`Действия команды ${command.title}`}
+            //     onClick={() => setActionsCommand(command)}
+            //   >
+            //     ⋯
+            //   </button>
+            // </div>
           ))}
         </div>
 
@@ -213,6 +220,7 @@ export const CommandMainPage = () => {
           onClose={() => setActionsCommand(null)}
           onToggleStatus={handlerEditStatus}
           onDelete={handlerDeleteCommand}
+          onEdit={(uuid) => openEditModal(uuid)}
         />
 
       </div>

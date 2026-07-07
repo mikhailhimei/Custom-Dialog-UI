@@ -1,183 +1,140 @@
+:root {
+  --mobile-nav-height: 88px;
+  --page-padding: 28px;
+}
+
 .page {
   display: flex;
   flex-direction: column;
   gap: 32px;
-  padding: 28px;
-  background: #0f1115;
-  min-height: 167vh;
+
+  min-height: 100vh;
+
+  padding: var(--page-padding);
 }
 
 .header {
   display: flex;
   flex-direction: column;
+}
+
+.headerTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
   gap: 24px;
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
 }
 
 .title {
   margin: 0;
+
   font-size: 40px;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.04em;
-  color: #f5f7fa;
+  letter-spacing: -.04em;
+
+  color: var(--text);
 }
 
 .description {
   margin-top: 10px;
-  color: #8b93a1;
+
+  color: var(--text-secondary);
+
   font-size: 15px;
   line-height: 1.5;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+}
+
 .addButton {
-  height: 44px;
+  height: 46px;
+
   padding: 0 18px;
-  border: 1px solid #2a2f3a;
-  border-radius: 12px;
-  background: #171a21;
-  color: #f5f7fa;
+
+  border: 1px solid var(--border);
+
+  border-radius: 14px;
+
+  background: var(--surface);
+
+  color: var(--text);
+
   cursor: pointer;
+
   font-size: 14px;
   font-weight: 600;
+
   transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
+    background .18s,
+    border-color .18s,
+    transform .18s;
 }
 
 .addButton:hover {
-  background: #1d212b;
-  border-color: #3a4150;
+  background: var(--surface-hover);
+
+  border-color: var(--border-hover);
 }
 
 .addButton:active {
-  transform: scale(0.98);
+  transform: scale(.98);
 }
 
-.subTabs {
+.list {
   display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
+  flex-direction: column;
 
-.subTab {
-  padding: 10px 14px;
-  border: 1px solid #252b36;
-  border-radius: 999px;
-  background: #151922;
-  color: #8b93a1;
-  cursor: pointer;
-  white-space: nowrap;
-  font-size: 14px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
+  gap: 12px;
 
-.activeSubTab,
-.subTab:hover {
-  background: #222a36;
-  border-color: #3b82f6;
-  color: #f5f7fa;
+  /* Чтобы последняя карточка не пряталась под нижней навигацией */
+  padding-bottom: calc(
+    var(--mobile-nav-height) + 32px + env(safe-area-inset-bottom)
+  );
 }
 
 .state {
-  color: #8b93a1;
-}
+  color: var(--text-secondary);
 
-.commandList {
-  display: grid;
-  gap: 12px;
-}
-
-.commandTab {
-  display: grid;
-  grid-template-columns: 1fr 44px;
-  gap: 10px;
-  align-items: stretch;
-}
-
-.commandButton,
-.moreButton {
-  border: 1px solid #252b36;
-  border-radius: 14px;
-  background: #171a21;
-  color: #f5f7fa;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
-}
-
-.commandButton {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 58px;
-  padding: 14px 16px;
-  text-align: left;
   font-size: 15px;
-  font-weight: 600;
-}
-
-.commandButton small {
-  color: #8b93a1;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.moreButton {
-  font-size: 24px;
-  line-height: 1;
-}
-
-.commandButton:hover,
-.moreButton:hover {
-  background: #1d212b;
-  border-color: #3a4150;
-}
-
-.innerTabs {
-  display: inline-flex;
-  width: fit-content;
-  padding: 4px;
-  gap: 4px;
-  border: 1px solid #252b36;
-  border-radius: 14px;
-  background: #11141b;
-}
-
-.innerTab {
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #8b93a1;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.activeInnerTab,
-.innerTab:hover {
-  background: #222a36;
-  color: #f5f7fa;
 }
 
 @media (max-width: 768px) {
+  .page {
+    padding: 20px;
+    padding-bottom: 0;
+  }
+
   .headerTop {
     flex-direction: column;
+  }
+
+  .title {
+    font-size: 32px;
   }
 
   .addButton {
     width: 100%;
   }
 
-  .title {
-    font-size: 32px;
+  .list {
+    padding-bottom: calc(
+      var(--mobile-nav-height) + 32px + env(safe-area-inset-bottom)
+    );
+  }
+}
+
+@media (min-width: 769px) {
+  .list {
+    padding-bottom: 0;
   }
 }

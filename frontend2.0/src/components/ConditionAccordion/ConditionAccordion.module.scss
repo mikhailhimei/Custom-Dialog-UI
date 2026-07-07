@@ -1,0 +1,21 @@
+.field {
+  margin-bottom: 12px;
+}
+
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+
+.inputWrapper {
+  flex: 1;
+}
+
+
+.deleteButton {
+  width: 100%;
+  margin-bottom: 12px;
+}
