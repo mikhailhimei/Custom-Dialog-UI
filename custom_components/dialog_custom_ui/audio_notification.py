@@ -20,9 +20,8 @@ def _resolve_media_player_entity_id(hass, device_ref) -> str:
         return device_ref
     return ""
 
-async def _async_restore_volume(hass, target: str, old_volume: Any, delay: float = 2.0) -> None:
+async def _async_restore_volume(hass, target: str, old_volume: Any) -> None:
     try:
-        await asyncio.sleep(float(delay))
         await hass.services.async_call(
             "media_player",
             "volume_set",
@@ -175,9 +174,8 @@ async def audio_notification(
                             await _async_wait_until_finished(hass, target)
 
                         # restore old volume after a delay; if we ramp, postpone restore until ramp finishes
-                        if wait_until_finished and old_volume is not None and volume_level is not None:
+                        if old_volume is not None and volume_level is not None:
                             try:
-                                
                                 hass.async_create_task(
                                     _async_restore_volume(hass, target, old_volume),
                                 )
