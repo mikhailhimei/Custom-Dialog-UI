@@ -3,11 +3,13 @@ import styles from "./Card.module.scss";
 
 interface Props {
   title: string;
+  subTitle?: string;
   onClick: () => void;
 }
 
 export const Card = ({
   title,
+  subTitle,
   onClick,
 }: Props) => {
   return (
@@ -22,7 +24,7 @@ export const Card = ({
         </div>
 
         <div className={styles.subtitle}>
-          Нажмите для редактирования
+          {subTitle}
         </div>
       </div>
 

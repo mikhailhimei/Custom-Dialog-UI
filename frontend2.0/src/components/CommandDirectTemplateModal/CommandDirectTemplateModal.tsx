@@ -1,10 +1,10 @@
 import React, { useMemo } from "react";
 
-import { Modal } from "../Modal/Modal";
+import { Modal } from "../ui/Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
 import { Textarea } from "../ui/Textarea/Textarea";
-import { Accordion } from "../Accordion/Accordion";
+import { Accordion } from "../ui/Accordion/Accordion";
 
 import { CommandDetails } from "../../types/commandTypes";
 

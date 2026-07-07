@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 
-import { Modal } from "../../components/Modal/Modal";
+import { Modal } from "../../components/ui/Modal/Modal";
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"

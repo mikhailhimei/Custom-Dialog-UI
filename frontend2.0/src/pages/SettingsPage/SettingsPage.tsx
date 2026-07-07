@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
-import { Accordion } from "../../components/Accordion/Accordion";
+import { Accordion } from "../../components/ui/Accordion/Accordion";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { MobileHeader } from "@/components/MobileHeader/MobileHeader"
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"

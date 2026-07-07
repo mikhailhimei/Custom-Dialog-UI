@@ -3,7 +3,7 @@ import React, {
   useEffect,
 } from "react";
 
-import { Button } from "../ui/Button/Button";
+import { Button } from "../Button/Button";
 
 import styles from "./Modal.module.scss";
 
@@ -17,6 +17,8 @@ interface Props {
   footer?: ReactNode;
 
   children: ReactNode;
+
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 export const Modal = ({
@@ -25,6 +27,7 @@ export const Modal = ({
   title,
   footer,
   children,
+  size = "md",
 }: Props) => {
   useEffect(() => {
     if (!open) return;
@@ -62,7 +65,7 @@ export const Modal = ({
       onClick={onClose}
     >
       <div
-        className={styles.modal}
+        className={`${styles.modal} ${styles[size]}`}
         onClick={(event) =>
           event.stopPropagation()
         }

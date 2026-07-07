@@ -1,82 +1,107 @@
-.card {
-  width: 100%;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  gap: 20px;
-
-  padding: 18px 20px;
-
-  border: 1px solid #374151;
-
-  border-radius: 16px;
-
-  background: #1f2937;
-
-  cursor: pointer;
-
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease,
-    background 0.2s ease,
-    box-shadow 0.2s ease;
-
-  text-align: left;
-
-  margin-bottom: 10px;
-}
-
-.card:hover {
-  border-color: #2563eb;
-
-  background: #243041;
-
-  transform: translateY(-2px);
-
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.25);
-}
-
-.card:active {
-  transform: scale(0.99);
-}
-
-.content {
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 6px;
-}
-
-.title {
-  font-size: 16px;
-
-  font-weight: 600;
-
-  color: white;
-}
-
 .subtitle {
   font-size: 13px;
 
   color: #9ca3af;
 }
 
+.card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  width: 100%;
+
+  padding: 18px 20px;
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  background: rgba(255,255,255,.025);
+
+  backdrop-filter: blur(16px);
+
+  cursor: pointer;
+
+  text-align: left;
+
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    background .18s ease,
+    box-shadow .18s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+
+  background: rgba(255,255,255,.04);
+
+  border-color: rgba(99,102,241,.35);
+
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.30);
+}
+
+.card:active {
+  transform: scale(.985);
+}
+
+.icon {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 14px;
+
+  background: rgba(99,102,241,.10);
+
+  color: var(--primary);
+
+  transition:
+    background .2s,
+    transform .2s;
+}
+
+.card:hover .icon {
+  background: rgba(99,102,241,.18);
+
+  transform: rotate(-6deg);
+}
+
+.content {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  min-width: 0;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+
+  color: var(--text);
+}
+
 .arrow {
-  font-size: 22px;
+  color: var(--text-muted);
 
-  color: #6b7280;
+  flex-shrink: 0;
 
-  transition: 0.2s;
+  transition:
+    color .2s,
+    transform .2s;
 }
 
 .card:hover .arrow {
-  color: #60a5fa;
+  color: var(--primary);
 
   transform: translateX(4px);
 }

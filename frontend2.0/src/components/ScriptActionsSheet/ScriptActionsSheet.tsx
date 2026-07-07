@@ -1,42 +1,43 @@
 import React from "react"
-import { Modal } from "../ui/Modal/Modal";
-import { BottomSheet } from "../ui/BottomSheet/BottomSheet";
-import { Button } from "../ui/Button/Button";
-import { useIsMobile } from "../../hooks/useIsMobile";
+import { Modal } from "@/components/ui/Modal/Modal";
+import { BottomSheet } from "@/components/ui/BottomSheet/BottomSheet";
+import { Button } from "@/components/ui/Button/Button";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
-import styles from "./CommandActionsSheet.module.scss";
+import styles from "./ScriptActionsSheet.module.scss";
 
-export const CommandActionsSheet = ({
+export const ScriptActionsSheet = ({
+  uuid,
   open,
-  command,
+  title,
   onClose,
-  onToggleStatus,
+  onEdit,
   onDelete,
-}: Props) => {
+  }: Props) => {
   const isMobile = useIsMobile();
 
-  if (!command) return null;
+  if (!uuid) return null;
 
   const content = (
     <div className={styles.content}>
-      <h3 className={styles.title}>{command.title}</h3>
+      <h3 className={styles.title}>{title}</h3>
 
       <div className={styles.actions}>
         <Button
           fullWidth
           onClick={() => {
-            onToggleStatus(command.uuid, !Boolean(command.status));
+            onEdit(uuid);
             onClose();
           }}
         >
-          {command.status ? "Выключить" : "Включить"}
+          Изменить
         </Button>
 
         <Button
           fullWidth
           variant="ghost"
           onClick={() => {
-            onDelete(command.uuid);
+            onDelete(uuid);
             onClose();
           }}
         >

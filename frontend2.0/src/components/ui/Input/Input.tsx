@@ -1,5 +1,6 @@
 import React, {
   InputHTMLAttributes,
+  useId,
 } from "react";
 
 import styles from "./Input.module.scss";
@@ -13,22 +14,28 @@ interface Props
 
 export const Input = ({
   label,
-
   error,
-
   className = "",
-
+  id,
   ...props
 }: Props) => {
+  const generatedId = useId();
+
+  const inputId = id ?? generatedId;
+
   return (
     <div className={styles.field}>
       {label && (
-        <label className={styles.label}>
+        <label
+          htmlFor={inputId}
+          className={styles.label}
+        >
           {label}
         </label>
       )}
 
       <input
+        id={inputId}
         {...props}
         className={`
           ${styles.input}

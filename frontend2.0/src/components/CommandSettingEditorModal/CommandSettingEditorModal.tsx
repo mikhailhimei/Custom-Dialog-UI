@@ -1,10 +1,10 @@
 import React, { useMemo } from "react";
 
-import { Modal } from "../Modal/Modal";
+import { Modal } from "../ui/Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
-import { Accordion } from "../Accordion/Accordion";
+import { Accordion } from "../ui/Accordion/Accordion";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
 
 import styles from "./CommandEditorModal.module.scss";

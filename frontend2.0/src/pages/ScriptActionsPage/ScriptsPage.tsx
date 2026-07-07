@@ -1,26 +1,26 @@
 import React, { useEffect, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
-import { MobileHeader } from '../../components/MobileHeader/MobileHeader';
-import { NavigationTabs } from '../../components/NavigationTabs/NavigationTabs';
-import { useIsMobile } from "../../hooks/useIsMobile";
-import { MobileNavigation } from "../../components/MobileNavigation/MobileNavigation";
-
-import { Modal } from '../../components/Modal/Modal';
-import { Pagination } from '../../components/Pagination/Pagination';
-import { ScriptForm } from '../../components/ScriptForm/ScriptForm';
-import { Card } from '../../components/Card/Card';
-import { Button } from '../../components/ui/Button/Button';
-import { BottomSlideButton } from "../../components/BottomSlideButton/BottomSlideButton";
-
-import styles from "./ScriptsPage.module.scss";
-
 import {
   ScriptAction,
   ScriptActionDetails,
-} from '../../types/scripts';
+} from '@/types/scripts';
 
-import { useApiScripts } from '../../hooks/scriptActions/useApiScripts';
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useApiScripts } from '@/hooks/scriptActions/useApiScripts';
+
+import { Card } from '@/components/Card/Card';
+import { Button } from '@/components/ui/Button/Button';
+import { Pagination } from '@/components/ui/Pagination/Pagination';
+import { ScriptActionsSheet } from "@/components/ScriptActionsSheet/ScriptActionsSheet";
+import { ScriptFormModal } from '@/components/ScriptFormModal/ScriptFormModal';
+import { MobileHeader } from '@/components/MobileHeader/MobileHeader';
+import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
+import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton"
+
+import styles from "./ScriptsPage.module.scss";
+
 
 export const ScriptsPage = () => {
   const isMobile = useIsMobile();
@@ -30,14 +30,17 @@ export const ScriptsPage = () => {
     rootMargin: "0px",
   });
 
-  const [formData, setFormData] =
-    useState<ScriptActionDetails>();
-
   const [selectedScript, setSelectedScript] =
     useState<ScriptActionDetails>();
 
   const [modalOpen, setModalOpen] =
     useState(false);
+
+  const [modalSheet, setModalSheet] =
+    useState(false)
+
+  const [formInfo, setFormInfo] =
+    useState({})
 
   const [isEdit, setIsEdit] =
     useState(false);
@@ -98,13 +101,18 @@ export const ScriptsPage = () => {
     setModalOpen(true);
   };
 
+  const openSheet = (script: ScriptAction) => {
+    setModalSheet(true)
+    setFormInfo(script)
+  }
+
   const openEditModal = async (
-    script: ScriptAction
+    uuid
   ) => {
     setIsEdit(true);
 
     const data = await getScriptAction(
-      script.uuid
+      uuid
     );
 
     setSelectedScript(data);
@@ -112,22 +120,27 @@ export const ScriptsPage = () => {
     setModalOpen(true);
   };
 
-  const handlerUpdateSaveScript = async () => {
+  const handlerUpdateSaveScript = async (data) => {
     if (isEdit) {
-      const uuid = formData?.uuid;
 
-      if (!uuid) return;
+      if (!data.uuid) return;
 
-      const { uuid: _uuid, ...payload } = formData;
+      const { uuid, ...payload } = data;
 
-      await updateScript(uuid, payload)
+      await updateScript(data.uuid, payload)
     } else {
 
-      await saveScript(formData)
+      await saveScript(data)
 
     }
 
     setModalOpen(false)
+  }
+
+  const handlerDeleteScript = async (uuid) => {
+    if (!uuid) return
+
+    await deleteScriptAction(uuid)
   }
 
   return (
@@ -138,22 +151,26 @@ export const ScriptsPage = () => {
 
         <div className={styles.header}>
           <div className={styles.heading}>
+            <h1 className={styles.title}>
+              Сценарии
+            </h1>
 
             <p className={styles.description}>
-              Создавайте и редактируйте
-              автоматизации и условия
+              Создавайте автоматизации для управления устройствами
+              и объединяйте действия в единые сценарии.
             </p>
+
           </div>
 
           <div className={styles.actions}>
-            {!isMobile ?
+            {!isMobile ? (
               <Button
                 variant="primary"
                 onClick={openCreateModal}
               >
-                Добавить сценарий
+                🞢 Добавить сценарий
               </Button>
-              :
+            ) : (
               <BottomSlideButton>
                 <Button
                   variant="primary"
@@ -162,9 +179,8 @@ export const ScriptsPage = () => {
                   Добавить сценарий
                 </Button>
               </BottomSlideButton>
-            }
+            )}
           </div>
-
         </div>
 
         {loading && (
@@ -176,8 +192,9 @@ export const ScriptsPage = () => {
             <Card
               key={script.uuid}
               title={script.title}
+              subTitle="Нажмите для редактирования"
               onClick={() =>
-                openEditModal(script)
+                openSheet(script)
               }
             />
           ))}
@@ -192,49 +209,26 @@ export const ScriptsPage = () => {
           <div ref={ref} style={{ height: 1 }} />
         }
 
-        <Modal
+        <ScriptActionsSheet
+          uuid={formInfo.uuid}
+          open={modalSheet}
+          title={formInfo.title}
+          onClose={() => setModalSheet(false)}
+          onEdit={openEditModal}
+          onDelete={handlerDeleteScript}
+        />
+
+        <ScriptFormModal
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          title={
-            isEdit
-              ? "Редактировать сценарий"
-              : "Создать сценарий"
-          }
-          footer={
-            <>
-              {isEdit && (
-                <Button
-                  variant="ghost"
-                  onClick={async () => {
-                    if (!selectedScript?.uuid)
-                      return;
-
-                    await deleteScriptAction(
-                      selectedScript.uuid
-                    );
-
-                    setModalOpen(false);
-                  }}
-                >
-                  Удалить
-                </Button>
-              )}
-
-              <Button
-                onClick={handlerUpdateSaveScript}
-              >
-                Сохранить
-              </Button>
-            </>
-          }
-        >
-          <ScriptForm
-            initialData={selectedScript}
-            isEdit={isEdit}
-            isOptionData={scriptData()}
-            onChange={setFormData}
-          />
-        </Modal>
+          initialData={selectedScript}
+          isEdit={isEdit}
+          isOptionData={scriptData()}
+          loading={loading}
+          onCancel={() => setModalOpen(false)}
+          onSave={async (data) => {
+            await handlerUpdateSaveScript(data);
+          }}
+        />
       </div>
       <MobileNavigation />
     </>

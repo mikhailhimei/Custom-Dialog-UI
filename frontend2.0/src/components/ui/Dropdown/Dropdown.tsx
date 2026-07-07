@@ -1,0 +1,69 @@
+import React, { useId } from "react";
+import { ChevronDown } from "lucide-react";
+
+import styles from "./Dropdown.module.scss";
+
+type Option = {
+  label: string;
+  value: string;
+};
+
+type DropdownProps = {
+  label?: string;
+  options: Option[];
+  value?: string;
+  placeholder?: string;
+  onSelect?: (value: string) => void;
+};
+
+export function Dropdown({
+  label,
+  options,
+  value = "",
+  placeholder = "Выберите",
+  onSelect,
+}: DropdownProps) {
+  const id = useId();
+
+  return (
+    <div className={styles.dropdown}>
+      {label && (
+        <label
+          htmlFor={id}
+          className={styles.label}
+        >
+          {label}
+        </label>
+      )}
+
+      <div className={styles.wrapper}>
+        <select
+          id={id}
+          className={styles.select}
+          value={value}
+          onChange={(e) =>
+            onSelect?.(e.target.value)
+          }
+        >
+          <option value="" disabled>
+            {placeholder}
+          </option>
+
+          {options.map((option) => (
+            <option
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDown
+          size={18}
+          className={styles.arrow}
+        />
+      </div>
+    </div>
+  );
+}

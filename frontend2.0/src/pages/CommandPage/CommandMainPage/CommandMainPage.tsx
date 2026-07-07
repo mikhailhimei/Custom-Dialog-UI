@@ -4,9 +4,9 @@ import { useInView } from "react-intersection-observer";
 import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
 import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
 import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
-import { Pagination } from '@/components/Pagination/Pagination';
+import { Pagination } from '@/components/ui/Pagination/Pagination';
 import { Button } from '@/components/ui/Button/Button';
-import { BottomSlideButton } from '@/components/BottomSlideButton/BottomSlideButton';
+import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
 import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
