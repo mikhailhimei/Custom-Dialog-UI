@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Accordion } from '../../ui/Accordion/Accordion';
-import { Condition } from '../../../types/scripts';
-import { Input } from '../../ui/Input/Input';
-import { Button } from '../../ui/Button/Button';
+import { Accordion } from '../ui/Accordion/Accordion';
+import { Condition } from '@/types/scripts'
+import { Input } from '@/components/ui/Input/Input';
+import { Button } from '@/components/ui/Button/Button';
 
 interface Props {
   condition: Condition;

@@ -1,16 +1,36 @@
 .container {
-    display: flex;
-    justify-content: center;
   position: fixed;
+
   left: 16px;
   right: 16px;
-  bottom: 80px;
 
-  transition: transform 0.3s ease, bottom 0.3s ease;
+  bottom: calc(88px + env(safe-area-inset-bottom));
 
-  z-index: 1000;
+  display: flex;
+  justify-content: center;
+
+  pointer-events: none;
+
+  opacity: 0;
+
+  transform: translateY(24px) scale(.96);
+
+  transition:
+    opacity .22s ease,
+    transform .22s ease;
+
+  z-index: 1100;
+}
+
+.container > * {
+  pointer-events: auto;
+
+  width: 100%;
+  max-width: 420px;
 }
 
 .visible {
-  bottom: 16px;
+  opacity: 1;
+
+  transform: translateY(0) scale(1);
 }

@@ -1,4 +1,7 @@
-import React, { ButtonHTMLAttributes } from "react";
+import React, {
+  ButtonHTMLAttributes,
+  ReactNode,
+} from "react";
 
 import styles from "./Button.module.scss";
 
@@ -7,6 +10,10 @@ interface Props
   variant?: "primary" | "secondary" | "ghost";
 
   fullWidth?: boolean;
+
+  leftIcon?: ReactNode;
+
+  rightIcon?: ReactNode;
 }
 
 export const Button = ({
@@ -15,6 +22,10 @@ export const Button = ({
   variant = "primary",
 
   fullWidth = false,
+
+  leftIcon,
+
+  rightIcon,
 
   className = "",
 
@@ -30,7 +41,11 @@ export const Button = ({
         ${className}
       `}
     >
+      {leftIcon}
+
       {children}
+
+      {rightIcon}
     </button>
   );
 };

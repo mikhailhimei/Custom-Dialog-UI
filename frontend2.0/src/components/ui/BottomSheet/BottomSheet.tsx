@@ -1,4 +1,9 @@
-import React, {useEffect} from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 import styles from "./BottomSheet.module.scss";
 
@@ -8,35 +13,145 @@ interface BottomSheetProps {
   children: React.ReactNode;
 }
 
-export const BottomSheet: React.FC<BottomSheetProps> = ({
+export const BottomSheet = ({
   open,
   onClose,
   children,
-}) => {
-  if (!open) return null;
+}: BottomSheetProps) => {
+  const [mounted, setMounted] = useState(open);
+  const [visible, setVisible] = useState(open);
+
+  const startY = useRef(0);
+  const currentY = useRef(0);
+
+  const [translate, setTranslate] = useState(0);
 
   useEffect(() => {
-  if (!open) return;
+    if (open) {
+      setMounted(true);
 
-  const originalOverflow = document.body.style.overflow;
+      requestAnimationFrame(() => {
+        setVisible(true);
+      });
 
-  document.body.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    } else {
+      setVisible(false);
 
-  return () => {
-    document.body.style.overflow = originalOverflow;
+      const timeout = setTimeout(() => {
+        setMounted(false);
+      }, 300);
+
+      document.body.style.overflow = "";
+
+      return () => clearTimeout(timeout);
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+
+  const onTouchStart = (
+    e: React.TouchEvent
+  ) => {
+    startY.current =
+      e.touches[0].clientY;
   };
-}, [open]);
 
-  return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div
-        className={styles.sheet}
-        onClick={(e) => e.stopPropagation()}
+
+  const onTouchMove = (
+    e: React.TouchEvent
+  ) => {
+    currentY.current =
+      e.touches[0].clientY;
+
+    const diff =
+      currentY.current -
+      startY.current;
+
+    if (diff > 0) {
+      setTranslate(diff);
+    }
+  };
+
+
+  const onTouchEnd = () => {
+    if (translate > 120) {
+      onClose();
+    }
+
+    setTranslate(0);
+  };
+
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    if (open) {
+      window.addEventListener(
+        "keydown",
+        handler
+      );
+    }
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handler
+      );
+    };
+  }, [open, onClose]);
+
+
+  if (!mounted) return null;
+
+
+  return createPortal(
+    <div
+      className={`${styles.overlay} ${
+        visible ? styles.visible : ""
+      }`}
+      onClick={onClose}
+    >
+      <section
+        className={`${styles.sheet} ${
+          visible ? styles.open : ""
+        }`}
+        style={{
+          transform: `translateY(${translate}px)`,
+          transition:
+            translate === 0
+              ? "transform .3s cubic-bezier(.32,.72,0,1)"
+              : "none",
+        }}
+        onClick={(e) =>
+          e.stopPropagation()
+        }
+        role="dialog"
+        aria-modal="true"
       >
-        <div className={styles.handle} />
+        <div
+          className={styles.handleArea}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className={styles.handle} />
+        </div>
 
-        {children}
-      </div>
-    </div>
+
+        <div className={styles.content}>
+          {children}
+        </div>
+
+      </section>
+    </div>,
+    document.body
   );
 };

@@ -1,41 +1,68 @@
 .header {
   position: sticky;
+
   top: 0;
 
   display: flex;
   align-items: center;
+  justify-content: space-between;
 
-  height: 56px;
+  height: 64px;
 
   padding: 0 16px;
 
-  background: #151518;
+  background: rgba(15, 23, 42, .82);
 
-  border-bottom: 1px solid #23262d;
+  backdrop-filter: blur(22px);
+
+  border-bottom: 1px solid rgba(255,255,255,.06);
 
   z-index: 1000;
 }
 
-.backButton {
+.title {
+  margin: 0;
+
+  font-size: 17px;
+  font-weight: 600;
+
+  color: var(--text);
+}
+
+.backButton,
+.homeButton {
+  width: 40px;
+  height: 40px;
+
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
 
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 12px;
 
-  color: #f3f4f6;
+  background: rgba(255,255,255,.04);
 
-  font-size: 15px;
-  font-weight: 500;
+  color: var(--text);
 
   cursor: pointer;
 
-  transition: color .15s;
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    transform .18s ease;
 }
 
-.backButton:hover {
-  color: #fff;
+.backButton:hover,
+.homeButton:hover {
+  background: rgba(255,255,255,.07);
+
+  border-color: rgba(255,255,255,.12);
+}
+
+.backButton:active,
+.homeButton:active {
+  transform: scale(.96);
 }
 
 @media (min-width: 769px) {

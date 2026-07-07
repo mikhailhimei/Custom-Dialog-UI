@@ -151,9 +151,11 @@ export const ScriptsPage = () => {
 
         <div className={styles.header}>
           <div className={styles.heading}>
-            <h1 className={styles.title}>
-              Сценарии
-            </h1>
+            {!isMobile ?
+              <h1 className={styles.title}>
+                Сценарии
+              </h1> : <></>
+            }
 
             <p className={styles.description}>
               Создавайте автоматизации для управления устройствами

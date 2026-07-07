@@ -6,7 +6,7 @@ import {
 } from "../../types/scripts";
 
 import { Modal } from "../ui/Modal/Modal";
-import { ConditionAccordion } from "../ConditionAccordion/Script/ConditionAccordion";
+import { ConditionAccordion } from "../ConditionAccordion/ConditionAccordion";
 import { Dropdown } from "../ui/Dropdown/Dropdown";
 
 import { Input } from "../ui/Input/Input";

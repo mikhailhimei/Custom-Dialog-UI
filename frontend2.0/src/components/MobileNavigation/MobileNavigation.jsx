@@ -1,5 +1,12 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import React, { useState } from "react";
+import {
+  AlarmClock,
+  Bot,
+  Clock3,
+  Settings,
+  Workflow,
+} from "lucide-react";
 
 import styles from "./MobileNavigation.module.scss";
 
@@ -25,18 +32,24 @@ export const MobileNavigation = () => {
     return (
       <nav className={styles.nav}>
 
-        <NavLink to="/commands/main">Основные</NavLink>
+        <NavLink to="/commands/main">
+          <Bot size={20} />
+          <span>Основные</span>
+        </NavLink>
 
         <NavLink to="/commands/sub">
-          Второстепенные
+          <Bot size={20} />
+          <span>Второстепенные</span>
         </NavLink>
 
         <NavLink to="/commands/direct/main">
-          Прямые
+          <Bot size={20} />
+          <span>Прямые</span>
         </NavLink>
 
         <NavLink to="/commands/settings">
-          Настройки
+          <Bot size={20} />
+          <span>Настройки</span>
         </NavLink>
       </nav>
     );
@@ -45,7 +58,8 @@ export const MobileNavigation = () => {
   return (
     <nav className={styles.nav}>
       <NavLink to="/scripts">
-        Скрипты
+        <Workflow size={20} />
+        <span>Скрипты</span>
       </NavLink>
 
       <button
@@ -54,19 +68,23 @@ export const MobileNavigation = () => {
           navigate("/commands/main");
         }}
       >
-        Команды
+        <Bot size={20} />
+        <span>Команды</span>
       </button>
 
       <NavLink to="/timer">
-        Таймер
+        <Clock3 size={20} />
+        <span>Таймер</span>
       </NavLink>
 
       <NavLink to="/alarm">
-        Будильник
+        <AlarmClock size={20} />
+        <span>Будильник</span>
       </NavLink>
 
       <NavLink to="/settings">
-        Настройки
+        <Settings size={20} />
+        <span>Настройки</span>
       </NavLink>
     </nav>
   );

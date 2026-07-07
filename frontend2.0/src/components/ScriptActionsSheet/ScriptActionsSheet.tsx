@@ -55,6 +55,7 @@ export const ScriptActionsSheet = ({
             open={open}
             onClose={onClose}
             title="Действия"
+            size="sm"
           >
             {content}
           </Modal >
