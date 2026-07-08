@@ -32,6 +32,18 @@ interface Props {
   onCancel?: () => void;
 }
 
+type ConditionErrors = {
+  parent_type?: string;
+  children_type?: string;
+  children_direct_type?: string;
+};
+
+type FormErrors = {
+  name?: string;
+  script_entity_id?: string;
+  conditions: ConditionErrors[];
+};
+
 export const ScriptFormModal = ({
   open,
   initialData,
@@ -55,6 +67,10 @@ export const ScriptFormModal = ({
       ],
     });
 
+  const [errors, setErrors] =
+    useState<FormErrors>({
+      conditions: [],
+    });
 
   useEffect(() => {
     setForm({
@@ -69,15 +85,17 @@ export const ScriptFormModal = ({
           },
         ],
     });
-  }, [initialData, open]);
 
+    setErrors({
+      conditions: [],
+    });
+  }, [initialData, open]);
 
   const updateForm = (
     data: ScriptActionDetails
   ) => {
     setForm(data);
   };
-
 
   const addCondition = () => {
     updateForm({
@@ -91,14 +109,11 @@ export const ScriptFormModal = ({
     });
   };
 
-
   const updateCondition = (
     index: number,
     value: Condition
   ) => {
-    const updated = [
-      ...form.conditions,
-    ];
+    const updated = [...form.conditions];
 
     updated[index] = value;
 
@@ -108,7 +123,6 @@ export const ScriptFormModal = ({
     });
   };
 
-
   const deleteCondition = (
     index: number
   ) => {
@@ -116,7 +130,6 @@ export const ScriptFormModal = ({
       form.conditions.filter(
         (_, i) => i !== index
       );
-
 
     updateForm({
       ...form,
@@ -131,6 +144,67 @@ export const ScriptFormModal = ({
     });
   };
 
+  const validate = () => {
+    const nextErrors: FormErrors = {
+      conditions: [],
+    };
+
+    if (!form.name.trim()) {
+      nextErrors.name =
+        "Обязательное поле";
+    }
+
+    if (!form.script_entity_id) {
+      nextErrors.script_entity_id =
+        "Обязательное поле";
+    }
+
+    form.conditions.forEach(
+      (condition, index) => {
+        const conditionErrors: ConditionErrors =
+          {};
+
+        if (
+          !condition.parent_type.trim()
+        ) {
+          conditionErrors.parent_type =
+            "Обязательное поле";
+        }
+
+        if (
+          condition.children_type !==
+            undefined &&
+          !condition.children_type.trim()
+        ) {
+          conditionErrors.children_type =
+            "Обязательное поле";
+        }
+
+        if (
+          condition.children_direct_type !==
+            undefined &&
+          !condition.children_direct_type.trim()
+        ) {
+          conditionErrors.children_direct_type =
+            "Обязательное поле";
+        }
+
+        nextErrors.conditions[index] =
+          conditionErrors;
+      }
+    );
+
+    setErrors(nextErrors);
+
+    return (
+      !nextErrors.name &&
+      !nextErrors.script_entity_id &&
+      nextErrors.conditions.every(
+        (item) =>
+          Object.keys(item).length === 0
+      )
+    );
+  };
 
   return (
     <Modal
@@ -142,15 +216,12 @@ export const ScriptFormModal = ({
           : "Создать сценарий"
       }
     >
-
       <div className={styles.form}>
-
-
         <div className={styles.section}>
-
           <Input
             label="Название"
             value={form.name}
+            error={errors.name}
             onChange={(e) =>
               updateForm({
                 ...form,
@@ -159,9 +230,9 @@ export const ScriptFormModal = ({
             }
           />
 
-
           <Dropdown
-            label="скрипты"
+            label="Скрипт"
+            error={errors.script_entity_id}
             options={isOptionData.map(
               (item) => ({
                 label: item.name,
@@ -176,27 +247,28 @@ export const ScriptFormModal = ({
               })
             }
           />
-
         </div>
 
-
-
         <div className={styles.section}>
-
           <h3 className={styles.sectionTitle}>
             Условия
           </h3>
 
-
           <div className={styles.conditions}>
-
             {form.conditions.map(
-              (condition, index, total) => (
+              (
+                condition,
+                index,
+                total
+              ) => (
                 <ConditionAccordion
                   key={index}
                   index={index}
                   condition={condition}
                   defaultOpen={!isEdit}
+                  errors={
+                    errors.conditions[index]
+                  }
                   onChange={(value) =>
                     updateCondition(
                       index,
@@ -206,48 +278,40 @@ export const ScriptFormModal = ({
                   onDelete={() =>
                     deleteCondition(index)
                   }
-                  totalCount = {total.length}
+                  totalCount={total.length}
                 />
               )
             )}
-
           </div>
-
-
 
           <Button
             type="button"
-            className={styles.addCondition}
+            className={
+              styles.addCondition
+            }
             onClick={addCondition}
           >
             + Добавить условие
           </Button>
-
-
         </div>
 
-
-
         <div className={styles.footer}>
-
           <div className={styles.right}>
-
             <Button
               disabled={loading}
-              onClick={() =>
-                onSave?.(form)
-              }
+              onClick={() => {
+                if (!validate()) {
+                  return;
+                }
+
+                onSave?.(form);
+              }}
             >
               Сохранить
             </Button>
-
           </div>
-
         </div>
-
-
       </div>
-
     </Modal>
   );
 };

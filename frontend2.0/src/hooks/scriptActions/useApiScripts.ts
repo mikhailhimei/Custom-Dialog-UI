@@ -87,12 +87,12 @@ export function useApiScripts() {
 
   const saveScript = async (data: any) => {
     await api._save(data, "save_script_action");
-    await loadScripts(scripts?.page ?? 1);
+    await loadScripts(1);
   };
 
   const updateScript = async (uuid: string, data: any) => {
     await api._update(uuid, "update_script_action", data);
-    await loadScripts(scripts?.page ?? 1);
+    await loadScripts(1);
   };
 
   const scriptData = () => {

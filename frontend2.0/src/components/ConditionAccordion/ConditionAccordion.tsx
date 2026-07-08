@@ -1,22 +1,30 @@
-import React, { useState } from 'react';
+import React from "react";
 
-import { Accordion } from '../ui/Accordion/Accordion';
-import { Condition } from '@/types/scripts';
-import { Input } from '@/components/ui/Input/Input';
-import { Button } from '@/components/ui/Button/Button';
+import { Accordion } from "../ui/Accordion/Accordion";
+import { Condition } from "@/types/scripts";
+import { Input } from "@/components/ui/Input/Input";
+import { Button } from "@/components/ui/Button/Button";
 
-import styles from './ConditionAccordion.module.scss';
+import styles from "./ConditionAccordion.module.scss";
 
+type ConditionErrors = {
+  parent_type?: string;
+  children_type?: string;
+  children_direct_type?: string;
+};
 
 interface Props {
   condition: Condition;
   index: number;
   defaultOpen?: boolean;
+
   onChange: (value: Condition) => void;
   onDelete: () => void;
-  totalCount: number;
-}
 
+  totalCount: number;
+
+  errors?: ConditionErrors;
+}
 
 export const ConditionAccordion = ({
   condition,
@@ -25,45 +33,38 @@ export const ConditionAccordion = ({
   onChange,
   onDelete,
   totalCount,
+  errors,
 }: Props) => {
+  const showChildrenType =
+    condition.children_type !== undefined;
 
-  const [showChildrenType, setShowChildrenType] =
-    useState(Boolean(condition.children_type));
-
-  const [showChildrenDirectType, setShowChildrenDirectType] =
-    useState(Boolean(condition.children_direct_type));
-
+  const showChildrenDirectType =
+    condition.children_direct_type !== undefined;
 
   const hideChildrenType = () => {
-    setShowChildrenType(false);
-
     onChange({
       ...condition,
       children_type: undefined,
     });
   };
 
-
   const hideChildrenDirectType = () => {
-    setShowChildrenDirectType(false);
-
     onChange({
       ...condition,
       children_direct_type: undefined,
     });
   };
 
-
   return (
     <Accordion
       title={`Условие ${index + 1}`}
       defaultOpen={defaultOpen}
     >
-
       <div className={styles.field}>
         <Input
           label="parent_type"
-          value={condition.parent_type}
+          value={condition.parent_type ?? ""}
+          error={errors?.parent_type}
           onChange={(e) =>
             onChange({
               ...condition,
@@ -73,27 +74,29 @@ export const ConditionAccordion = ({
         />
       </div>
 
-
       <div className={styles.field}>
-
-        {!showChildrenType && (
+        {!showChildrenType ? (
           <Button
+            type="button"
+            style={{ "width": "100%" }}
             onClick={() =>
-              setShowChildrenType(true)
+              onChange({
+                ...condition,
+                children_type: "",
+              })
             }
           >
             🞢 Добавить children_type
           </Button>
-        )}
-
-
-        {showChildrenType && (
-          <div className={styles.row}>
-
-            <div className={styles.inputWrapper}>
+        ) : (
+          <div
+            className={styles.row}
+            style={errors?.children_type ? { alignItems: "center" } : {}}
+          >            <div className={styles.inputWrapper}>
               <Input
                 label="children_type"
-                value={condition.children_type || ''}
+                value={condition.children_type ?? ""}
+                error={errors?.children_type}
                 onChange={(e) =>
                   onChange({
                     ...condition,
@@ -103,39 +106,43 @@ export const ConditionAccordion = ({
               />
             </div>
 
-
-            <Button onClick={hideChildrenType}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={hideChildrenType}
+            >
               ×
             </Button>
-
           </div>
         )}
-
       </div>
 
-
       <div className={styles.field}>
-
-        {!showChildrenDirectType && (
+        {!showChildrenDirectType ? (
           <Button
+            type="button"
+            style={{ "width": "100%" }}
             onClick={() =>
-              setShowChildrenDirectType(true)
+              onChange({
+                ...condition,
+                children_direct_type: "",
+              })
             }
           >
             🞢 Добавить children_direct_type
           </Button>
-        )}
-
-
-        {showChildrenDirectType && (
-          <div className={styles.row}>
-
+        ) : (
+          <div
+            className={styles.row}
+            style={errors?.children_direct_type ? { alignItems: "center" } : {}}
+          >
             <div className={styles.inputWrapper}>
               <Input
                 label="children_direct_type"
                 value={
-                  condition.children_direct_type || ''
+                  condition.children_direct_type ?? ""
                 }
+                error={errors?.children_direct_type}
                 onChange={(e) =>
                   onChange({
                     ...condition,
@@ -146,26 +153,27 @@ export const ConditionAccordion = ({
               />
             </div>
 
-
-            <Button onClick={hideChildrenDirectType}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={hideChildrenDirectType}
+            >
               ×
             </Button>
-
           </div>
         )}
-
       </div>
-
 
       {totalCount > 1 && (
         <Button
-          onClick={onDelete}
+          type="button"
+          variant="ghost"
           className={styles.deleteButton}
+          onClick={onDelete}
         >
           🗑 Удалить условие
         </Button>
       )}
-
     </Accordion>
   );
 };

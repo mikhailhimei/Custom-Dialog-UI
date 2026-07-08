@@ -13,6 +13,7 @@ type DropdownProps = {
   options: Option[];
   value?: string;
   placeholder?: string;
+  error?: string;
   onSelect?: (value: string) => void;
 };
 
@@ -21,6 +22,7 @@ export function Dropdown({
   options,
   value = "",
   placeholder = "Выберите",
+  error,
   onSelect,
 }: DropdownProps) {
   const id = useId();
@@ -39,7 +41,10 @@ export function Dropdown({
       <div className={styles.wrapper}>
         <select
           id={id}
-          className={styles.select}
+          className={`
+            ${styles.select}
+            ${error ? styles.error : ""}
+          `}
           value={value}
           onChange={(e) =>
             onSelect?.(e.target.value)
@@ -64,6 +69,12 @@ export function Dropdown({
           className={styles.arrow}
         />
       </div>
+
+      {error && (
+        <span className={styles.errorText}>
+          {error}
+        </span>
+      )}
     </div>
   );
 }
