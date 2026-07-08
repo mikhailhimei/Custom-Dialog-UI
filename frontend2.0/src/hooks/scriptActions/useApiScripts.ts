@@ -82,7 +82,7 @@ export function useApiScripts() {
   const deleteScriptAction = async (uuid: string) => {
     await api._delete(uuid, "delete_script_action");
 
-    await loadScripts(scripts?.page ?? 1);
+    await loadScripts(1);
   };
 
   const saveScript = async (data: any) => {
