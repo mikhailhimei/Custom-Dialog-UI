@@ -56,23 +56,9 @@ export class DialogApi {
     });
   }
 
-  async searchAssistantCommands(query: string) {
+  async searchAssistantCommands(query: string, type: string) {
     return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/search_assistant_commands",
-      query,
-    });
-  }
-
-  async searchAssistantSubDirectControls(query: string) {
-    return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/search_assistant_sub_direct_controls",
-      query,
-    });
-  }
-
-  async searchAssistantSubDirectControlSamples(query: string) {
-    return this.hass.connection.sendMessagePromise({
-      type: "dialog_custom_ui/search_assistant_sub_direct_control_samples",
+      type: `dialog_custom_ui/${type}`,
       query,
     });
   }

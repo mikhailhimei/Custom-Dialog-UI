@@ -7,7 +7,7 @@ import { SelectInput } from "../ui/SelectInput";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../ui/Accordion/Accordion";
 import { Textarea } from "../ui/Textarea/Textarea"
-import { CommandSearchInput } from "../CommandSearchInput";
+import { SearchInput } from "../SearchInput/SearchInput";
 
 import { CommandDetails } from "../../types/commandTypes";
 import { VALUE_TYPE_OPTIONS } from "../../constants/commandSelectOptions";
@@ -227,7 +227,7 @@ export const CommandDirectModal: React.FC<Props> = ({
             </Button>
           </Accordion>
         ) : (
-          <CommandSearchInput
+          <SearchInput
             label="subDirectControl"
             value={
               typeof directControl.subDirectControl === "string"

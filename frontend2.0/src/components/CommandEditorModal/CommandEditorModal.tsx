@@ -6,7 +6,7 @@ import { Input } from "../ui/Input/Input";
 import { SelectInput } from "../ui/SelectInput";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../ui/Accordion/Accordion";
-import { CommandSearchInput } from "../CommandSearchInput";
+import { SearchInput } from "../SearchInput/SearchInput";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
 import {
   ACTION_TYPE_COMPONENT_OPTIONS,
@@ -189,7 +189,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
         <Accordion title="nextDirectControl" defaultOpen>
           {(component.nextDirectControl ?? []).map((item, index) => (
             <div key={index} className={styles.arrayItem}>
-              <CommandSearchInput
+              <SearchInput
                 label="uuid"
                 value={item.uuid}
                 selectedTitle={item.title}
@@ -318,7 +318,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 }
               />
 
-              <CommandSearchInput
+              <SearchInput
                 label="uuid"
                 value={item.uuid}
                 selectedTitle={item.title}

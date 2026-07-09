@@ -2,7 +2,7 @@ import React from "react";
 
 import { Accordion } from "../ui/Accordion/Accordion";
 import { Condition } from "@/types/scripts";
-import { Input } from "@/components/ui/Input/Input";
+import { SearchInput } from "@/components/SearchInput/SearchInput";
 import { Button } from "@/components/ui/Button/Button";
 
 import styles from "./ConditionAccordion.module.scss";
@@ -61,14 +61,23 @@ export const ConditionAccordion = ({
       defaultOpen={defaultOpen}
     >
       <div className={styles.field}>
-        <Input
+        <SearchInput
           label="parent_type"
           value={condition.parent_type ?? ""}
+          searchSource="search_assistant_commands"
+          minQueryLength={3}
           error={errors?.parent_type}
-          onChange={(e) =>
+          onChange={(value) =>
             onChange({
               ...condition,
-              parent_type: e.target.value,
+              parent_type: value,
+            })
+          }
+          getSelectedValue={(option) => option.actionType ?? option.uuid}
+          onSelect={(option) =>
+            onChange({
+              ...condition,
+              parent_type: option.actionType ?? option.uuid,
             })
           }
         />
@@ -78,7 +87,7 @@ export const ConditionAccordion = ({
         {!showChildrenType ? (
           <Button
             type="button"
-            style={{ "width": "100%" }}
+            style={{ width: "100%" }}
             onClick={() =>
               onChange({
                 ...condition,
@@ -92,15 +101,25 @@ export const ConditionAccordion = ({
           <div
             className={styles.row}
             style={errors?.children_type ? { alignItems: "center" } : {}}
-          >            <div className={styles.inputWrapper}>
-              <Input
+          >
+            <div className={styles.inputWrapper}>
+              <SearchInput
                 label="children_type"
                 value={condition.children_type ?? ""}
+                searchSource="search_assistant_sub_direct_controls"
+                minQueryLength={3}
                 error={errors?.children_type}
-                onChange={(e) =>
+                onChange={(value) =>
                   onChange({
                     ...condition,
-                    children_type: e.target.value,
+                    children_type: value,
+                  })
+                }
+                getSelectedValue={(option) => option.actionType ?? option.uuid}
+                onSelect={(option) =>
+                  onChange({
+                    ...condition,
+                    children_type: option.actionType ?? option.uuid,
                   })
                 }
               />
@@ -121,7 +140,7 @@ export const ConditionAccordion = ({
         {!showChildrenDirectType ? (
           <Button
             type="button"
-            style={{ "width": "100%" }}
+            style={{ width: "100%" }}
             onClick={() =>
               onChange({
                 ...condition,
@@ -137,17 +156,23 @@ export const ConditionAccordion = ({
             style={errors?.children_direct_type ? { alignItems: "center" } : {}}
           >
             <div className={styles.inputWrapper}>
-              <Input
+              <SearchInput
                 label="children_direct_type"
-                value={
-                  condition.children_direct_type ?? ""
-                }
+                value={condition.children_direct_type ?? ""}
+                searchSource="search_assistant_sub_commands"
+                minQueryLength={3}
                 error={errors?.children_direct_type}
-                onChange={(e) =>
+                onChange={(value) =>
                   onChange({
                     ...condition,
-                    children_direct_type:
-                      e.target.value,
+                    children_direct_type: value,
+                  })
+                }
+                getSelectedValue={(option) => option.mappingType ?? option.uuid}
+                onSelect={(option) =>
+                  onChange({
+                    ...condition,
+                    children_direct_type: option.mappingType ?? option.uuid,
                   })
                 }
               />
