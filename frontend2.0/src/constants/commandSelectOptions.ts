@@ -1,10 +1,6 @@
 export const ANSWER_TYPE_OPTIONS = [
   { label: "default", value: "default" },
-  { label: "builtin", value: "builtin" },
-  { label: "ha_storage", value: "ha_storage" },
-  { label: "ha", value: "ha" },
-  { label: "external", value: "external" },
-  { label: "redis", value: "redis" },
+  { label: "ha_storage", value: "ha_storage" }
 ];
 
 export const VALUE_TYPE_OPTIONS = [
@@ -18,6 +14,5 @@ export const VALUE_TYPE_OPTIONS = [
 export const ACTION_TYPE_COMPONENT_OPTIONS = [
   { label: "children", value: "children" },
   { label: "custom", value: "custom" },
-  { label: "children_error", value: "children_error" },
-  { label: "chidren_error", value: "chidren_error" },
+  { label: "children_error", value: "children_error" }
 ];

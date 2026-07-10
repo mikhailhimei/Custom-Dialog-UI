@@ -38,10 +38,10 @@ async def async_search_assistant_commands(
     assistant_commands = []
     assistant_sub_commands = []
 
-    if type_value == "search_assistant_commands" or type_value == "":
+    if type_value in ["search_assistant_commands", ""]:
         assistant_commands = await async_load_assistant_commands(hass)
     
-    if type_value == "search_assistant_sub_commands" or type_value == "":
+    if type_value in ["search_assistant_sub_commands", ""]:
         assistant_sub_commands = await async_load_assistant_sub_commands(hass)
 
     return [

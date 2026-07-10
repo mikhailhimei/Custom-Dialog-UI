@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 
 import { Modal } from "../ui/Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
-import { SelectInput } from "../ui/SelectInput";
+import { SelectInput } from "../ui/Select/SelectInput";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../ui/Accordion/Accordion";
 import { SearchInput } from "../SearchInput/SearchInput";
@@ -52,6 +52,8 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
     if (formData[formatData]) return formData[formatData] ?? createComponent();
   }, [formData]);
 
+  const [errors, setErrors] = useState({});
+
   const updateComponent = (patch: Record<string, any>) => {
     setFormData((current) => ({
       ...current,
@@ -95,32 +97,48 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
     });
   };
 
+  const validate = () => {
+    const nextErrors = {};
+
+    if (!formData.title.trim()) {
+      nextErrors.title =
+        "Обязательное поле";
+    }
+
+    if (!component.actionType?.trim()) {
+      nextErrors.actionType =
+        "Обязательное поле"
+    }
+
+    setErrors(nextErrors);
+
+    const isEmpty = Object.keys(nextErrors).length === 0;
+
+    return (isEmpty);
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={isEdit ? "Редактировать" : "Создать"}
       footer={
-        <Button onClick={isEdit ? onUpdate : onSave}>
+        <Button onClick={() => {
+          if (!validate()) {
+            return;
+          }
+          isEdit ? onUpdate() : onSave()
+        }
+        }>
           {isEdit ? "Обновить" : "Сохранить"}
         </Button>
       }
     >
       <div className={styles.form}>
-        {/* <ToggleSwitch
-          label="Команда включена"
-          checked={formData.status ?? true}
-          onChange={(event) =>
-            setFormData({
-              ...formData,
-              status: event.target.checked,
-            })
-          }
-        /> */}
-
         <Input
           label="Название команды"
           value={formData.title}
+          error={errors.title}
           onChange={(event) =>
             setFormData({
               ...formData,
@@ -140,19 +158,20 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
         />
 
         {formatData == 'subComponentDialog' ?
-        <ToggleSwitch
-          label="forwardText"
-          checked={component.forwardText}
-          onChange={(event) =>
-            updateComponent({
-              forwardText: event.target.checked,
-            })
-          }
-        /> : <></>}
+          <ToggleSwitch
+            label="forwardText"
+            checked={component.forwardText}
+            onChange={(event) =>
+              updateComponent({
+                forwardText: event.target.checked,
+              })
+            }
+          /> : <></>}
 
         <Input
           label="actionType"
           value={component.actionType}
+          error={errors.actionType}
           onChange={(event) =>
             updateComponent({
               actionType: event.target.value,
@@ -185,65 +204,6 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
             }
           />
         </div>
-
-        <Accordion title="nextDirectControl" defaultOpen>
-          {(component.nextDirectControl ?? []).map((item, index) => (
-            <div key={index} className={styles.arrayItem}>
-              <SearchInput
-                label="uuid"
-                value={item.uuid}
-                selectedTitle={item.title}
-                searchSource="sub_direct_controls"
-                onChange={(value) =>
-                  updateComponentArray("nextDirectControl", index, {
-                    uuid: value,
-                  })
-                }
-                onSelect={(option) =>
-                  updateComponentArray("nextDirectControl", index, {
-                    uuid: option.uuid,
-                    actionType: option.actionType ?? option.mappingType ?? "",
-                    title: option.title ?? "",
-                  })
-                }
-              />
-
-              <Input
-                label="actionType"
-                value={item.actionType ?? ""}
-                onChange={(event) =>
-                  updateComponentArray("nextDirectControl", index, {
-                    actionType: event.target.value,
-                  })
-                }
-              />
-
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  removeComponentArrayItem("nextDirectControl", index)
-                }
-              >
-                Удалить
-              </Button>
-            </div>
-          ))}
-
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() =>
-              addComponentArrayItem("nextDirectControl", {
-                uuid: "",
-                actionType: "",
-                title: "",
-              })
-            }
-          >
-            Добавить ещё
-          </Button>
-        </Accordion>
 
         <Accordion title="voiceResponseArray" defaultOpen>
           {(component.voiceResponseArray ?? []).map((item, index) => (
@@ -363,6 +323,66 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
             Добавить ещё
           </Button>
         </Accordion>
+
+        <Accordion title="nextDirectControl" defaultOpen>
+          {(component.nextDirectControl ?? []).map((item, index) => (
+            <div key={index} className={styles.arrayItem}>
+              <SearchInput
+                label="uuid"
+                value={item.uuid}
+                selectedTitle={item.title}
+                searchSource="sub_direct_controls"
+                onChange={(value) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    uuid: value,
+                  })
+                }
+                onSelect={(option) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    uuid: option.uuid,
+                    actionType: option.actionType ?? option.mappingType ?? "",
+                    title: option.title ?? "",
+                  })
+                }
+              />
+
+              <Input
+                label="actionType"
+                value={item.actionType ?? ""}
+                onChange={(event) =>
+                  updateComponentArray("nextDirectControl", index, {
+                    actionType: event.target.value,
+                  })
+                }
+              />
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  removeComponentArrayItem("nextDirectControl", index)
+                }
+              >
+                Удалить
+              </Button>
+            </div>
+          ))}
+
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() =>
+              addComponentArrayItem("nextDirectControl", {
+                uuid: "",
+                actionType: "",
+                title: "",
+              })
+            }
+          >
+            Добавить ещё
+          </Button>
+        </Accordion>
+
       </div>
     </Modal>
   );

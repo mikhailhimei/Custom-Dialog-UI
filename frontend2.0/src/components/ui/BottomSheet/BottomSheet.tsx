@@ -112,7 +112,7 @@ export const BottomSheet = ({
   if (!mounted) return null;
 
 
-  return createPortal(
+  return (
     <div
       className={`${styles.overlay} ${
         visible ? styles.visible : ""
@@ -151,7 +151,6 @@ export const BottomSheet = ({
         </div>
 
       </section>
-    </div>,
-    document.body
+    </div>
   );
 };

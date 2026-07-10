@@ -1,21 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import { useInView } from "react-intersection-observer";
 
-import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
-import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
-import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
-import { Pagination } from '@/components/ui/Pagination/Pagination';
-import { Button } from '@/components/ui/Button/Button';
-import { Card } from '@/components/Card/Card'
-import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
+import { NavigationTabs } from "@/components/NavigationTabs/NavigationTabs";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
+import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
+import { Pagination } from "@/components/ui/Pagination/Pagination";
+import { Button } from "@/components/ui/Button/Button";
+import { Card } from "@/components/Card/Card";
+import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
-import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
-import { useApiCommands } from '@/hooks/command/useApiCommands';
-import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
+import { CommandEditorModal } from "@/components/CommandEditorModal/CommandEditorModal";
+import { CommandActionsSheet } from "@/components/CommandActionsSheet/CommandActionsSheet";
+import { useApiCommands } from "@/hooks/command/useApiCommands";
+import {
+  ShortCommand,
+  CommandDetails,
+  ComponentDialog,
+} from "@/types/commandTypes";
 
-
-import styles from "../CommandEditorPage.module.scss";
+import styles from "@/pages/GlobalsPage.module.scss";
 
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
@@ -33,7 +36,7 @@ const createEmptyCommand = (): CommandDetails => {
     title: "",
     ["componentDialog"]: {
       ...createComponent(),
-      ...({ forwardText: false }),
+      ...{ forwardText: false },
     },
   };
 };
@@ -42,8 +45,12 @@ export const CommandMainPage = () => {
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [formData, setFormData] = useState<CommandDetails>(() => createEmptyCommand());
-  const [actionsCommand, setActionsCommand] = useState<ShortCommand | null>(null);
+  const [formData, setFormData] = useState<CommandDetails>(() =>
+    createEmptyCommand(),
+  );
+  const [actionsCommand, setActionsCommand] = useState<ShortCommand | null>(
+    null,
+  );
 
   const { ref, inView } = useInView({
     threshold: 1,
@@ -58,9 +65,8 @@ export const CommandMainPage = () => {
     saveCommand,
     updateCommand,
     editStatusCommand,
-    commands
-
-  } = useApiCommands("get_assistant_commands_short")
+    commands,
+  } = useApiCommands("get_assistant_commands_short");
 
   const [canLoadMore, setCanLoadMore] = useState(false);
 
@@ -77,20 +83,10 @@ export const CommandMainPage = () => {
     }
 
     loadCommands("get_assistant_commands_short", commands.page + 1, true);
-  }, [
-    inView,
-    isMobile,
-    loading,
-    commands,
-    loadCommands,
-  ]);
+  }, [inView, isMobile, loading, commands, loadCommands]);
 
   useEffect(() => {
-    if (
-      !loading &&
-      commands &&
-      commands.page === 1
-    ) {
+    if (!loading && commands && commands.page === 1) {
       setCanLoadMore(true);
     }
   }, [loading, commands]);
@@ -104,7 +100,10 @@ export const CommandMainPage = () => {
   const openEditModal = async (uuid) => {
     setIsEdit(true);
 
-    const response = await detailInformationCommand("get_assistant_command", uuid)
+    const response = await detailInformationCommand(
+      "get_assistant_command",
+      uuid,
+    );
 
     setFormData(response.data);
 
@@ -112,107 +111,95 @@ export const CommandMainPage = () => {
   };
 
   const handlerEditStatus = async (uuid: string, status: boolean) => {
-    console.log(uuid, status)
-    const result = await editStatusCommand("update_assistant_command_status", uuid, status)
-    loadCommands("get_assistant_commands_short")
-  }
+    console.log(uuid, status);
+    const result = await editStatusCommand(
+      "update_assistant_command_status",
+      uuid,
+      status,
+    );
+    loadCommands("get_assistant_commands_short");
+  };
 
   const handlerDeleteCommand = async (uuid: string) => {
-    const result = await deleteCommand("delete_assistant_command", uuid)
-    loadCommands("get_assistant_commands_short")
-  }
+    const result = await deleteCommand("delete_assistant_command", uuid);
+    loadCommands("get_assistant_commands_short");
+  };
 
   const handlerSaveCommand = async () => {
-    const result = await saveCommand("save_assistant_command", formData)
+    const result = await saveCommand("save_assistant_command", formData);
     setModalOpen(false);
-  }
+  };
 
   const handlerUpdateCommand = async () => {
-    const result = await updateCommand("update_assistant_command", formData)
+    const result = await updateCommand("update_assistant_command", formData);
     setModalOpen(false);
-  }
+  };
 
   return (
     <>
+      {loading && <div>Загрузка...</div>}
       <MobileHeader />
-
       <div className={styles.page}>
-        {!isMobile ? <NavigationTabs /> : <></>}
-
-        {loading && <div className={styles.state}>Загрузка...</div>}
+        <NavigationTabs />
 
         <div className={styles.header}>
-          <div className={styles.headerTop}>
-            <div className={styles.heading}>
-              <p className={styles.description}>Создавайте и редактируйте голосовые команды ассистента.</p>
-            </div>
+          <div className={styles.heading}>
+            {!isMobile ? <h1 className={styles.title}>Комманды</h1> : <></>}
 
-            {!isMobile ?
-              <Button
-                variant="primary"
-                onClick={openCreateModal}
-              >
-                Добавить сценарий
+            <p className={styles.description}>
+              Создавайте команды для управления устройствами и объединяйте
+              действия в единые сценарии.
+            </p>
+          </div>
+
+          <div className={styles.actions}>
+            {!isMobile ? (
+              <Button variant="primary" onClick={openCreateModal}>
+                🞢 Добавить сценарий
               </Button>
-              :
+            ) : (
               <BottomSlideButton>
-                <Button
-                  variant="primary"
-                  onClick={openCreateModal}
-                >
+                <Button variant="primary" onClick={openCreateModal}>
                   Добавить сценарий
                 </Button>
               </BottomSlideButton>
-            }
+            )}
           </div>
         </div>
 
-        <div className={styles.commandList}>
+        <div className={styles.list}>
           {commands?.data.map((command) => (
-            <Card 
+            <Card
               key={command.uuid}
               title={command.title}
               subTitle={command.status === false ? "Выключена" : "Включена"}
               onClick={() => setActionsCommand(command)}
             />
-            // <div key={command.uuid} className={styles.commandTab}>
-            //   <button type="button" className={styles.commandButton} onClick={() => openEditModal(command)}>
-            //     <span>{command.title}</span>
-            //     <small>{command.status === false ? "Выключена" : "Включена"}</small>
-            //   </button>
-
-            //   <button
-            //     type="button"
-            //     className={styles.moreButton}
-            //     aria-label={`Действия команды ${command.title}`}
-            //     onClick={() => setActionsCommand(command)}
-            //   >
-            //     ⋯
-            //   </button>
-            // </div>
           ))}
         </div>
 
-        {!isMobile ?
+        {!isMobile ? (
           <Pagination
             page={commands?.page || 1}
             totalPages={commands?.total_pages || 1}
-            onChange={(page) => loadCommands("get_assistant_commands_short", page)}
-          /> :
+            onChange={(page) =>
+              loadCommands("get_assistant_commands_short", page)
+            }
+          />
+        ) : (
           <div ref={ref} style={{ height: 1 }} />
-        }
+        )}
 
         <CommandEditorModal
           open={modalOpen}
           isEdit={isEdit}
           formData={formData}
-          formatData = {"componentDialog"}
+          formatData={"componentDialog"}
           setFormData={setFormData}
           onClose={() => setModalOpen(false)}
           onSave={handlerSaveCommand}
           onUpdate={handlerUpdateCommand}
         />
-
 
         <CommandActionsSheet
           open={!!actionsCommand}
@@ -222,7 +209,6 @@ export const CommandMainPage = () => {
           onDelete={handlerDeleteCommand}
           onEdit={(uuid) => openEditModal(uuid)}
         />
-
       </div>
       <MobileNavigation />
     </>

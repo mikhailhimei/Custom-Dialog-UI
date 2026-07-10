@@ -1,5 +1,6 @@
 import React, {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -16,25 +17,33 @@ export function DialogProvider({
   children,
   hass,
 }: Props) {
-  const [api, setApi] =
-    useState<DialogApi | null>(null);
+  const apiRef = useRef<DialogApi | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     async function init() {
-      const resolvedHass = hass ? normalizeHass(hass) : await createHass();
+      const resolvedHass = hass
+        ? normalizeHass(hass)
+        : await createHass();
 
-      setApi(new DialogApi(resolvedHass));
+      if (!apiRef.current) {
+        apiRef.current = new DialogApi(resolvedHass);
+      } else {
+        apiRef.current.setHass(resolvedHass);
+      }
+
+      setReady(true);
     }
 
     init().catch(console.error);
   }, [hass]);
 
-  if (!api) {
+  if (!ready || !apiRef.current) {
     return <div>Connecting to Home Assistant...</div>;
   }
 
   return (
-    <DialogContext.Provider value={api}>
+    <DialogContext.Provider value={apiRef.current}>
       {children}
     </DialogContext.Provider>
   );

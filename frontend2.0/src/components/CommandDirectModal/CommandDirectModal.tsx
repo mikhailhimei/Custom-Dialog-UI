@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { Modal } from "../ui/Modal/Modal";
 import { Button } from "../ui/Button/Button";
 import { Input } from "../ui/Input/Input";
-import { SelectInput } from "../ui/SelectInput";
+import { SelectInput } from "../ui/Select/SelectInput";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../ui/Accordion/Accordion";
 import { Textarea } from "../ui/Textarea/Textarea"

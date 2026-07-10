@@ -1,8 +1,8 @@
 import React from "react"
-import { Modal } from "../ui/Modal/Modal";
-import { BottomSheet } from "../ui/BottomSheet/BottomSheet";
-import { Button } from "../ui/Button/Button";
-import { useIsMobile } from "../../hooks/useIsMobile";
+import { Modal } from "@/components/ui/Modal/Modal";
+import { BottomSheet } from "@/components/ui/BottomSheet/BottomSheet";
+import { Button } from "@/components/ui/Button/Button";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 import styles from "./CommandActionsSheet.module.scss";
 

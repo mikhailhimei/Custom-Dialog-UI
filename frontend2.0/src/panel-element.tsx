@@ -10,6 +10,7 @@ const STYLE_ID = "dialog-custom-ui-style";
 class DialogCustomUiPanel extends HTMLElement {
   private root?: ReactDOM.Root;
   private hassValue?: HassLike | null;
+  private renderTimer?: number;
 
   private ensureShadowRoot(): ShadowRoot {
     if (!this.shadowRoot) {
@@ -20,7 +21,15 @@ class DialogCustomUiPanel extends HTMLElement {
 
   set hass(hass: HassLike | null | undefined) {
     this.hassValue = hass;
-    this.render();
+
+    if (this.renderTimer !== undefined) {
+      return;
+    }
+
+    this.renderTimer = window.setTimeout(() => {
+      this.renderTimer = undefined;
+      this.render();
+    }, 250);
   }
 
   get hass() {
@@ -34,6 +43,11 @@ class DialogCustomUiPanel extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this.renderTimer !== undefined) {
+      window.clearTimeout(this.renderTimer);
+      this.renderTimer = undefined;
+    }
+
     this.root?.unmount();
     this.root = undefined;
   }

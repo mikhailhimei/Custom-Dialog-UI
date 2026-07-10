@@ -19,7 +19,7 @@ import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton"
 
-import styles from "./ScriptsPage.module.scss";
+import styles from "../GlobalsPage.module.scss";
 
 
 export const ScriptsPage = () => {
@@ -145,6 +145,10 @@ export const ScriptsPage = () => {
 
   return (
     <>
+
+      {loading && (
+        <div>Загрузка...</div>
+      )}
       <MobileHeader />
       <div className={styles.page}>
         <NavigationTabs />
@@ -184,10 +188,6 @@ export const ScriptsPage = () => {
             )}
           </div>
         </div>
-
-        {loading && (
-          <div>Загрузка...</div>
-        )}
 
         <div className={styles.list}>
           {scripts?.script_actions.map((script) => (

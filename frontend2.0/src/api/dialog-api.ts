@@ -6,10 +6,17 @@ export interface HassLike {
 }
 
 export class DialogApi {
-  constructor(private hass: HassLike) {}
+  private hass: HassLike;
+
+  constructor(hass: HassLike) {
+    this.hass = hass;
+  }
+
+  setHass(hass: HassLike) {
+    this.hass = hass;
+  }
 
   async _getShort(type: string, page?: number, pageSize?: number) {
-
     const result =
       await this.hass.connection.sendMessagePromise({
         type: `dialog_custom_ui/${type}`,
@@ -23,36 +30,32 @@ export class DialogApi {
   }
 
   async _getDetail(uuid: string, type: string) {
-    const result =
-      await this.hass.connection.sendMessagePromise({
-        type: `dialog_custom_ui/${type}`,
-        uuid,
-      });
-    return result;
+    return this.hass.connection.sendMessagePromise({
+      type: `dialog_custom_ui/${type}`,
+      uuid,
+    });
   }
 
   async _save(data: any, type: string) {
-    console.log(data)
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,
       data,
     });
   }
 
-  async _update(uuid: string, type: string, data: any){
-    console.log(data)
+  async _update(uuid: string, type: string, data: any) {
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,
-      uuid: uuid,
-      data: data,
+      uuid,
+      data,
     });
   }
 
-  async _update_status(type: string, uuid: string, status: any){
+  async _update_status(type: string, uuid: string, status: any) {
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,
-      uuid: uuid,
-      status: status,
+      uuid,
+      status,
     });
   }
 
@@ -75,7 +78,10 @@ export class DialogApi {
       .filter((entity: any) => {
         const entityId = String(entity.entity_id || "");
 
-        return entityId.startsWith("media_player.") || entityId.startsWith("speaker.");
+        return (
+          entityId.startsWith("media_player.") ||
+          entityId.startsWith("speaker.")
+        );
       })
       .map((entity: any) => ({
         id: entity.entity_id,
@@ -85,10 +91,7 @@ export class DialogApi {
 
   getScripts() {
     return Object.values(this.hass.states)
-      .filter(
-        (entity: any) =>
-          entity.entity_id.startsWith("script.")
-      )
+      .filter((entity: any) => entity.entity_id.startsWith("script."))
       .map((entity: any) => ({
         entity_id: entity.entity_id,
         name:
@@ -96,11 +99,6 @@ export class DialogApi {
           entity.entity_id,
       }));
   }
-
-
-
-
-
 
   async runScript(entityId: string) {
     return this.hass.connection.sendMessagePromise({
@@ -112,9 +110,4 @@ export class DialogApi {
       },
     });
   }
-
 }
-
-
-///"dialog_custom_ui/get_config"
-///dialog_custom_ui/get_logs
