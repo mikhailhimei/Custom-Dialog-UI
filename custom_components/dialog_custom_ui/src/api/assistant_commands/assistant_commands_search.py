@@ -35,15 +35,25 @@ async def async_search_assistant_commands(
     """Search assistant commands and sub commands by title or uuid."""
     query = _normalize_value(query_value).lower()
     
-    assistant_commands = []
-    assistant_sub_commands = []
+    load_main = type_value in {
+         "search_assistant_commands"
+    }
 
-    if type_value in ["search_assistant_commands", ""]:
-        assistant_commands = await async_load_assistant_commands(hass)
-    
-    if type_value in ["search_assistant_sub_commands", ""]:
-        assistant_sub_commands = await async_load_assistant_sub_commands(hass)
+    load_sub = type_value in {
+         "search_assistant_sub_commands"
+    }
 
+    assistant_commands = (
+         await async_load_assistant_commands(hass)
+         if load_main
+         else []
+    )
+
+    assistant_sub_commands = (
+         await async_load_assistant_sub_commands(hass)
+         if load_sub
+         else []
+    )
     return [
         {
             "title": _normalize_value(item.get("title")),
