@@ -261,6 +261,6 @@ async def _ws_delete_assistant_command(hass, connection, msg):
 @websocket_api.websocket_command(SEARCH_ASSISTANT_COMMANDS_SCHEMA)
 @websocket_api.async_response
 async def _ws_search_assistant_commands(hass, connection, msg):
-    data = await async_search_assistant_commands(hass, msg.get("query"))
+    data = await async_search_assistant_commands(hass, msg.get("query"), msg.get("type")))
 
     connection.send_result(msg["id"], {"data": data})
