@@ -30,36 +30,24 @@ def _matches_query(item: dict[str, Any], query: str) -> bool:
 async def async_search_assistant_commands(
     hass: HomeAssistant,
     query_value: Any,
-    type_value: Any = None
+    type_value: Any = None,
 ) -> list[dict[str, str]]:
     """Search assistant commands and sub commands by title or uuid."""
     query = _normalize_value(query_value).lower()
-    
-    load_main = type_value in {
-         "search_assistant_commands"
-    }
 
-    load_sub = type_value in {
-         "search_assistant_sub_commands"
-    }
+    if type_value in "search_assistant_commands":
+        items = await async_load_assistant_commands(hass)
+    elif type_value in "search_assistant_sub_commands":
+        items = await async_load_assistant_sub_commands(hass)
+    else:
+        items = []
 
-    assistant_commands = (
-         await async_load_assistant_commands(hass)
-         if load_main
-         else []
-    )
-
-    assistant_sub_commands = (
-         await async_load_assistant_sub_commands(hass)
-         if load_sub
-         else []
-    )
     return [
         {
             "title": _normalize_value(item.get("title")),
             "uuid": _normalize_value(item.get("uuid")),
             "actionType": _get_action_type(item),
         }
-        for item in [*assistant_commands, *assistant_sub_commands]
+        for item in items
         if _matches_query(item, query)
     ]
