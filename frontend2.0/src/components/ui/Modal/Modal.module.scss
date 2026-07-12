@@ -87,15 +87,20 @@
 }
 
 .footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 
+  display: flex;
+
+  flex-direction: column;
+
+  z-index: 200;
+  
   padding: 20px 32px;
 
-  border-top: 1px solid rgba(255,255,255,.06);
+  background: rgba(15,23,42,.92);
 
-  flex-shrink: 0;
+  backdrop-filter: blur(18px);
+
+  border-top: 1px solid rgba(255,255,255,.06);
 }
 
 .close {

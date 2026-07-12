@@ -137,10 +137,10 @@ export const ScriptFormModal = ({
         updated.length > 0
           ? updated
           : [
-              {
-                parent_type: "",
-              },
-            ],
+            {
+              parent_type: "",
+            },
+          ],
     });
   };
 
@@ -173,7 +173,7 @@ export const ScriptFormModal = ({
 
         if (
           condition.children_type !==
-            undefined &&
+          undefined &&
           !condition.children_type.trim()
         ) {
           conditionErrors.children_type =
@@ -182,7 +182,7 @@ export const ScriptFormModal = ({
 
         if (
           condition.children_direct_type !==
-            undefined &&
+          undefined &&
           !condition.children_direct_type.trim()
         ) {
           conditionErrors.children_direct_type =
@@ -214,6 +214,20 @@ export const ScriptFormModal = ({
         isEdit
           ? "Редактировать сценарий"
           : "Создать сценарий"
+      }
+      footer={
+        <Button
+          disabled={loading}
+          onClick={() => {
+            if (!validate()) {
+              return;
+            }
+
+            onSave?.(form);
+          }}
+        >
+          Сохранить
+        </Button>
       }
     >
       <div className={styles.form}>
@@ -293,23 +307,6 @@ export const ScriptFormModal = ({
           >
             + Добавить условие
           </Button>
-        </div>
-
-        <div className={styles.footer}>
-          <div className={styles.right}>
-            <Button
-              disabled={loading}
-              onClick={() => {
-                if (!validate()) {
-                  return;
-                }
-
-                onSave?.(form);
-              }}
-            >
-              Сохранить
-            </Button>
-          </div>
         </div>
       </div>
     </Modal>

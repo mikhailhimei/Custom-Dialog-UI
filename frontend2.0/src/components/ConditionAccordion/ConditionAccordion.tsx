@@ -64,7 +64,7 @@ export const ConditionAccordion = ({
         <SearchInput
           label="parent_type"
           value={condition.parent_type ?? ""}
-          searchSource="search_assistant_commands"
+          searchSource={["search_assistant_commands"]}
           minQueryLength={3}
           error={errors?.parent_type}
           onChange={(value) =>
@@ -106,7 +106,7 @@ export const ConditionAccordion = ({
               <SearchInput
                 label="children_type"
                 value={condition.children_type ?? ""}
-                searchSource="search_assistant_sub_commands"
+                searchSource={["search_assistant_sub_commands"]}
                 minQueryLength={3}
                 error={errors?.children_type}
                 onChange={(value) =>
@@ -159,7 +159,7 @@ export const ConditionAccordion = ({
               <SearchInput
                 label="children_direct_type"
                 value={condition.children_direct_type ?? ""}
-                searchSource="search_assistant_sub_direct_controls"
+                searchSource={["search_assistant_sub_direct_controls"]}
                 minQueryLength={3}
                 error={errors?.children_direct_type}
                 onChange={(value) =>

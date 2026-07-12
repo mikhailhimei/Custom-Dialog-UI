@@ -124,13 +124,14 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
       onClose={onClose}
       title={isEdit ? "Редактировать" : "Создать"}
       footer={
-        <Button onClick={() => {
-          if (!validate()) {
-            return;
+        <Button
+          onClick={() => {
+            if (!validate()) {
+              return;
+            }
+            isEdit ? onUpdate() : onSave()
           }
-          isEdit ? onUpdate() : onSave()
-        }
-        }>
+          }>
           {isEdit ? "Обновить" : "Сохранить"}
         </Button>
       }
@@ -279,6 +280,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
               <SearchInput
                 label="uuid"
                 value={item.uuid}
+                searchSource={["search_assistant_commands","search_assistant_sub_commands"]}
                 selectedTitle={item.title}
                 onChange={(value) =>
                   updateComponentArray("nextAction", index, {
@@ -329,7 +331,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 label="uuid"
                 value={item.uuid}
                 selectedTitle={item.title}
-                searchSource="sub_direct_controls"
+                searchSource={["search_assistant_sub_direct_controls"]}
                 onChange={(value) =>
                   updateComponentArray("nextDirectControl", index, {
                     uuid: value,
@@ -338,15 +340,15 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 onSelect={(option) =>
                   updateComponentArray("nextDirectControl", index, {
                     uuid: option.uuid,
-                    actionType: option.actionType ?? option.mappingType ?? "",
+                    mappingType: option.mappingType ?? "",
                     title: option.title ?? "",
                   })
                 }
               />
 
               <Input
-                label="actionType"
-                value={item.actionType ?? ""}
+                label="mappingType"
+                value={item.mappingType ?? ""}
                 onChange={(event) =>
                   updateComponentArray("nextDirectControl", index, {
                     actionType: event.target.value,

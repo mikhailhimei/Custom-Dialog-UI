@@ -19,7 +19,7 @@ type Props = {
   label?: string;
   value: string;
   selectedTitle?: string;
-  searchSource?: SearchSource;
+  searchSource?: SearchSource[];
   minQueryLength?: number;
   onChange: (value: string) => void;
   onSelect?: (option: CommandSearchOption) => void;
@@ -31,7 +31,7 @@ export const SearchInput = ({
   label = "uuid",
   value,
   selectedTitle,
-  searchSource = "assistant_commands",
+  searchSource = ["assistant_commands"],
   minQueryLength = 2,
   onChange,
   onSelect,
@@ -63,9 +63,16 @@ export const SearchInput = ({
     const timeoutId = window.setTimeout(async () => {
       setLoading(true);
       try {
-        const response: any = await api.searchAssistantCommands(query, searchSource)
 
-        const data = Array.isArray(response?.data) ? response.data : [];
+        let data: any[] = [];
+
+        for (const source of searchSource) {
+          const response = await api.searchAssistantCommands(query, source);
+
+          const dataResult = Array.isArray(response?.data) ? response.data : [];
+
+          data.push(...dataResult);
+        }
 
         const isSame =
           data.length === options.length &&
