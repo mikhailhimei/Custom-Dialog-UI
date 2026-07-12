@@ -35,9 +35,9 @@ async def async_search_assistant_commands(
     """Search assistant commands and sub commands by title or uuid."""
     query = _normalize_value(query_value).lower()
 
-    if type_value in "search_assistant_commands":
+    if "search_assistant_commands" in type_value:
         items = await async_load_assistant_commands(hass)
-    elif type_value in "search_assistant_sub_commands":
+    elif "search_assistant_sub_commands" in type_value:
         items = await async_load_assistant_sub_commands(hass)
     else:
         items = []
