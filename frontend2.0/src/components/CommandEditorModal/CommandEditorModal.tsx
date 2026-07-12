@@ -6,6 +6,7 @@ import { Input } from "../ui/Input/Input";
 import { SelectInput } from "../ui/Select/SelectInput";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 import { Accordion } from "../ui/Accordion/Accordion";
+import { Textarea } from "../ui/Textarea/Textarea"
 import { SearchInput } from "../SearchInput/SearchInput";
 import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
 import {
@@ -191,11 +192,8 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
         />
 
         <div className={styles.field}>
-          <label>voiceCommands</label>
-
-          <textarea
-            className={styles.textarea}
-            rows={6}
+          <Textarea
+            label="voiceCommands"
             value={(component.voiceCommands == null ? [] : typeof component.voiceCommands != 'object' ? component?.voiceCommands.split(';') : component?.voiceCommands).join("\n")}
             onChange={(event) =>
               updateComponent({
@@ -218,7 +216,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 }
               />
 
-              <Input
+              <Textarea
                 label="voiceResponse"
                 value={item.voiceResponse}
                 onChange={(event) =>
