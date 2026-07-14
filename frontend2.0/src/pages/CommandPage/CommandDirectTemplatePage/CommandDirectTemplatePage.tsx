@@ -120,14 +120,14 @@ export const CommandDirectTemplatePage = () => {
   };
 
   const openEditModal = async (
-    command: ShortCommand
+    uuid: string
   ) => {
     setIsEdit(true);
 
     const response =
       await detailInformationCommand(
         "get_assistant_sub_direct_control_sample",
-        command.uuid
+        uuid
       );
 
     setFormData(response.data);
@@ -294,14 +294,13 @@ export const CommandDirectTemplatePage = () => {
         />
 
         <CommandActionsSheet
-          open={!!actionsCommand}
-          command={actionsCommand}
-          onClose={() =>
-            setActionsCommand(null)
-          }
-          onToggleStatus={handlerEditStatus}
-          onDelete={handlerDeleteCommand}
-        />
+                  open={!!actionsCommand}
+                  command={actionsCommand}
+                  onClose={() => setActionsCommand(null)}
+                  onToggleStatus={handlerEditStatus}
+                  onDelete={handlerDeleteCommand}
+                  onEdit={(uuid) => openEditModal(uuid)}
+                />
       </div>
 
       <MobileNavigation />
