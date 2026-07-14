@@ -161,7 +161,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
 
         {formatData == 'subComponentDialog' ?
           <ToggleSwitch
-            label="forwardText"
+            label="Отправить команду как есть"
             checked={component.forwardText}
             onChange={(event) =>
               updateComponent({
@@ -172,7 +172,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
 
         <Input
           label="actionType"
-          value={component.actionType}
+          value={component.actionType ?? ""}
           error={errors.actionType}
           onChange={(event) =>
             updateComponent({
@@ -266,16 +266,16 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                   })
                 }
               />
-
+            {item.actionTypeComponent == 'custom' ?
               <Input
                 label="actionType"
-                value={item.actionType}
+                value={item.actionType ?? ""}
                 onChange={(event) =>
                   updateComponentArray("nextAction", index, {
                     actionType: event.target.value,
                   })
                 }
-              />
+              /> : <></>}
 
               <SearchInput
                 label="uuid"
@@ -290,7 +290,6 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
                 onSelect={(option) =>
                   updateComponentArray("nextAction", index, {
                     uuid: option.uuid,
-                    actionType: option.actionType ?? "",
                     title: option.title ?? "",
                   })
                 }
@@ -348,6 +347,7 @@ export const CommandEditorModal: React.FC<CommandEditorModalProps> = ({
 
               <Input
                 label="mappingType"
+                disabled = {true}
                 value={item.mappingType ?? ""}
                 onChange={(event) =>
                   updateComponentArray("nextDirectControl", index, {

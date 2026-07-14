@@ -1,20 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useInView } from "react-intersection-observer";
 
-import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
-import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
-import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
-import { Pagination } from '@/components/ui/Pagination/Pagination';
-import { Button } from '@/components/ui/Button/Button';
-import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
-import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
 import { useApiCommands } from '@/hooks/command/useApiCommands';
 import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
 
+import { Card } from '@/components/Card/Card';
+import { Button } from '@/components/ui/Button/Button';
+import { Pagination } from '@/components/ui/Pagination/Pagination';
+import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
+import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
+import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
+import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEditorModal';
+import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
+import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
 
-import styles from "../CommandEditorPage.module.scss";
+import styles from "@/pages/GlobalsPage.module.scss";
 
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
@@ -61,12 +62,6 @@ export const CommandSubPage = () => {
 
   } = useApiCommands("get_assistant_sub_commands_short")
 
-    //   shortType: "get_assistant_sub_commands_short",
-    // detailType: "get_assistant_sub_command",
-    // saveType: "save_assistant_sub_command",
-    // updateType: "update_assistant_sub_command_status",
-    // deleteType: "delete_assistant_sub_command",
-
   const [canLoadMore, setCanLoadMore] = useState(false);
 
   useEffect(() => {
@@ -106,10 +101,10 @@ export const CommandSubPage = () => {
     setModalOpen(true);
   };
 
-  const openEditModal = async (command: ShortCommand) => {
+  const openEditModal = async (uuid: string) => {
     setIsEdit(true);
 
-    const response = await detailInformationCommand("get_assistant_sub_command", command.uuid)
+    const response = await detailInformationCommand("get_assistant_sub_command", uuid)
 
     setFormData(response.data);
 
@@ -146,48 +141,38 @@ export const CommandSubPage = () => {
         {loading && <div className={styles.state}>Загрузка...</div>}
 
         <div className={styles.header}>
-          <div className={styles.headerTop}>
-            <div className={styles.heading}>
-              <p className={styles.description}>Создавайте и редактируйте голосовые команды ассистента.</p>
-            </div>
+          <div className={styles.heading}>
+            {!isMobile ? <h1 className={styles.title}>Второстепенные команды </h1> : <></>}
 
-            {!isMobile ?
-              <Button
-                variant="primary"
-                onClick={openCreateModal}
-              >
-                Добавить сценарий
+            <p className={styles.description}>
+              Создавайте команды для управления устройствами и объединяйте
+              действия в единые сценарии.
+            </p>
+          </div>
+
+          <div className={styles.actions}>
+            {!isMobile ? (
+              <Button variant="primary" onClick={openCreateModal}>
+                🞢 Добавить сценарий
               </Button>
-              :
+            ) : (
               <BottomSlideButton>
-                <Button
-                  variant="primary"
-                  onClick={openCreateModal}
-                >
+                <Button variant="primary" onClick={openCreateModal}>
                   Добавить сценарий
                 </Button>
               </BottomSlideButton>
-            }
+            )}
           </div>
         </div>
 
-        <div className={styles.commandList}>
+        <div className={styles.list}>
           {commands?.data.map((command) => (
-            <div key={command.uuid} className={styles.commandTab}>
-              <button type="button" className={styles.commandButton} onClick={() => openEditModal(command)}>
-                <span>{command.title}</span>
-                <small>{command.status === false ? "Выключена" : "Включена"}</small>
-              </button>
-
-              <button
-                type="button"
-                className={styles.moreButton}
-                aria-label={`Действия команды ${command.title}`}
-                onClick={() => setActionsCommand(command)}
-              >
-                ⋯
-              </button>
-            </div>
+            <Card
+              key={command.uuid}
+              title={command.title}
+              subTitle={command.status === false ? "Выключена" : "Включена"}
+              onClick={() => setActionsCommand(command)}
+            />
           ))}
         </div>
 
@@ -218,6 +203,7 @@ export const CommandSubPage = () => {
           onClose={() => setActionsCommand(null)}
           onToggleStatus={handlerEditStatus}
           onDelete={handlerDeleteCommand}
+          onEdit={(uuid) => openEditModal(uuid)}
         />
 
       </div>

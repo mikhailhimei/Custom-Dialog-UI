@@ -8,13 +8,14 @@ import styles from "./Input.module.scss";
 interface Props
   extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-
+  disabled?: boolean;
   error?: string;
 }
 
 export const Input = ({
   label,
   error,
+  disabled,
   className = "",
   id,
   ...props
@@ -36,6 +37,7 @@ export const Input = ({
 
       <input
         id={inputId}
+        disabled={disabled}
         {...props}
         className={`
           ${styles.input}

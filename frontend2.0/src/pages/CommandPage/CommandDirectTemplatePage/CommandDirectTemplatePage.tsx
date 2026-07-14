@@ -7,6 +7,7 @@ import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation
 import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
 import { Pagination } from "@/components/ui/Pagination/Pagination";
 import { Button } from "@/components/ui/Button/Button";
+import { Card } from "@/components/Card/Card";
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
 import { CommandDirectTemplateModal } from "@/components/CommandDirectTemplateModal/CommandDirectTemplateModal";
 import { CommandActionsSheet } from "@/components/CommandActionsSheet/CommandActionsSheet";
@@ -19,7 +20,7 @@ import {
   CommandDetails,
 } from "@/types/commandTypes";
 
-import styles from "../CommandEditorPage.module.scss";
+import styles from "@/pages/GlobalsPage.module.scss";
 
 const createEmptyCommand = (): CommandDetails => ({
   status: false,
@@ -202,91 +203,54 @@ export const CommandDirectTemplatePage = () => {
         )}
 
         <div className={styles.header}>
-          <div className={styles.headerTop}>
-            <div className={styles.innerTabs}>
-              {directModes.map((mode) => (
-                <button
-                  key={mode.key}
-                  type="button"
-                  className={`${styles.innerTab} ${
-                    activeDirectMode === mode.key
-                      ? styles.activeInnerTab
-                      : ""
-                  }`}
-                  onClick={() => {
-                    setActiveDirectMode(mode.key);
+                  <div className={styles.heading}>
+                    {!isMobile ? <h1 className={styles.title}>Прямые команды</h1> : <></>}
+        
+                    <div className={styles.innerTabs}>
+                      {directModes.map((mode) => (
+                        <button
+                          key={mode.key}
+                          type="button"
+                          className={`${styles.innerTab} ${activeDirectMode === mode.key ? styles.activeInnerTab : ""}`}
+                          onClick={() => {
+                            setActiveDirectMode(mode.key);
+                            navigate(`/commands/direct/${mode.key === "main" ? "main" : "template"}`);
+                          }}
+                        >
+                          {mode.label}
+                        </button>
+                      ))}
+                    </div>
+        
+                    <p className={styles.description}>
+                      Создавайте команды для управления устройствами и объединяйте
+                      действия в единые сценарии.
+                    </p>
+                  </div>
+        
+                  <div className={styles.actions}>
+                    {!isMobile ? (
+                      <Button variant="primary" onClick={openCreateModal}>
+                        🞢 Добавить сценарий
+                      </Button>
+                    ) : (
+                      <BottomSlideButton>
+                        <Button variant="primary" onClick={openCreateModal}>
+                          Добавить сценарий
+                        </Button>
+                      </BottomSlideButton>
+                    )}
+                  </div>
+                </div>
 
-                    navigate(
-                      `/commands/direct/${
-                        mode.key === "main"
-                          ? "main"
-                          : "template"
-                      }`
-                    );
-                  }}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-
-            <div className={styles.heading}>
-              <p className={styles.description}>
-                Создавайте и редактируйте
-                голосовые команды ассистента.
-              </p>
-            </div>
-
-            {!isMobile ? (
-              <Button
-                onClick={openCreateModal}
-              >
-                Добавить сценарий
-              </Button>
-            ) : (
-              <BottomSlideButton>
-                <Button
-                  onClick={openCreateModal}
-                >
-                  Добавить сценарий
-                </Button>
-              </BottomSlideButton>
-            )}
-          </div>
-        </div>
-
-        <div className={styles.commandList}>
+        <div className={styles.list}>
           {commands?.data.map((command) => (
-            <div
+            <Card
               key={command.uuid}
-              className={styles.commandTab}
-            >
-              <button
-                type="button"
-                className={styles.commandButton}
-                onClick={() =>
-                  openEditModal(command)
-                }
-              >
-                <span>{command.title}</span>
-
-                <small>
-                  {command.status === false
-                    ? "Выключена"
-                    : "Включена"}
-                </small>
-              </button>
-
-              <button
-                type="button"
-                className={styles.moreButton}
-                onClick={() =>
-                  setActionsCommand(command)
-                }
-              >
-                ⋯
-              </button>
-            </div>
+              title={command.title}
+              subTitle={command.status === false ? "Выключена" : "Включена"}
+              onClick={() => setActionsCommand(command)}
+            />
           ))}
         </div>
 
