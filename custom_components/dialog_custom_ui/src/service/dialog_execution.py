@@ -8,6 +8,7 @@ from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY
 from ..service.dialog_matching import (
     build_child_candidates,
     collect_all_type_template_vars,
+    find_matching_custom_next_action,
     find_matching_subcommand,
     find_node_by_type,
     find_node_by_uuid,
@@ -24,6 +25,7 @@ from ..service.dialog_runtime import (
     get_service_response,
     store_command_data,
     get_voice_response,
+    has_custom_next_action,
     has_next_action_branch,
     miss_commands,
     resolve_next_action_uuid,
@@ -231,18 +233,20 @@ async def execute_top_level_command(hass, node, client_id, device_id, client_tex
             )
             if response_type == 'error' and has_children_error:
                 end_status = False
-            uuid = resolve_next_action_uuid(next_action, response_type, fallback_uuid=uuid)
+            has_custom_branch = has_custom_next_action(next_action, response_type)
+            uuid = node.get("uuid") if has_custom_branch else resolve_next_action_uuid(next_action, response_type, fallback_uuid=uuid)
             if not uuid:
                 end_status = True
             if response_type == 'error':
                 if has_children_error and not end_status and uuid:
                     set_current_node_state(client_id, node.get('uuid'), device_id, error_branch=True, parent_type=node.get('actionType'))
             elif response_type != 'miss' and uuid and not end_status:
-                set_current_node_state(client_id, uuid, device_id, parent_type=node.get('actionType'))
+                set_current_node_state(client_id, uuid, device_id, custom=response_type if has_custom_branch else "", parent_type=node.get('actionType'))
         else:
             if is_external_service_answer(answer_type):
                 response_text = get_voice_response(node, 'error', {"commands": client_text, "client_id": client_id}) or response_text
-                uuid = resolve_next_action_uuid(next_action, 'error', fallback_uuid=uuid)
+                has_custom_branch = has_custom_next_action(next_action, 'error')
+                uuid = node.get("uuid") if has_custom_branch else resolve_next_action_uuid(next_action, 'error', fallback_uuid=uuid)
 
                 if not uuid:
                     end_status = True
@@ -298,16 +302,18 @@ async def execute_top_level_template(
             )
             if response_type == 'error' and has_children_error:
                 end_status = False
-            uuid = resolve_next_action_uuid(next_action, response_type, fallback_uuid=uuid)
+            has_custom_branch = has_custom_next_action(next_action, response_type)
+            uuid = node.get("uuid") if has_custom_branch else resolve_next_action_uuid(next_action, response_type, fallback_uuid=uuid)
             if uuid and not end_status:
                 if response_type == 'error':
                     if has_children_error:
                         set_current_node_state(client_id, node.get('uuid'), device_id, error_branch=True, parent_type=node.get('actionType'))
                 else:
-                    set_current_node_state(client_id, uuid, device_id, parent_type=node.get('actionType'))
+                    set_current_node_state(client_id, uuid, device_id, custom=response_type if has_custom_branch else "", parent_type=node.get('actionType'))
         elif is_external_service_answer(answer_type):
             response_text = get_voice_response(node, 'error', {"commands": client_text, "client_id": client_id}) or response_text
-            uuid = resolve_next_action_uuid(next_action, 'error')
+            has_custom_branch = has_custom_next_action(next_action, 'error')
+            uuid = node.get("uuid") if has_custom_branch else resolve_next_action_uuid(next_action, 'error')
             if not uuid:
                 end_status = True
             
@@ -332,6 +338,7 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
     current_node_uuid = current_node_state.get("uuid")
     
     stored_parent_type = current_node_state.get("parent_type")
+    stored_custom_action_type = current_node_state.get("custom")
     
     active_node = find_node_by_uuid(sub_level_nodes, current_node_uuid)
 
@@ -339,12 +346,20 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
         return None
 
     template_vars = None
-    found, _, template_vars = find_matching_subcommand(
-        active_node,
-        client_text,
-        sub_level_nodes,
-        error_branch=bool(error_branch),
-    )
+    if stored_custom_action_type:
+        found, _, template_vars = find_matching_custom_next_action(
+            active_node,
+            client_text,
+            sub_level_nodes,
+            action_type=stored_custom_action_type,
+        )
+    else:
+        found, _, template_vars = find_matching_subcommand(
+            active_node,
+            client_text,
+            sub_level_nodes,
+            error_branch=bool(error_branch),
+        )
     
     if not found and active_node.get("forwardText"):
         found = active_node
@@ -450,7 +465,8 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
             )
             if response_type == 'error' and has_children_error:
                 end_status = False
-            uuid = resolve_next_action_uuid(next_action, response_type, fallback_uuid=uuid)
+            has_custom_branch = has_custom_next_action(next_action, response_type)
+            uuid = found.get("uuid") if has_custom_branch else resolve_next_action_uuid(next_action, response_type, fallback_uuid=uuid)
 
             if not uuid:
                 end_status = True
@@ -474,7 +490,14 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
             ):
                 next_parent_type = found.get('actionType') if found is not active_node else parent_type
                 next_uuid = found.get('uuid') if response_type == 'error' and has_children_error else uuid
-                set_current_node_state(client_id, next_uuid, device_id, error_branch=(response_type == 'error'), parent_type=next_parent_type)
+                set_current_node_state(
+                    client_id,
+                    next_uuid,
+                    device_id,
+                    error_branch=(response_type == 'error'),
+                    custom=response_type if has_custom_branch else "",
+                    parent_type=next_parent_type,
+                )
             else:
                 delete_dialog_state_value(ERR_BRANCH_KEY, client_id, device_id)
                 delete_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id)
@@ -485,7 +508,8 @@ async def execute_active_node(hass, sub_level_nodes, client_new_dialog, client_t
                     or get_voice_response(active_node, 'error', {"commands": client_text, "client_id": client_id})
                     or response_text
                 )
-                uuid = resolve_next_action_uuid(next_action, 'error', fallback_uuid=uuid)
+                has_custom_branch = has_custom_next_action(next_action, 'error')
+                uuid = found.get("uuid") if has_custom_branch else resolve_next_action_uuid(next_action, 'error', fallback_uuid=uuid)
                 if not uuid:
                     end_status = True
 

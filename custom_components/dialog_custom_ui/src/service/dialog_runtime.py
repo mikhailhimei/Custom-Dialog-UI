@@ -133,7 +133,8 @@ def decode_current_node_state(value):
 def set_current_node_state(client_id, uuid, device_id, error_branch=False, custom="", parent_type = ""):
     command = {
         "uuid": uuid,
-        "parent_type": parent_type
+        "parent_type": parent_type,
+        "custom": custom or ""
     }
     set_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id, json.dumps(command), ttl=120)
     set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, 0, ttl=120)
