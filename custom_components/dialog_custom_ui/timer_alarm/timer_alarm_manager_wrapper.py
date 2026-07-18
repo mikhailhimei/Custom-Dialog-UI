@@ -340,32 +340,45 @@ class DialogTimerAlarmManager:
         client_id = _normalize_value(result.get("clientId") or result.get("client_id"))
         if client_id:
             result["clientId"] = client_id
+        device_id = _normalize_value(result.get("deviceId") or result.get("device_id"))
+        if device_id:
+            result["deviceId"] = device_id
         return result
 
     def _yaml_json_response(self, action_type: str, items: list[dict[str, str]]) -> dict[str, Any]:
         return {"actionType": action_type, "message": json.dumps(items, ensure_ascii=False), "items": items}
 
     def _yaml_timer_info_items(self, client_id: str) -> list[dict[str, str]]:
-        return [
-            {
+        items: list[dict[str, str]] = []
+        for item in self.timer_manager.get_active_items():
+            if client_id and _normalize_value(item.get("clientId")) != client_id:
+                continue
+            entry = {
                 "uuid": _normalize_value(item.get("id")),
                 "time": _normalize_value((item.get("time") or {}).get("count_timer")),
                 "clientId": _normalize_value(item.get("clientId")),
             }
-            for item in self.timer_manager.get_active_items()
-            if not client_id or _normalize_value(item.get("clientId")) == client_id
-        ]
+            device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
+            if device_id:
+                entry["deviceId"] = device_id
+            items.append(entry)
+        return items
 
     def _yaml_alarm_info_items(self, client_id: str) -> list[dict[str, str]]:
-        return [
-            {
+        items: list[dict[str, str]] = []
+        for item in self.alarm_manager.get_active_items():
+            if client_id and _normalize_value(item.get("clientId")) != client_id:
+                continue
+            entry = {
                 "uuid": _normalize_value(item.get("id")),
                 "time": _normalize_value((item.get("time") or {}).get("time")),
                 "clientId": _normalize_value(item.get("clientId")),
             }
-            for item in self.alarm_manager.get_active_items()
-            if not client_id or _normalize_value(item.get("clientId")) == client_id
-        ]
+            device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))
+            if device_id:
+                entry["deviceId"] = device_id
+            items.append(entry)
+        return items
 
     async def _delete_yaml_timer_by_uuid(self, timer_id: str, client_id: str, device_id: str) -> dict[str, Any]:
         if not timer_id:
