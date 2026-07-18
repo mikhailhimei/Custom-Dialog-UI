@@ -39,3 +39,167 @@ send_command:
       example: true
       selector:
         boolean: {}
+
+alarm_script:
+  name: Alarm script
+  description: Create, list, or delete Dialog Custom UI alarms from Home Assistant YAML scripts. Info returns JSON items with time, uuid, and clientId.
+  fields:
+    action:
+      name: Action
+      description: Operation for the alarm helper.
+      required: true
+      default: create
+      selector:
+        select:
+          options:
+            - value: create
+              label: Создать
+            - value: info
+              label: Информация о запущенных
+            - value: delete
+              label: Удалить
+    hh:
+      name: HH
+      description: Alarm hour for create.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 23
+          mode: box
+    mm:
+      name: MM
+      description: Alarm minute for create.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 59
+          mode: box
+    repeat_type:
+      name: Repeat
+      description: Alarm repeat mode for create.
+      required: false
+      default: once
+      selector:
+        select:
+          options:
+            - value: once
+              label: Один раз
+            - value: daily
+              label: Повторять каждый день
+            - value: weekdays
+              label: По будням
+            - value: weekends
+              label: По выходным
+            - value: custom
+              label: Кастом
+    repeat_days:
+      name: Custom days
+      description: Custom repeat days used only when Repeat is custom.
+      required: false
+      selector:
+        select:
+          multiple: true
+          mode: dropdown
+          options:
+            - value: monday
+              label: Понедельник
+            - value: tuesday
+              label: Вторник
+            - value: wednesday
+              label: Среда
+            - value: thursday
+              label: Четверг
+            - value: friday
+              label: Пятница
+            - value: saturday
+              label: Суббота
+            - value: sunday
+              label: Воскресенье
+    convert_day_period:
+      name: Convert morning/evening
+      description: Convert an entered morning hour to evening time by adding 12 hours.
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    alarm_uuid:
+      name: Alarm UUID
+      description: Alarm UUID from the info list to delete. Used only with delete.
+      required: false
+      selector:
+        text:
+    clientId:
+      name: Client ID
+      description: Optional client identifier. Defaults to integration client_id.
+      required: false
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Optional device identifier.
+      required: false
+      selector:
+        text:
+
+timer_script:
+  name: Timer script
+  description: Create, list, or delete Dialog Custom UI timers from Home Assistant YAML scripts. Info returns JSON items with time, uuid, and clientId.
+  fields:
+    action:
+      name: Action
+      description: Operation for the timer helper.
+      required: true
+      default: create
+      selector:
+        select:
+          options:
+            - value: create
+              label: Создать
+            - value: info
+              label: Информация о запущенных
+            - value: delete
+              label: Удалить
+    hh:
+      name: HH
+      description: Timer hours for create.
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    mm:
+      name: MM
+      description: Timer minutes for create.
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    ss:
+      name: SS
+      description: Timer seconds for create.
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    timer_uuid:
+      name: Timer UUID
+      description: Timer UUID from the info list to delete. Used only with delete.
+      required: false
+      selector:
+        text:
+    clientId:
+      name: Client ID
+      description: Optional client identifier. Defaults to integration client_id.
+      required: false
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Optional device identifier.
+      required: false
+      selector:
+        text:

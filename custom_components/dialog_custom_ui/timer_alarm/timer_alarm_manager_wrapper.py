@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 import logging
+import json
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Any
 
@@ -295,6 +296,115 @@ class DialogTimerAlarmManager:
         alarm_requests = await async_load_alarm_requests(self.hass)
         alarm_requests.append(request_payload)
         await async_save_alarm_requests(self.hass, alarm_requests)
+
+
+    async def async_handle_yaml_script_action(
+        self,
+        kind: str,
+        config: dict[str, Any],
+        client_id: str,
+        device_id: str,
+    ) -> dict[str, Any]:
+        action = _normalize_value(config.get("action")).lower()
+        if kind == "timer":
+            if action == "create":
+                timer = {
+                    "hour": _safe_config_int(config.get("hh")),
+                    "minut": _safe_config_int(config.get("mm")),
+                    "second": _safe_config_int(config.get("ss")),
+                }
+                result = await self.timer_manager.async_handle_timer_start(timer, client_id, device_id, True)
+                return self._with_yaml_response(result or {"actionType": "success"})
+            if action == "info":
+                return self._with_yaml_response(self._yaml_json_response("timers", self._yaml_timer_info_items(client_id)))
+            if action == "delete":
+                result = await self._delete_yaml_timer_by_uuid(_normalize_value(config.get("target_uuid")), client_id, device_id)
+                return self._with_yaml_response(result)
+
+        if kind == "alarm":
+            if action == "create":
+                alarm_time = self._yaml_alarm_time_from_config(config)
+                result = await self.alarm_manager.async_handle_alarm_start(alarm_time, client_id, device_id, True)
+                await self._apply_yaml_alarm_repeat_config(client_id, device_id, alarm_time, config)
+                return self._with_yaml_response(result or {"actionType": "success"})
+            if action == "info":
+                return self._with_yaml_response(self._yaml_json_response("alarms", self._yaml_alarm_info_items(client_id)))
+            if action == "delete":
+                result = await self._delete_yaml_alarm_by_uuid(_normalize_value(config.get("target_uuid")), client_id, device_id)
+                return self._with_yaml_response(result)
+
+        return self._with_yaml_response({"actionType": "error", "message": "Неизвестное действие"})
+
+    def _with_yaml_response(self, result: dict[str, Any]) -> dict[str, Any]:
+        result = dict(result)
+        client_id = _normalize_value(result.get("clientId") or result.get("client_id"))
+        if client_id:
+            result["clientId"] = client_id
+        return result
+
+    def _yaml_json_response(self, action_type: str, items: list[dict[str, str]]) -> dict[str, Any]:
+        return {"actionType": action_type, "message": json.dumps(items, ensure_ascii=False), "items": items}
+
+    def _yaml_timer_info_items(self, client_id: str) -> list[dict[str, str]]:
+        return [
+            {
+                "uuid": _normalize_value(item.get("id")),
+                "time": _normalize_value((item.get("time") or {}).get("count_timer")),
+                "clientId": _normalize_value(item.get("clientId")),
+            }
+            for item in self.timer_manager.get_active_items()
+            if not client_id or _normalize_value(item.get("clientId")) == client_id
+        ]
+
+    def _yaml_alarm_info_items(self, client_id: str) -> list[dict[str, str]]:
+        return [
+            {
+                "uuid": _normalize_value(item.get("id")),
+                "time": _normalize_value((item.get("time") or {}).get("time")),
+                "clientId": _normalize_value(item.get("clientId")),
+            }
+            for item in self.alarm_manager.get_active_items()
+            if not client_id or _normalize_value(item.get("clientId")) == client_id
+        ]
+
+    async def _delete_yaml_timer_by_uuid(self, timer_id: str, client_id: str, device_id: str) -> dict[str, Any]:
+        if not timer_id:
+            return {"client_id": client_id, "device_id": device_id, "actionType": "error", "message": "UUID таймера не указан"}
+        timer_entry = self.timer_manager._timers.pop(timer_id, None)
+        if timer_entry is None:
+            return {"client_id": client_id, "device_id": device_id, "actionType": "error", "message": "Таймер не найден"}
+        self.timer_manager._cancel_timer_task(timer_entry)
+        self._mark_updated()
+        return {"client_id": client_id, "device_id": device_id, "actionType": "success", "message": timer_id}
+
+    async def _delete_yaml_alarm_by_uuid(self, alarm_id: str, client_id: str, device_id: str) -> dict[str, Any]:
+        if not alarm_id:
+            return {"client_id": client_id, "device_id": device_id, "actionType": "error", "message": "UUID будильника не указан"}
+        alarm_entry = self.alarm_manager._alarms.pop(alarm_id, None)
+        if alarm_entry is None:
+            return {"client_id": client_id, "device_id": device_id, "actionType": "error", "message": "Будильник не найден"}
+        self._mark_updated()
+        return {"client_id": client_id, "device_id": device_id, "actionType": "success", "message": alarm_id}
+
+    def _yaml_alarm_time_from_config(self, config: dict[str, Any]) -> str:
+        hour = _safe_config_int(config.get("hh"))
+        minute = _safe_config_int(config.get("mm"))
+        if config.get("convert_day_period") and 1 <= hour <= 11:
+            hour += 12
+        return f"{max(0, min(hour, 23)):02d}:{max(0, min(minute, 59)):02d}"
+
+    async def _apply_yaml_alarm_repeat_config(self, client_id: str, device_id: str, alarm_time: str, config: dict[str, Any]) -> None:
+        repeat_type = _normalize_repeat_type(config.get("repeat_type"))
+        repeat_days = _normalize_repeat_days(config.get("repeat_days")) if repeat_type == "custom" else []
+        for alarm in self.alarm_manager._alarms.values():
+            if _normalize_value(alarm.get("client_id")) != client_id:
+                continue
+            if device_id and _normalize_value(alarm.get("device_id")) != device_id:
+                continue
+            if _normalize_value(alarm.get("time")) == alarm_time:
+                alarm["repeat_type"] = repeat_type
+                alarm["repeat_days"] = repeat_days
+        self._mark_updated()
 
     def get_timer_items(self) -> list[dict[str, Any]]:
         return self.timer_manager.get_timer_items()
@@ -611,3 +721,10 @@ def _select_manager(
             best_score = score
             best_manager = manager
     return best_manager or managers[0]
+
+
+def _safe_config_int(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
