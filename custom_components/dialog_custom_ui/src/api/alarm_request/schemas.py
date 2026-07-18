@@ -9,6 +9,7 @@ from ....const import (
 )
 
 _ALARM_ACTIONS = ("create_alarm", "delete_alarm", "edit_alarm")
+_ALARM_REPEAT_TYPES = ("once", "daily", "weekdays", "weekends", "custom")
 
 SAVE_ALARM_REQUEST_SCHEMA = {
     vol.Required("type"): WS_SAVE_ALARM_REQUEST,
@@ -20,6 +21,8 @@ SAVE_ALARM_REQUEST_SCHEMA = {
         vol.Required("status"): str,
         vol.Required("time"): str,
         vol.Optional("volume_start", default=0.3): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
+        vol.Optional("repeat_type", default="once"): str,
+        vol.Optional("repeat_days", default=[]): [str],
     },
 }
 

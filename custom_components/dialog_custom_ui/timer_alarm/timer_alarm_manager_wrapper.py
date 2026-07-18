@@ -30,6 +30,44 @@ from .timer_alarm_utils import (
     _sort_item_key,
 )
 
+
+def _normalize_repeat_type(value: Any) -> str:
+    normalized = _normalize_value(value).lower() or "once"
+    aliases = {
+        "one_time": "once",
+        "single": "once",
+        "once": "once",
+        "daily": "daily",
+        "everyday": "daily",
+        "weekdays": "weekdays",
+        "workdays": "weekdays",
+        "weekends": "weekends",
+        "custom": "custom",
+    }
+    return aliases.get(normalized, "once")
+
+
+def _normalize_repeat_days(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [part.strip() for part in value.split(",")]
+    if not isinstance(value, list):
+        return []
+    aliases = {
+        "monday": "mon", "mon": "mon", "пн": "mon",
+        "tuesday": "tue", "tue": "tue", "вт": "tue",
+        "wednesday": "wed", "wed": "wed", "ср": "wed",
+        "thursday": "thu", "thu": "thu", "чт": "thu",
+        "friday": "fri", "fri": "fri", "пт": "fri",
+        "saturday": "sat", "sat": "sat", "сб": "sat",
+        "sunday": "sun", "sun": "sun", "вс": "sun",
+    }
+    result: list[str] = []
+    for item in value:
+        day = aliases.get(_normalize_value(item).lower())
+        if day and day not in result:
+            result.append(day)
+    return result
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -60,6 +98,8 @@ def _build_voice_request_payload(payload: dict[str, Any]) -> dict[str, Any] | No
             "status": "on",
             "time": alarm_time,
             "volume_start": 0.3,
+            "repeat_type": "once",
+            "repeat_days": [],
         }
 
     return None
@@ -91,6 +131,8 @@ def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_
         "deviceId": _normalize_value(alarm_request.get("device_id")),
         "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
         "volume_start": alarm_request.get("volume_start", 0.3),
+        "repeat_type": _normalize_repeat_type(alarm_request.get("repeat_type", alarm_request.get("repeat"))),
+        "repeat_days": _normalize_repeat_days(alarm_request.get("repeat_days", alarm_request.get("week_days", alarm_request.get("days")))),
     }
 
 
@@ -119,6 +161,8 @@ def _alarm_item_to_request(item: dict[str, Any]) -> dict[str, Any]:
         "status": _normalize_value(item.get("status")) or "on",
         "time": alarm_time,
         "volume_start": item.get("volume_start", 0.3),
+        "repeat_type": _normalize_repeat_type(item.get("repeat_type", item.get("repeat"))),
+        "repeat_days": _normalize_repeat_days(item.get("repeat_days", item.get("week_days", item.get("days")))),
     }
 
 
@@ -317,6 +361,8 @@ class DialogTimerAlarmManager:
             "deviceId": _normalize_value(item.get("deviceId") or item.get("device_id")),
             "time": item.get("time") if isinstance(item.get("time"), dict) else {},
             "volume_start": item.get("volume_start", 0.3),
+            "repeat_type": _normalize_repeat_type(item.get("repeat_type", item.get("repeat"))),
+            "repeat_days": _normalize_repeat_days(item.get("repeat_days", item.get("week_days", item.get("days")))),
         }
 
     def _mark_updated(self) -> None:

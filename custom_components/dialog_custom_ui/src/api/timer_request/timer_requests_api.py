@@ -69,6 +69,13 @@ def _find(timer_requests, uuid_value: str):
     return None
 
 
+def _coerce_volume_start(value: Any) -> float:
+    try:
+        return min(max(float(value), 0.0), 1.0)
+    except (TypeError, ValueError):
+        return 0.3
+
+
 def _normalize_timer_request_payload(data: dict[str, Any], uuid_value: str | None = None) -> dict[str, Any]:
     action_type = _normalize_value(data.get("action_type"))
     timer_request = {
@@ -77,6 +84,7 @@ def _normalize_timer_request_payload(data: dict[str, Any], uuid_value: str | Non
         "action_type": action_type,
         "device_id": _normalize_value(data.get("device_id")),
         "timer_time": data.get("timer_time") if action_type == "create_timer" else "",
+        "volume_start": _coerce_volume_start(data.get("volume_start")),
     }
 
     if action_type == "delete_timer":
@@ -99,6 +107,7 @@ def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_
             if isinstance(timer_time, dict)
             else {"count_timer": _normalize_value(timer_time)}
         ),
+        "volume_start": _coerce_volume_start(timer_request.get("volume_start")),
     }
 
 

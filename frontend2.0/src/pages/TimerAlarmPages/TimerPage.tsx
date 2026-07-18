@@ -1,16 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Speaker, Trash2 } from "lucide-react";
 
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTimerAlarmRequests } from "../../hooks/useTimerAlarmRequests";
-
 import { Modal } from "@/components/ui/Modal/Modal";
 import { Button } from "@/components/ui/Button/Button";
 import { NavigationTabs } from "@/components/NavigationTabs/NavigationTabs";
-import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 
-import styles from "../GlobalsPage.module.scss";
+import styles from "./TimerAlarmPages.module.scss";
 
-const QUICK_MINUTES = [5, 10, 15, 30, 60];
+const QUICK_MINUTES = [5, 10, 15, 30, 45, 60];
 
 const formatLeft = (seconds: number) => {
   const safe = Math.max(0, seconds);
@@ -21,12 +20,20 @@ const formatLeft = (seconds: number) => {
   return [hours, minutes, secs].map((part) => String(part).padStart(2, "0")).join(":");
 };
 
+const parseTotalSeconds = (hours: number, minutes: number, seconds: number) => Math.max(1, hours * 3600 + minutes * 60 + seconds);
+
+const toParts = (totalSeconds: number) => ({
+  hours: Math.floor(totalSeconds / 3600),
+  minutes: Math.floor((totalSeconds % 3600) / 60),
+  seconds: totalSeconds % 60,
+});
+
 export const TimerPage = () => {
-  const isMobile = useIsMobile();
   const { createTimer, devices, loading, stopTimer, timers, toTimerSeconds } = useTimerAlarmRequests();
   const [modalOpen, setModalOpen] = useState(false);
   const [deviceId, setDeviceId] = useState("");
-  const [minutes, setMinutes] = useState(5);
+  const [volumeStart, setVolumeStart] = useState(0.3);
+  const [duration, setDuration] = useState({ hours: 0, minutes: 5, seconds: 0 });
   const [remainingById, setRemainingById] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -42,13 +49,16 @@ export const TimerPage = () => {
   }, []);
 
   const deviceName = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);
+  const totalSeconds = parseTotalSeconds(duration.hours, duration.minutes, duration.seconds);
 
   const submit = async () => {
     if (!deviceId) return;
 
-    await createTimer(deviceId, minutes);
+    await createTimer(deviceId, totalSeconds, volumeStart);
     setModalOpen(false);
   };
+
+  const setQuickMinutes = (minutes: number) => setDuration(toParts(minutes * 60));
 
   return (
     <div className={styles.page}>
@@ -57,7 +67,7 @@ export const TimerPage = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Таймер</h1>
-          <p className={styles.description}>Создавайте таймеры для выбранных устройств и отслеживайте обратный отсчет.</p>
+          <p className={styles.description}>Создавайте таймеры через модальное окно и отслеживайте запущенные отсчеты.</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>Создать</Button>
       </div>
@@ -65,48 +75,49 @@ export const TimerPage = () => {
       {loading && <div>Загрузка...</div>}
 
       <div className={styles.grid}>
-        {timers.length ? timers.map((timer) => (
-          <div className={styles.card} key={timer.uuid}>
-            <div className={styles.cardHeader}>
-              <div>
-                <h2 className={styles.cardTitle}>{timer.name || "Таймер"}</h2>
-                <div className={styles.meta}>Устройство: {deviceName.get(timer.device_id) || timer.device_id}</div>
+        {timers.length ? timers.map((timer) => {
+          const initialSeconds = toTimerSeconds(timer.timer_time);
+          return (
+            <div className={styles.card} key={timer.uuid}>
+              <div className={styles.cardHeader}>
+                <div className={styles.cardLead}>
+                  <Speaker className={styles.cardIcon} size={26} />
+                  <div>
+                    <h2 className={styles.cardTitle}>{formatLeft(remainingById[timer.uuid] ?? initialSeconds)}</h2>
+                    <div className={styles.meta}>Заведен на {formatLeft(initialSeconds)} • {deviceName.get(timer.device_id) || timer.device_id}</div>
+                  </div>
+                </div>
+                <Button variant="ghost" onClick={() => stopTimer(timer)}><Trash2 size={16} /></Button>
               </div>
-              <Button variant="ghost" onClick={() => stopTimer(timer)}>Стоп</Button>
             </div>
-            <div className={styles.time}>{formatLeft(remainingById[timer.uuid] ?? toTimerSeconds(timer.timer_time))}</div>
-          </div>
-        )) : <div className={styles.empty}>Нет запущенных таймеров.</div>}
+          );
+        }) : <div className={styles.empty}>Нет запущенных таймеров.</div>}
       </div>
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Создать таймер" footer={<Button onClick={submit} disabled={!deviceId}>Создать</Button>}>
         <div className={styles.form}>
-          <label className={styles.field}>
-            <span className={styles.label}>Устройство</span>
-            <select className={styles.select} value={deviceId} onChange={(event) => setDeviceId(event.target.value)}>
-              <option value="">Выберите устройство</option>
-              {devices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}
-            </select>
-          </label>
+          <div className={styles.wheelPicker} aria-label="Длительность таймера">
+            {(["hours", "minutes", "seconds"] as const).map((unit) => (
+              <label className={styles.wheelColumn} key={unit}>
+                <span className={styles.label}>{unit === "hours" ? "чч" : unit === "minutes" ? "мм" : "сс"}</span>
+                <select className={styles.wheelSelect} value={duration[unit]} onChange={(event) => setDuration((current) => ({ ...current, [unit]: Number(event.target.value) }))}>
+                  {Array.from({ length: unit === "hours" ? 24 : 60 }, (_, value) => <option key={value} value={value}>{String(value).padStart(2, "0")}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
 
           <div className={styles.field}>
-            <span className={styles.label}>Быстрый старт</span>
+            <span className={styles.label}>Быстрое создание</span>
             <div className={styles.quickTabs}>
-              {QUICK_MINUTES.map((value) => (
-                <button key={value} type="button" className={`${styles.quickTab} ${minutes === value ? styles.activeQuickTab : ""}`} onClick={() => setMinutes(value)}>
-                  {value} мин
-                </button>
-              ))}
+              {QUICK_MINUTES.map((value) => <button key={value} type="button" className={`${styles.quickTab} ${totalSeconds === value * 60 ? styles.activeQuickTab : ""}`} onClick={() => setQuickMinutes(value)}>{value} мин</button>)}
             </div>
           </div>
 
-          <label className={styles.field}>
-            <span className={styles.label}>Свое значение, минут</span>
-            <input className={styles.input} type="number" min="1" value={minutes} onChange={(event) => setMinutes(Number(event.target.value) || 1)} />
-          </label>
+          <label className={styles.field}><span className={styles.label}>Устройство воспроизведения</span><select className={styles.select} value={deviceId} onChange={(event) => setDeviceId(event.target.value)}><option value="">Выберите устройство</option>{devices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}</select></label>
+          <label className={styles.field}><span className={styles.label}>Стартовая громкость</span><input className={styles.input} type="range" min="0" max="1" step="0.05" value={volumeStart} onChange={(event) => setVolumeStart(Number(event.target.value))} /><span className={styles.meta}>{Math.round(volumeStart * 100)}%</span></label>
         </div>
       </Modal>
-
 
       <MobileNavigation />
     </div>

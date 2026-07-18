@@ -25,6 +25,43 @@ def _coerce_volume_start(value: Any) -> float:
         return 0.3
 
 
+def _normalize_repeat_type(value: Any) -> str:
+    normalized = _normalize_value(value).lower() or "once"
+    aliases = {
+        "one_time": "once",
+        "single": "once",
+        "once": "once",
+        "daily": "daily",
+        "everyday": "daily",
+        "weekdays": "weekdays",
+        "workdays": "weekdays",
+        "weekends": "weekends",
+        "custom": "custom",
+    }
+    return aliases.get(normalized, "once")
+
+
+def _normalize_repeat_days(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [part.strip() for part in value.split(",")]
+    if not isinstance(value, list):
+        return []
+    aliases = {
+        "monday": "mon", "mon": "mon", "пн": "mon",
+        "tuesday": "tue", "tue": "tue", "вт": "tue",
+        "wednesday": "wed", "wed": "wed", "ср": "wed",
+        "thursday": "thu", "thu": "thu", "чт": "thu",
+        "friday": "fri", "fri": "fri", "пт": "fri",
+        "saturday": "sat", "sat": "sat", "сб": "sat",
+        "sunday": "sun", "sun": "sun", "вс": "sun",
+    }
+    result: list[str] = []
+    for item in value:
+        day = aliases.get(_normalize_value(item).lower())
+        if day and day not in result:
+            result.append(day)
+    return result
+
 class DialogAlarmManager:
     def __init__(
         self,
@@ -144,6 +181,8 @@ class DialogAlarmManager:
             "status": "on",
             "time": alarm_time,
             "volume_start": 0.3,
+            "repeat_type": _normalize_repeat_type(None),
+            "repeat_days": [],
             "created_at": datetime.now().timestamp(),
         }
         self._remember_alarm_preset(alarm_time)
@@ -241,6 +280,8 @@ class DialogAlarmManager:
                     "ha_managed": True,
                     "time": {"time": _normalize_value(entry.get("time") or "08:00")},
                     "volume_start": _coerce_volume_start(entry.get("volume_start")),
+                    "repeat_type": _normalize_repeat_type(entry.get("repeat_type")),
+                    "repeat_days": _normalize_repeat_days(entry.get("repeat_days")),
                 }
             )
         items.sort(key=lambda item: _normalize_value(item.get("id")))
@@ -282,6 +323,8 @@ class DialogAlarmManager:
                     "status": _normalize_value(item.get("status")) or "on",
                     "time": {"time": _normalize_value(time_data.get("time")) or "08:00"},
                     "volume_start": _coerce_volume_start(item.get("volume_start")),
+                    "repeat_type": _normalize_repeat_type(item.get("repeat_type")),
+                    "repeat_days": _normalize_repeat_days(item.get("repeat_days")),
                 }
             )
         return result
@@ -301,6 +344,8 @@ class DialogAlarmManager:
             status = _normalize_value(item.get("status")).lower()
             status = "off" if status == "off" else "on"
             volume_start = _coerce_volume_start(item.get("volume_start"))
+            repeat_type = _normalize_repeat_type(item.get("repeat_type"))
+            repeat_days = _normalize_repeat_days(item.get("repeat_days"))
 
             if alarm_id in self._alarms:
                 alarm = self._alarms[alarm_id]
@@ -309,6 +354,8 @@ class DialogAlarmManager:
                 alarm["status"] = status
                 alarm["time"] = alarm_time
                 alarm["volume_start"] = volume_start
+                alarm["repeat_type"] = repeat_type
+                alarm["repeat_days"] = repeat_days
                 self._remember_alarm_preset(alarm_time)
                 if status == "on":
                     self._ensure_alarm_tick_task()
@@ -322,6 +369,8 @@ class DialogAlarmManager:
                 "status": status,
                 "time": alarm_time,
                 "volume_start": volume_start,
+                "repeat_type": repeat_type,
+                "repeat_days": repeat_days,
                 "created_at": datetime.now().timestamp(),
             }
             self._remember_alarm_preset(alarm_time)
@@ -360,6 +409,8 @@ class DialogAlarmManager:
                 continue
             if now.hour != hour or now.minute != minute:
                 continue
+            if not self._should_alarm_run_today(alarm, now):
+                continue
             alarm_id = _normalize_value(alarm.get("id"))
             trigger_key = f"{alarm_id}:{date_key}:{alarm_time}"
             if trigger_key in self._triggered_alarm_keys:
@@ -367,11 +418,26 @@ class DialogAlarmManager:
             self._triggered_alarm_keys.add(trigger_key)
             await self._run_alarm_action(alarm)
 
+    def _should_alarm_run_today(self, alarm: dict[str, Any], now: datetime) -> bool:
+        repeat_type = _normalize_repeat_type(alarm.get("repeat_type"))
+        weekday = now.weekday()
+        if repeat_type == "daily":
+            return True
+        if repeat_type == "weekdays":
+            return weekday < 5
+        if repeat_type == "weekends":
+            return weekday >= 5
+        if repeat_type == "custom":
+            day_key = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"][weekday]
+            return day_key in set(_normalize_repeat_days(alarm.get("repeat_days")))
+        return True
+
     async def _run_alarm_action(self, alarm: dict[str, Any]) -> None:
         device_ref = _normalize_value(alarm.get("device_id"))
         volume_start = _coerce_volume_start(alarm.get("volume_start"))
         await audio_notification(self.hass, device_ref, self._default_media_content_id(), f"{volume_start}-0.7")
-        alarm["status"] = "off"
+        if _normalize_repeat_type(alarm.get("repeat_type")) == "once":
+            alarm["status"] = "off"
         self._mark_updated()
 
     def _alarms_for_client(self, client_id: str) -> list[dict[str, Any]]:
