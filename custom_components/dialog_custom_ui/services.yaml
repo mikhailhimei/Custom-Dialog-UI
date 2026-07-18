@@ -96,10 +96,27 @@ alarm_script:
               label: Кастом
     repeat_days:
       name: Custom days
-      description: Custom repeat days, for example понедельник, вторник.
+      description: Custom repeat days used only when Repeat is custom.
       required: false
       selector:
-        text:
+        select:
+          multiple: true
+          mode: dropdown
+          options:
+            - value: monday
+              label: Понедельник
+            - value: tuesday
+              label: Вторник
+            - value: wednesday
+              label: Среда
+            - value: thursday
+              label: Четверг
+            - value: friday
+              label: Пятница
+            - value: saturday
+              label: Суббота
+            - value: sunday
+              label: Воскресенье
     convert_day_period:
       name: Convert morning/evening
       description: Convert an entered morning hour to evening time by adding 12 hours.
@@ -107,15 +124,9 @@ alarm_script:
       default: false
       selector:
         boolean: {}
-    target:
-      name: Alarm number
-      description: One-based alarm number from the info list to delete.
-      required: false
-      selector:
-        text:
-    response_variable:
-      name: Response variable
-      description: Name of the Home Assistant script variable that should receive the service response.
+    alarm_uuid:
+      name: Alarm UUID
+      description: Alarm UUID from the info list to delete. Used only with delete.
       required: false
       selector:
         text:
@@ -174,15 +185,9 @@ timer_script:
         number:
           min: 0
           mode: box
-    target:
+    timer_uuid:
       name: Timer UUID
-      description: Timer UUID from the info list to delete.
-      required: false
-      selector:
-        text:
-    response_variable:
-      name: Response variable
-      description: Name of the Home Assistant script variable that should receive the service response.
+      description: Timer UUID from the info list to delete. Used only with delete.
       required: false
       selector:
         text:

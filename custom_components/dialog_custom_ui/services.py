@@ -43,8 +43,8 @@ ATTR_SS = "ss"
 ATTR_REPEAT_TYPE = "repeat_type"
 ATTR_REPEAT_DAYS = "repeat_days"
 ATTR_CONVERT_DAY_PERIOD = "convert_day_period"
-ATTR_RESPONSE_VARIABLE = "response_variable"
-ATTR_TARGET = "target"
+ATTR_TIMER_UUID = "timer_uuid"
+ATTR_ALARM_UUID = "alarm_uuid"
 
 _SEND_COMMAND_SCHEMA = vol.Schema(
     {
@@ -146,9 +146,9 @@ async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, call:
     device_id = _normalize_value(call.data.get(ATTR_DEVICE_ID))
     config = dict(call.data)
     if kind == "alarm":
-        config["target"] = call.data.get(ATTR_TARGET)
+        config["target_uuid"] = _normalize_value(call.data.get(ATTR_ALARM_UUID))
     else:
-        config["target"] = _normalize_value(call.data.get(ATTR_TARGET))
+        config["target_uuid"] = _normalize_value(call.data.get(ATTR_TIMER_UUID))
     return await manager.async_handle_yaml_script_action(kind, config, client_id, device_id)
 
 def _parse_variables(value: Any) -> dict[str, Any]:
@@ -184,8 +184,7 @@ _ALARM_SCRIPT_SCHEMA = vol.Schema(
         vol.Optional(ATTR_REPEAT_TYPE, default="once"): _REPEAT_SCHEMA,
         vol.Optional(ATTR_REPEAT_DAYS, default=""): vol.Any(str, [str]),
         vol.Optional(ATTR_CONVERT_DAY_PERIOD, default=False): vol.Boolean(),
-        vol.Optional(ATTR_TARGET, default=""): vol.Any(str, int),
-        vol.Optional(ATTR_RESPONSE_VARIABLE, default=""): vol.Coerce(str),
+        vol.Optional(ATTR_ALARM_UUID, default=""): vol.Coerce(str),
     }
 )
 
@@ -197,7 +196,6 @@ _TIMER_SCRIPT_SCHEMA = vol.Schema(
         vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
         vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
         vol.Optional(ATTR_SS, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_TARGET, default=""): vol.Coerce(str),
-        vol.Optional(ATTR_RESPONSE_VARIABLE, default=""): vol.Coerce(str),
+        vol.Optional(ATTR_TIMER_UUID, default=""): vol.Coerce(str),
     }
 )

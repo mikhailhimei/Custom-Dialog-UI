@@ -306,8 +306,6 @@ class DialogTimerAlarmManager:
         device_id: str,
     ) -> dict[str, Any]:
         action = _normalize_value(config.get("action")).lower()
-        response_variable = _normalize_value(config.get("response_variable"))
-
         if kind == "timer":
             if action == "create":
                 timer = {
@@ -316,34 +314,32 @@ class DialogTimerAlarmManager:
                     "second": _safe_config_int(config.get("ss")),
                 }
                 result = await self.timer_manager.async_handle_timer_start(timer, client_id, device_id, True)
-                return self._with_yaml_response_variable(result or {"actionType": "success"}, response_variable)
+                return self._with_yaml_response(result or {"actionType": "success"})
             if action == "info":
-                return self._with_yaml_response_variable(self._yaml_json_response("timers", self._yaml_timer_info_items(client_id)), response_variable)
+                return self._with_yaml_response(self._yaml_json_response("timers", self._yaml_timer_info_items(client_id)))
             if action == "delete":
-                result = await self._delete_yaml_timer_by_uuid(_normalize_value(config.get("target")), client_id, device_id)
-                return self._with_yaml_response_variable(result, response_variable)
+                result = await self._delete_yaml_timer_by_uuid(_normalize_value(config.get("target_uuid")), client_id, device_id)
+                return self._with_yaml_response(result)
 
         if kind == "alarm":
             if action == "create":
                 alarm_time = self._yaml_alarm_time_from_config(config)
                 result = await self.alarm_manager.async_handle_alarm_start(alarm_time, client_id, device_id, True)
                 await self._apply_yaml_alarm_repeat_config(client_id, device_id, alarm_time, config)
-                return self._with_yaml_response_variable(result or {"actionType": "success"}, response_variable)
+                return self._with_yaml_response(result or {"actionType": "success"})
             if action == "info":
-                return self._with_yaml_response_variable(self._yaml_json_response("alarms", self._yaml_alarm_info_items(client_id)), response_variable)
+                return self._with_yaml_response(self._yaml_json_response("alarms", self._yaml_alarm_info_items(client_id)))
             if action == "delete":
-                result = await self.alarm_manager.async_handle_alarm_stop(client_id, device_id, _safe_config_int(config.get("target")) or None, True)
-                return self._with_yaml_response_variable(result or {"actionType": "success"}, response_variable)
+                result = await self._delete_yaml_alarm_by_uuid(_normalize_value(config.get("target_uuid")), client_id, device_id)
+                return self._with_yaml_response(result)
 
-        return self._with_yaml_response_variable({"actionType": "error", "message": "Неизвестное действие"}, response_variable)
+        return self._with_yaml_response({"actionType": "error", "message": "Неизвестное действие"})
 
-    def _with_yaml_response_variable(self, result: dict[str, Any], response_variable: str) -> dict[str, Any]:
+    def _with_yaml_response(self, result: dict[str, Any]) -> dict[str, Any]:
         result = dict(result)
         client_id = _normalize_value(result.get("clientId") or result.get("client_id"))
         if client_id:
             result["clientId"] = client_id
-        if response_variable:
-            result["response_variable"] = response_variable
         return result
 
     def _yaml_json_response(self, action_type: str, items: list[dict[str, str]]) -> dict[str, Any]:
@@ -380,6 +376,15 @@ class DialogTimerAlarmManager:
         self.timer_manager._cancel_timer_task(timer_entry)
         self._mark_updated()
         return {"client_id": client_id, "device_id": device_id, "actionType": "success", "message": timer_id}
+
+    async def _delete_yaml_alarm_by_uuid(self, alarm_id: str, client_id: str, device_id: str) -> dict[str, Any]:
+        if not alarm_id:
+            return {"client_id": client_id, "device_id": device_id, "actionType": "error", "message": "UUID будильника не указан"}
+        alarm_entry = self.alarm_manager._alarms.pop(alarm_id, None)
+        if alarm_entry is None:
+            return {"client_id": client_id, "device_id": device_id, "actionType": "error", "message": "Будильник не найден"}
+        self._mark_updated()
+        return {"client_id": client_id, "device_id": device_id, "actionType": "success", "message": alarm_id}
 
     def _yaml_alarm_time_from_config(self, config: dict[str, Any]) -> str:
         hour = _safe_config_int(config.get("hh"))
