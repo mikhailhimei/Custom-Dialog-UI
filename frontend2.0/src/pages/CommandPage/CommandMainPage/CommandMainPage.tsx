@@ -180,6 +180,7 @@ export const CommandMainPage = () => {
               onClick={() => setActionsCommand(command)}
             />
           ))}
+          {isMobile ? <div ref={ref} style={{ height: 1 }} /> : <></>}
         </div>
 
         {!isMobile ? (
@@ -191,7 +192,8 @@ export const CommandMainPage = () => {
             }
           />
         ) : (
-          <div ref={ref} style={{ height: 1 }} />
+          <></>
+          // <div ref={ref} style={{ height: 1 }} />
         )}
 
         <CommandEditorModal

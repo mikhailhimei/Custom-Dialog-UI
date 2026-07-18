@@ -202,6 +202,7 @@ export const ScriptsPage = () => {
               }
             />
           ))}
+          {isMobile ? <div ref={ref} style={{ height: 1 }} /> : <></>}
         </div>
 
         {!isMobile ?
@@ -209,8 +210,7 @@ export const ScriptsPage = () => {
             page={scripts?.page || 1}
             totalPages={scripts?.total_pages || 1}
             onChange={loadScripts}
-          /> :
-          <div ref={ref} style={{ height: 1 }} />
+          /> : <></>
         }
 
         <ScriptActionsSheet
