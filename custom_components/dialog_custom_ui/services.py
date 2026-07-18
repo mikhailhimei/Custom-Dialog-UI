@@ -49,6 +49,7 @@ ATTR_SS = "ss"
 ATTR_REPEAT_TYPE = "repeat_type"
 ATTR_REPEAT_DAYS = "repeat_days"
 ATTR_CONVERT_DAY_PERIOD = "convert_day_period"
+ATTR_UUID = "uuid"
 ATTR_TIMER_UUID = "timer_uuid"
 ATTR_ALARM_UUID = "alarm_uuid"
 
@@ -163,9 +164,9 @@ async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, actio
     config = dict(call.data)
     config[ATTR_ACTION] = action
     if kind == "alarm":
-        config["target_uuid"] = _normalize_value(call.data.get(ATTR_ALARM_UUID))
+        config["target_uuid"] = _normalize_value(call.data.get(ATTR_UUID) or call.data.get(ATTR_ALARM_UUID))
     else:
-        config["target_uuid"] = _normalize_value(call.data.get(ATTR_TIMER_UUID))
+        config["target_uuid"] = _normalize_value(call.data.get(ATTR_UUID) or call.data.get(ATTR_TIMER_UUID))
     return await manager.async_handle_yaml_script_action(kind, config, client_id, device_id)
 
 def _parse_variables(value: Any) -> dict[str, Any]:
@@ -211,7 +212,6 @@ def _register_response_service(
 _INFO_SCHEMA = vol.Schema(
     {
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
-        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
     }
 )
 
@@ -229,9 +229,7 @@ _ALARM_CREATE_SCHEMA = vol.Schema(
 
 _ALARM_DELETE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ALARM_UUID): vol.Coerce(str),
-        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
-        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Required(ATTR_UUID): vol.Coerce(str),
     }
 )
 
@@ -247,8 +245,6 @@ _TIMER_CREATE_SCHEMA = vol.Schema(
 
 _TIMER_DELETE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_TIMER_UUID): vol.Coerce(str),
-        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
-        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Required(ATTR_UUID): vol.Coerce(str),
     }
 )

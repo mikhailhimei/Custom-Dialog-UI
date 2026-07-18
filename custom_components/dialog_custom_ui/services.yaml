@@ -133,33 +133,15 @@ alarm_info:
       required: false
       selector:
         text:
-    deviceId:
-      name: Device ID
-      description: Optional device identifier.
-      required: false
-      selector:
-        text:
 
 alarm_delete:
   name: Alarm delete
   description: Delete a Dialog Custom UI alarm by UUID.
   fields:
-    alarm_uuid:
+    uuid:
       name: UUID
       description: Alarm UUID from the info list to delete.
       required: true
-      selector:
-        text:
-    clientId:
-      name: Client ID
-      description: Optional client identifier. Defaults to integration client_id.
-      required: false
-      selector:
-        text:
-    deviceId:
-      name: Device ID
-      description: Optional device identifier.
-      required: false
       selector:
         text:
 
@@ -214,32 +196,14 @@ timer_info:
       required: false
       selector:
         text:
-    deviceId:
-      name: Device ID
-      description: Optional device identifier.
-      required: false
-      selector:
-        text:
 
 timer_delete:
   name: Timer delete
   description: Delete a Dialog Custom UI timer by UUID.
   fields:
-    timer_uuid:
+    uuid:
       name: UUID
       description: Timer UUID from the info list to delete.
       required: true
-      selector:
-        text:
-    clientId:
-      name: Client ID
-      description: Optional client identifier. Defaults to integration client_id.
-      required: false
-      selector:
-        text:
-    deviceId:
-      name: Device ID
-      description: Optional device identifier.
-      required: false
       selector:
         text:
