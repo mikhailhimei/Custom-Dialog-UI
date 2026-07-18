@@ -40,27 +40,13 @@ send_command:
       selector:
         boolean: {}
 
-alarm_script:
-  name: Alarm script
-  description: Create, list, or delete Dialog Custom UI alarms from Home Assistant YAML scripts. Info returns JSON items with time, uuid, and clientId.
+alarm_create:
+  name: Alarm create
+  description: Create a Dialog Custom UI alarm from Home Assistant YAML scripts.
   fields:
-    action:
-      name: Action
-      description: Operation for the alarm helper.
-      required: true
-      default: create
-      selector:
-        select:
-          options:
-            - value: create
-              label: Создать
-            - value: info
-              label: Информация о запущенных
-            - value: delete
-              label: Удалить
     hh:
       name: HH
-      description: Alarm hour for create.
+      description: Alarm hour.
       required: false
       selector:
         number:
@@ -69,16 +55,28 @@ alarm_script:
           mode: box
     mm:
       name: MM
-      description: Alarm minute for create.
+      description: Alarm minute.
       required: false
       selector:
         number:
           min: 0
           max: 59
           mode: box
+    clientId:
+      name: Client ID
+      description: Optional client identifier. Defaults to integration client_id.
+      required: false
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Optional device identifier.
+      required: false
+      selector:
+        text:
     repeat_type:
       name: Repeat
-      description: Alarm repeat mode for create.
+      description: Alarm repeat mode.
       required: false
       default: once
       selector:
@@ -124,10 +122,32 @@ alarm_script:
       default: false
       selector:
         boolean: {}
-    alarm_uuid:
-      name: Alarm UUID
-      description: Alarm UUID from the info list to delete. Used only with delete.
+
+alarm_info:
+  name: Alarm info
+  description: List Dialog Custom UI alarms. Returns JSON items with time, uuid, and clientId.
+  fields:
+    clientId:
+      name: Client ID
+      description: Optional client identifier. Defaults to integration client_id.
       required: false
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Optional device identifier.
+      required: false
+      selector:
+        text:
+
+alarm_delete:
+  name: Alarm delete
+  description: Delete a Dialog Custom UI alarm by UUID.
+  fields:
+    alarm_uuid:
+      name: UUID
+      description: Alarm UUID from the info list to delete.
+      required: true
       selector:
         text:
     clientId:
@@ -143,27 +163,13 @@ alarm_script:
       selector:
         text:
 
-timer_script:
-  name: Timer script
-  description: Create, list, or delete Dialog Custom UI timers from Home Assistant YAML scripts. Info returns JSON items with time, uuid, and clientId.
+timer_create:
+  name: Timer create
+  description: Create a Dialog Custom UI timer from Home Assistant YAML scripts.
   fields:
-    action:
-      name: Action
-      description: Operation for the timer helper.
-      required: true
-      default: create
-      selector:
-        select:
-          options:
-            - value: create
-              label: Создать
-            - value: info
-              label: Информация о запущенных
-            - value: delete
-              label: Удалить
     hh:
       name: HH
-      description: Timer hours for create.
+      description: Timer hours.
       required: false
       selector:
         number:
@@ -171,7 +177,7 @@ timer_script:
           mode: box
     mm:
       name: MM
-      description: Timer minutes for create.
+      description: Timer minutes.
       required: false
       selector:
         number:
@@ -179,16 +185,50 @@ timer_script:
           mode: box
     ss:
       name: SS
-      description: Timer seconds for create.
+      description: Timer seconds.
       required: false
       selector:
         number:
           min: 0
           mode: box
-    timer_uuid:
-      name: Timer UUID
-      description: Timer UUID from the info list to delete. Used only with delete.
+    clientId:
+      name: Client ID
+      description: Optional client identifier. Defaults to integration client_id.
       required: false
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Optional device identifier.
+      required: false
+      selector:
+        text:
+
+timer_info:
+  name: Timer info
+  description: List Dialog Custom UI timers. Returns JSON items with time, uuid, and clientId.
+  fields:
+    clientId:
+      name: Client ID
+      description: Optional client identifier. Defaults to integration client_id.
+      required: false
+      selector:
+        text:
+    deviceId:
+      name: Device ID
+      description: Optional device identifier.
+      required: false
+      selector:
+        text:
+
+timer_delete:
+  name: Timer delete
+  description: Delete a Dialog Custom UI timer by UUID.
+  fields:
+    timer_uuid:
+      name: UUID
+      description: Timer UUID from the info list to delete.
+      required: true
       selector:
         text:
     clientId:

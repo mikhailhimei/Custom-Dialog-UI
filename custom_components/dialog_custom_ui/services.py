@@ -28,8 +28,14 @@ from .const import (
 )
 
 SERVICE_SEND_COMMAND = "send_command"
-SERVICE_ALARM_SCRIPT = "alarm_script"
-SERVICE_TIMER_SCRIPT = "timer_script"
+SERVICE_ALARM_CREATE = "alarm_create"
+SERVICE_ALARM_INFO = "alarm_info"
+SERVICE_ALARM_DELETE = "alarm_delete"
+SERVICE_LEGACY_ALARM_SCRIPT = "alarm_script"
+SERVICE_TIMER_CREATE = "timer_create"
+SERVICE_TIMER_INFO = "timer_info"
+SERVICE_TIMER_DELETE = "timer_delete"
+SERVICE_LEGACY_TIMER_SCRIPT = "timer_script"
 
 ATTR_CLIENT_ID = "clientId"
 ATTR_DEVICE_ID = "deviceId"
@@ -62,11 +68,23 @@ def async_register_services(hass: HomeAssistant) -> None:
     async def async_handle_send_command(call: ServiceCall) -> None:
         await _async_handle_send_command(hass, call)
 
-    async def async_handle_alarm_script(call: ServiceCall) -> dict[str, Any]:
-        return await _async_handle_timer_alarm_script(hass, "alarm", call)
+    async def async_handle_alarm_create(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "alarm", "create", call)
 
-    async def async_handle_timer_script(call: ServiceCall) -> dict[str, Any]:
-        return await _async_handle_timer_alarm_script(hass, "timer", call)
+    async def async_handle_alarm_info(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "alarm", "info", call)
+
+    async def async_handle_alarm_delete(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "alarm", "delete", call)
+
+    async def async_handle_timer_create(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "timer", "create", call)
+
+    async def async_handle_timer_info(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "timer", "info", call)
+
+    async def async_handle_timer_delete(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "timer", "delete", call)
 
     if not hass.services.has_service(DOMAIN, SERVICE_SEND_COMMAND):
         hass.services.async_register(
@@ -75,32 +93,30 @@ def async_register_services(hass: HomeAssistant) -> None:
             async_handle_send_command,
             schema=_SEND_COMMAND_SCHEMA,
         )
-    if not hass.services.has_service(DOMAIN, SERVICE_ALARM_SCRIPT):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_ALARM_SCRIPT,
-            async_handle_alarm_script,
-            schema=_ALARM_SCRIPT_SCHEMA,
-            supports_response=SupportsResponse.OPTIONAL,
-        )
-    if not hass.services.has_service(DOMAIN, SERVICE_TIMER_SCRIPT):
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_TIMER_SCRIPT,
-            async_handle_timer_script,
-            schema=_TIMER_SCRIPT_SCHEMA,
-            supports_response=SupportsResponse.OPTIONAL,
-        )
+    _register_response_service(hass, SERVICE_ALARM_CREATE, async_handle_alarm_create, _ALARM_CREATE_SCHEMA)
+    _register_response_service(hass, SERVICE_ALARM_INFO, async_handle_alarm_info, _INFO_SCHEMA)
+    _register_response_service(hass, SERVICE_ALARM_DELETE, async_handle_alarm_delete, _ALARM_DELETE_SCHEMA)
+    _register_response_service(hass, SERVICE_TIMER_CREATE, async_handle_timer_create, _TIMER_CREATE_SCHEMA)
+    _register_response_service(hass, SERVICE_TIMER_INFO, async_handle_timer_info, _INFO_SCHEMA)
+    _register_response_service(hass, SERVICE_TIMER_DELETE, async_handle_timer_delete, _TIMER_DELETE_SCHEMA)
 
 
 def async_unregister_services(hass: HomeAssistant) -> None:
     """Unregister Dialog Custom UI services."""
     if hass.services.has_service(DOMAIN, SERVICE_SEND_COMMAND):
         hass.services.async_remove(DOMAIN, SERVICE_SEND_COMMAND)
-    if hass.services.has_service(DOMAIN, SERVICE_ALARM_SCRIPT):
-        hass.services.async_remove(DOMAIN, SERVICE_ALARM_SCRIPT)
-    if hass.services.has_service(DOMAIN, SERVICE_TIMER_SCRIPT):
-        hass.services.async_remove(DOMAIN, SERVICE_TIMER_SCRIPT)
+    for service in (
+        SERVICE_ALARM_CREATE,
+        SERVICE_ALARM_INFO,
+        SERVICE_ALARM_DELETE,
+        SERVICE_LEGACY_ALARM_SCRIPT,
+        SERVICE_TIMER_CREATE,
+        SERVICE_TIMER_INFO,
+        SERVICE_TIMER_DELETE,
+        SERVICE_LEGACY_TIMER_SCRIPT,
+    ):
+        if hass.services.has_service(DOMAIN, service):
+            hass.services.async_remove(DOMAIN, service)
 
 
 async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -132,7 +148,7 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
 
 
 
-async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, call: ServiceCall) -> dict[str, Any]:
+async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, action: str, call: ServiceCall) -> dict[str, Any]:
     entry = _get_entry(hass)
     if entry is None:
         raise HomeAssistantError("Dialog Custom UI integration entry not found")
@@ -145,6 +161,7 @@ async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, call:
     client_id = _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get("client_id"))
     device_id = _normalize_value(call.data.get(ATTR_DEVICE_ID))
     config = dict(call.data)
+    config[ATTR_ACTION] = action
     if kind == "alarm":
         config["target_uuid"] = _normalize_value(call.data.get(ATTR_ALARM_UUID))
     else:
@@ -171,31 +188,67 @@ def _append_log(hass: HomeAssistant, level: str, message: str) -> None:
     logs.appendleft({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
 
 
-_ACTION_SCHEMA = vol.In(["create", "info", "delete"])
 _REPEAT_SCHEMA = vol.In(["once", "daily", "weekdays", "weekends", "custom"])
 
-_ALARM_SCRIPT_SCHEMA = vol.Schema(
+
+def _register_response_service(
+    hass: HomeAssistant,
+    service: str,
+    handler: Any,
+    schema: vol.Schema,
+) -> None:
+    if hass.services.has_service(DOMAIN, service):
+        return
+    hass.services.async_register(
+        DOMAIN,
+        service,
+        handler,
+        schema=schema,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+
+_INFO_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ACTION): _ACTION_SCHEMA,
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
         vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
-        vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_REPEAT_TYPE, default="once"): _REPEAT_SCHEMA,
-        vol.Optional(ATTR_REPEAT_DAYS, default=""): vol.Any(str, [str]),
-        vol.Optional(ATTR_CONVERT_DAY_PERIOD, default=False): vol.Boolean(),
-        vol.Optional(ATTR_ALARM_UUID, default=""): vol.Coerce(str),
     }
 )
 
-_TIMER_SCRIPT_SCHEMA = vol.Schema(
+_ALARM_CREATE_SCHEMA = vol.Schema(
     {
-        vol.Required(ATTR_ACTION): _ACTION_SCHEMA,
+        vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
         vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Optional(ATTR_REPEAT_TYPE, default="once"): _REPEAT_SCHEMA,
+        vol.Optional(ATTR_REPEAT_DAYS, default=""): vol.Any(str, [str]),
+        vol.Optional(ATTR_CONVERT_DAY_PERIOD, default=False): vol.Boolean(),
+    }
+)
+
+_ALARM_DELETE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ALARM_UUID): vol.Coerce(str),
+        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
+        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+    }
+)
+
+_TIMER_CREATE_SCHEMA = vol.Schema(
+    {
         vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
         vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
         vol.Optional(ATTR_SS, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_TIMER_UUID, default=""): vol.Coerce(str),
+        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
+        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+    }
+)
+
+_TIMER_DELETE_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_TIMER_UUID): vol.Coerce(str),
+        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
+        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
     }
 )
