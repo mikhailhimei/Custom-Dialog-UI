@@ -8,13 +8,14 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from .storage.settings_storage import get_cached_settings
 
 from .utils import (
     _get_entry,
-    _get_options
+    _get_options,
+    _get_manager
 )
 
 from .normalize import (
@@ -27,12 +28,23 @@ from .const import (
 )
 
 SERVICE_SEND_COMMAND = "send_command"
+SERVICE_ALARM_SCRIPT = "alarm_script"
+SERVICE_TIMER_SCRIPT = "timer_script"
 
 ATTR_CLIENT_ID = "clientId"
 ATTR_DEVICE_ID = "deviceId"
 ATTR_ACTION_TYPE = "actionType"
 ATTR_VARIABLES = "variables"
 ATTR_USE_DECLENSION = "useDeclension"
+ATTR_ACTION = "action"
+ATTR_HH = "hh"
+ATTR_MM = "mm"
+ATTR_SS = "ss"
+ATTR_REPEAT_TYPE = "repeat_type"
+ATTR_REPEAT_DAYS = "repeat_days"
+ATTR_CONVERT_DAY_PERIOD = "convert_day_period"
+ATTR_RESPONSE_VARIABLE = "response_variable"
+ATTR_TARGET = "target"
 
 _SEND_COMMAND_SCHEMA = vol.Schema(
     {
@@ -47,24 +59,48 @@ _SEND_COMMAND_SCHEMA = vol.Schema(
 
 def async_register_services(hass: HomeAssistant) -> None:
     """Register Dialog Custom UI services for scripts and automations."""
-    if hass.services.has_service(DOMAIN, SERVICE_SEND_COMMAND):
-        return
-
     async def async_handle_send_command(call: ServiceCall) -> None:
         await _async_handle_send_command(hass, call)
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_SEND_COMMAND,
-        async_handle_send_command,
-        schema=_SEND_COMMAND_SCHEMA,
-    )
+    async def async_handle_alarm_script(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "alarm", call)
+
+    async def async_handle_timer_script(call: ServiceCall) -> dict[str, Any]:
+        return await _async_handle_timer_alarm_script(hass, "timer", call)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_SEND_COMMAND):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SEND_COMMAND,
+            async_handle_send_command,
+            schema=_SEND_COMMAND_SCHEMA,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_ALARM_SCRIPT):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ALARM_SCRIPT,
+            async_handle_alarm_script,
+            schema=_ALARM_SCRIPT_SCHEMA,
+            supports_response=SupportsResponse.OPTIONAL,
+        )
+    if not hass.services.has_service(DOMAIN, SERVICE_TIMER_SCRIPT):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_TIMER_SCRIPT,
+            async_handle_timer_script,
+            schema=_TIMER_SCRIPT_SCHEMA,
+            supports_response=SupportsResponse.OPTIONAL,
+        )
 
 
 def async_unregister_services(hass: HomeAssistant) -> None:
     """Unregister Dialog Custom UI services."""
     if hass.services.has_service(DOMAIN, SERVICE_SEND_COMMAND):
         hass.services.async_remove(DOMAIN, SERVICE_SEND_COMMAND)
+    if hass.services.has_service(DOMAIN, SERVICE_ALARM_SCRIPT):
+        hass.services.async_remove(DOMAIN, SERVICE_ALARM_SCRIPT)
+    if hass.services.has_service(DOMAIN, SERVICE_TIMER_SCRIPT):
+        hass.services.async_remove(DOMAIN, SERVICE_TIMER_SCRIPT)
 
 
 async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> None:
@@ -95,6 +131,26 @@ async def _async_handle_send_command(hass: HomeAssistant, call: ServiceCall) -> 
     )
 
 
+
+async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, call: ServiceCall) -> dict[str, Any]:
+    entry = _get_entry(hass)
+    if entry is None:
+        raise HomeAssistantError("Dialog Custom UI integration entry not found")
+
+    manager = _get_manager(hass, entry)
+    if manager is None:
+        raise HomeAssistantError("Dialog timer/alarm manager not found")
+
+    options = _get_options(entry, get_cached_settings(hass))
+    client_id = _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get("client_id"))
+    device_id = _normalize_value(call.data.get(ATTR_DEVICE_ID))
+    config = dict(call.data)
+    if kind == "alarm":
+        config["target"] = call.data.get(ATTR_TARGET)
+    else:
+        config["target"] = _normalize_value(call.data.get(ATTR_TARGET))
+    return await manager.async_handle_yaml_script_action(kind, config, client_id, device_id)
+
 def _parse_variables(value: Any) -> dict[str, Any]:
     if value in (None, ""):
         return {}
@@ -113,3 +169,35 @@ def _parse_variables(value: Any) -> dict[str, Any]:
 def _append_log(hass: HomeAssistant, level: str, message: str) -> None:
     logs = hass.data.setdefault(DOMAIN, {}).setdefault("logs", [])
     logs.appendleft({"ts": datetime.now().strftime("%H:%M:%S"), "level": level, "message": message})
+
+
+_ACTION_SCHEMA = vol.In(["create", "info", "delete"])
+_REPEAT_SCHEMA = vol.In(["once", "daily", "weekdays", "weekends", "custom"])
+
+_ALARM_SCRIPT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ACTION): _ACTION_SCHEMA,
+        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
+        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_REPEAT_TYPE, default="once"): _REPEAT_SCHEMA,
+        vol.Optional(ATTR_REPEAT_DAYS, default=""): vol.Any(str, [str]),
+        vol.Optional(ATTR_CONVERT_DAY_PERIOD, default=False): vol.Boolean(),
+        vol.Optional(ATTR_TARGET, default=""): vol.Any(str, int),
+        vol.Optional(ATTR_RESPONSE_VARIABLE, default=""): vol.Coerce(str),
+    }
+)
+
+_TIMER_SCRIPT_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_ACTION): _ACTION_SCHEMA,
+        vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
+        vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_SS, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_TARGET, default=""): vol.Coerce(str),
+        vol.Optional(ATTR_RESPONSE_VARIABLE, default=""): vol.Coerce(str),
+    }
+)
