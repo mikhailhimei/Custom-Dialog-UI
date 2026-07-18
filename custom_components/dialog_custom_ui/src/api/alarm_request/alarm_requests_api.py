@@ -76,6 +76,18 @@ def _coerce_volume_start(value: Any) -> float:
         return 0.3
 
 
+def _normalize_repeat_type(value: Any) -> str:
+    normalized = _normalize_value(value) or "once"
+    return normalized if normalized in {"once", "daily", "weekdays", "weekends", "custom"} else "once"
+
+
+def _normalize_repeat_days(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    allowed = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
+    return [day for day in (_normalize_value(item) for item in value) if day in allowed]
+
+
 def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | None = None) -> dict[str, Any]:
     return {
         "uuid": _normalize_value(uuid_value or data.get("uuid")),
@@ -85,6 +97,8 @@ def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | Non
         "status": _normalize_value(data.get("status")),
         "time": _normalize_value(data.get("time")),
         "volume_start": _coerce_volume_start(data.get("volume_start")),
+        "repeat_type": _normalize_repeat_type(data.get("repeat_type")),
+        "repeat_days": _normalize_repeat_days(data.get("repeat_days")),
     }
 
 
@@ -104,6 +118,8 @@ def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_
         "deviceId": _normalize_value(alarm_request.get("device_id")),
         "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
         "volume_start": _coerce_volume_start(alarm_request.get("volume_start")),
+        "repeat_type": _normalize_repeat_type(alarm_request.get("repeat_type")),
+        "repeat_days": _normalize_repeat_days(alarm_request.get("repeat_days")),
     }
 
 

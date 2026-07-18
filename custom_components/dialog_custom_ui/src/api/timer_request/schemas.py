@@ -19,6 +19,7 @@ SAVE_TIMER_REQUEST_SCHEMA = {
         vol.Required("action_type"): vol.In(_TIMER_ACTIONS),
         vol.Required("device_id"): str,
         vol.Optional("timer_time", default=""): _TIMER_TIME,
+        vol.Optional("volume_start", default=0.3): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
     },
 }
 

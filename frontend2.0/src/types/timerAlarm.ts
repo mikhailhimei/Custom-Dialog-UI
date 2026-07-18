@@ -1,9 +1,12 @@
+export type AlarmRepeat = "once" | "daily" | "weekdays" | "weekends" | "custom";
+
 export interface TimerRequest {
   uuid: string;
   name: string;
   action_type: "create_timer" | "delete_timer";
   device_id: string;
   timer_time: string | { count_timer?: string; date_end?: string };
+  volume_start?: number;
 }
 
 export interface AlarmRequest {
@@ -14,6 +17,8 @@ export interface AlarmRequest {
   status: string;
   time: string;
   volume_start?: number;
+  repeat_type?: AlarmRepeat;
+  repeat_days?: string[];
 }
 
 export interface AlarmTimeWidget {

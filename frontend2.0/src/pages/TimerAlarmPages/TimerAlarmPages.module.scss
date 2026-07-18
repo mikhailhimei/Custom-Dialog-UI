@@ -18,3 +18,14 @@
 .row { display: flex; align-items: center; gap: 10px; }
 .switch { transform: scale(1.2); }
 @media (max-width: 768px) { .header { align-items: stretch; flex-direction: column; } .title { font-size: 32px; } }
+.cardLead { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.cardIcon { flex: 0 0 auto; color: #9ca3af; }
+.cardButton { width: 100%; text-align: left; color: inherit; cursor: pointer; }
+.cardButton:hover { border-color: #3f3f46; background: #1b1b20; }
+.wheelPicker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 14px; border: 1px solid #27272a; border-radius: 999px; background: radial-gradient(circle, #202026 0%, #121216 72%); }
+.wheelColumn { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.wheelSelect { width: 100%; height: 64px; border: 0; border-radius: 999px; background: #fafafa; color: #09090b; text-align: center; font-size: 24px; font-weight: 700; }
+.selectButton { min-height: 44px; padding: 0 14px; border: 1px solid #27272a; border-radius: 14px; background: #111114; color: #fafafa; text-align: left; cursor: pointer; }
+.timeInput { font-size: 28px; font-weight: 700; text-align: center; }
+@media (min-width: 769px) { .wheelPicker { border-radius: 24px; } }
+@media (max-width: 768px) { .wheelPicker { position: relative; overflow: hidden; } .wheelSelect { height: 72px; } }

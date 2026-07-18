@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useDialogApi } from "../context/DialogContext";
-import { AlarmRequest, AlarmTimeWidget, TimerAlarmDevice, TimerAlarmShortItem, TimerRequest } from "../types/timerAlarm";
+import { AlarmRepeat, AlarmRequest, AlarmTimeWidget, TimerAlarmDevice, TimerAlarmShortItem, TimerRequest } from "../types/timerAlarm";
 
 const unwrapData = <T,>(response: any): T => response?.result?.data ?? response?.result ?? response?.data ?? response;
 
-const getUtcFinishDate = (minutes: number) => {
-  const safeMinutes = Math.max(1, Number(minutes) || 1);
+const getUtcFinishDate = (seconds: number) => {
+  const safeSeconds = Math.max(1, Number(seconds) || 1);
 
-  return new Date(Date.now() + safeMinutes * 60 * 1000).toISOString();
+  return new Date(Date.now() + safeSeconds * 1000).toISOString();
 };
 
 const toTimerSeconds = (timerTime: TimerRequest["timer_time"]): number => {
@@ -38,12 +38,13 @@ const toTimerSeconds = (timerTime: TimerRequest["timer_time"]): number => {
   return 0;
 };
 
-const formatTimerTime = (minutes: number) => {
-  const safeMinutes = Math.max(1, Number(minutes) || 1);
-  const hours = Math.floor(safeMinutes / 60);
-  const mins = safeMinutes % 60;
+const formatTimerTime = (seconds: number) => {
+  const safeSeconds = Math.max(1, Number(seconds) || 1);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const secs = safeSeconds % 60;
 
-  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:00`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
 };
 
 const getResponseItems = (response: any): TimerAlarmShortItem[] => {
@@ -114,13 +115,13 @@ export function useTimerAlarmRequests() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createTimer = async (deviceId: string, minutes: number) => {
+  const createTimer = async (deviceId: string, seconds: number, volumeStart = 0.3) => {
     const timerTime = {
-      count_timer: formatTimerTime(minutes),
-      date_end: getUtcFinishDate(minutes),
+      count_timer: formatTimerTime(seconds),
+      date_end: getUtcFinishDate(seconds),
     };
 
-    await api._save({ name: `Таймер ${minutes} мин`, action_type: "create_timer", device_id: deviceId, timer_time: timerTime }, "save_timer_request");
+    await api._save({ name: `Таймер ${formatTimerTime(seconds)}`, action_type: "create_timer", device_id: deviceId, timer_time: timerTime, volume_start: volumeStart }, "save_timer_request");
     await loadTimers();
   };
 
@@ -129,8 +130,8 @@ export function useTimerAlarmRequests() {
     await loadTimers();
   };
 
-  const createAlarm = async (deviceId: string, time: string, volumeStart = 0.3) => {
-    await api._save({ name: `Будильник ${time}`, action_type: "create_alarm", device_id: deviceId, status: "on", time, volume_start: volumeStart }, "save_alarm_request");
+  const createAlarm = async (deviceId: string, time: string, volumeStart = 0.3, repeatType: AlarmRepeat = "once", repeatDays: string[] = []) => {
+    await api._save({ name: `Будильник ${time}`, action_type: "create_alarm", device_id: deviceId, status: "on", time, volume_start: volumeStart, repeat_type: repeatType, repeat_days: repeatDays }, "save_alarm_request");
     await loadAlarms();
   };
 
