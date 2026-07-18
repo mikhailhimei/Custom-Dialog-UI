@@ -191,7 +191,9 @@ export const CommandDirectTemplatePage = () => {
 
   return (
     <>
-      <MobileHeader />
+      <MobileHeader
+        title={"Прямые команды шаблоны"}
+      />
 
       <div className={styles.page}>
         {!isMobile && <NavigationTabs />}
@@ -203,45 +205,45 @@ export const CommandDirectTemplatePage = () => {
         )}
 
         <div className={styles.header}>
-                  <div className={styles.heading}>
-                    {!isMobile ? <h1 className={styles.title}>Прямые команды</h1> : <></>}
-        
-                    <div className={styles.innerTabs}>
-                      {directModes.map((mode) => (
-                        <button
-                          key={mode.key}
-                          type="button"
-                          className={`${styles.innerTab} ${activeDirectMode === mode.key ? styles.activeInnerTab : ""}`}
-                          onClick={() => {
-                            setActiveDirectMode(mode.key);
-                            navigate(`/commands/direct/${mode.key === "main" ? "main" : "template"}`);
-                          }}
-                        >
-                          {mode.label}
-                        </button>
-                      ))}
-                    </div>
-        
-                    <p className={styles.description}>
-                      Создавайте команды для управления устройствами и объединяйте
-                      действия в единые сценарии.
-                    </p>
-                  </div>
-        
-                  <div className={styles.actions}>
-                    {!isMobile ? (
-                      <Button variant="primary" onClick={openCreateModal}>
-                        🞢 Добавить сценарий
-                      </Button>
-                    ) : (
-                      <BottomSlideButton>
-                        <Button variant="primary" onClick={openCreateModal}>
-                          Добавить сценарий
-                        </Button>
-                      </BottomSlideButton>
-                    )}
-                  </div>
-                </div>
+          <div className={styles.heading}>
+            {!isMobile ? <h1 className={styles.title}>Прямые команды шаблоны</h1> : <></>}
+
+            <div className={styles.innerTabs}>
+              {directModes.map((mode) => (
+                <button
+                  key={mode.key}
+                  type="button"
+                  className={`${styles.innerTab} ${activeDirectMode === mode.key ? styles.activeInnerTab : ""}`}
+                  onClick={() => {
+                    setActiveDirectMode(mode.key);
+                    navigate(`/commands/direct/${mode.key === "main" ? "main" : "template"}`);
+                  }}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+
+            <p className={styles.description}>
+              Создавайте команды для управления устройствами и объединяйте
+              действия в единые сценарии.
+            </p>
+          </div>
+
+          <div className={styles.actions}>
+            {!isMobile ? (
+              <Button variant="primary" onClick={openCreateModal}>
+                🞢 Добавить сценарий
+              </Button>
+            ) : (
+              <BottomSlideButton>
+                <Button variant="primary" onClick={openCreateModal}>
+                  Добавить сценарий
+                </Button>
+              </BottomSlideButton>
+            )}
+          </div>
+        </div>
 
         <div className={styles.list}>
           {commands?.data.map((command) => (
@@ -294,13 +296,13 @@ export const CommandDirectTemplatePage = () => {
         />
 
         <CommandActionsSheet
-                  open={!!actionsCommand}
-                  command={actionsCommand}
-                  onClose={() => setActionsCommand(null)}
-                  onToggleStatus={handlerEditStatus}
-                  onDelete={handlerDeleteCommand}
-                  onEdit={(uuid) => openEditModal(uuid)}
-                />
+          open={!!actionsCommand}
+          command={actionsCommand}
+          onClose={() => setActionsCommand(null)}
+          onToggleStatus={handlerEditStatus}
+          onDelete={handlerDeleteCommand}
+          onEdit={(uuid) => openEditModal(uuid)}
+        />
       </div>
 
       <MobileNavigation />

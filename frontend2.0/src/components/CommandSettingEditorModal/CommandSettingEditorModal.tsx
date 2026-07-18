@@ -10,24 +10,12 @@ import { ComponentDialog, CommandDetails } from "../../types/commandTypes";
 import styles from "./CommandEditorModal.module.scss";
 
 
-const createComponent = (): ComponentDialog => ({
-  endStatus: true,
-  actionType: "",
-  answerType: "default",
-  voiceCommands: [""],
-  nextDirectControl: [{ uuid: "" }],
-  voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
-  nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "" }],
-});
-
 interface CommandEditorModalProps {
   open: boolean;
   isEdit: boolean;
-  formData: CommandDetails;
-  formatData: string;
+  formData: any;
   setFormData: React.Dispatch<React.SetStateAction<CommandDetails>>;
   onClose: () => void;
-  onSave: () => void;
   onUpdate: () => void;
 }
 
@@ -35,58 +23,22 @@ export const CommandSettingEditorModal: React.FC<CommandEditorModalProps> = ({
   open,
   isEdit,
   formData,
-  formatData,
   setFormData,
   onClose,
-  onSave,
   onUpdate,
 }) => {
 
+  if (!formData) return
+
   const component = useMemo(() => {
-    if (formData[formatData]) return formData[formatData] ?? createComponent();
+    if (formData) return formData;
   }, [formData]);
 
   const updateComponent = (patch: Record<string, any>) => {
     setFormData((current) => ({
       ...current,
-      [formatData]: {
-        ...(current[formatData] ?? createComponent()),
-        ...patch,
-      },
+      ...patch
     }));
-  };
-
-  const updateComponentArray = (
-    field: keyof ComponentDialog,
-    index: number,
-    patch: Record<string, string>
-  ) => {
-    const list = [...((component[field] as any[]) ?? [])];
-    list[index] = { ...list[index], ...patch };
-
-    updateComponent({
-      [field]: list,
-    });
-  };
-
-  const addComponentArrayItem = (
-    field: keyof ComponentDialog,
-    item: Record<string, string>
-  ) => {
-    updateComponent({
-      [field]: [...((component[field] as any[]) ?? []), item],
-    });
-  };
-
-  const removeComponentArrayItem = (
-    field: keyof ComponentDialog,
-    index: number
-  ) => {
-    updateComponent({
-      [field]: ((component[field] as any[]) ?? []).filter(
-        (_, itemIndex) => itemIndex !== index
-      ),
-    });
   };
 
   return (
@@ -95,23 +47,12 @@ export const CommandSettingEditorModal: React.FC<CommandEditorModalProps> = ({
       onClose={onClose}
       title={isEdit ? "Редактировать" : "Создать"}
       footer={
-        <Button onClick={isEdit ? onUpdate : onSave}>
-          {isEdit ? "Обновить" : "Сохранить"}
+        <Button onClick={onUpdate}>
+          {"Обновить"}
         </Button>
       }
     >
       <div className={styles.form}>
-        {/* <ToggleSwitch
-          label="Команда включена"
-          checked={formData.status ?? true}
-          onChange={(event) =>
-            setFormData({
-              ...formData,
-              status: event.target.checked,
-            })
-          }
-        /> */}
-
         <Input
           label="Название команды"
           value={formData.title}
@@ -133,6 +74,16 @@ export const CommandSettingEditorModal: React.FC<CommandEditorModalProps> = ({
           }
         />
 
+        <ToggleSwitch
+          label="Передать команду серверу"
+          checked={component.forwardCommandToServer}
+          onChange={(event) =>
+            updateComponent({
+              forwardCommandToServer: event.target.checked,
+            })
+          }
+        />
+
         <Input
           label="actionType"
           value={component.actionType}
@@ -144,30 +95,14 @@ export const CommandSettingEditorModal: React.FC<CommandEditorModalProps> = ({
         />
 
         <Input
-          label="answerType"
-          value={component.answerType}
+          label="Ответное сообщение"
+          value={component.voiceResponse}
           onChange={(event) =>
             updateComponent({
-              answerType: event.target.value,
+              voiceResponse: event.target.value,
             })
           }
         />
-
-        <div className={styles.field}>
-          <label>voiceCommands</label>
-
-          <textarea
-            className={styles.textarea}
-            rows={6}
-            value={(component.voiceCommands == null ? [] : typeof component.voiceCommands != 'object' ? component?.voiceCommands.split(';') : component?.voiceCommands).join("\n")}
-            onChange={(event) =>
-              updateComponent({
-                voiceCommands: event.target.value.split("\n"),
-              })
-            }
-          />
-        </div>
-
       </div>
     </Modal>
   );

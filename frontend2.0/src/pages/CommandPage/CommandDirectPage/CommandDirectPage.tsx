@@ -135,7 +135,9 @@ export const CommandDirectPage = () => {
 
   return (
     <>
-      <MobileHeader />
+      <MobileHeader 
+        title={"Прямые команды"}
+      />
 
       <div className={styles.page}>
         {!isMobile ? <NavigationTabs /> : <></>}

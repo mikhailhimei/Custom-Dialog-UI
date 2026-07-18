@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from "react";
 
-import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
-import { Accordion } from "../../components/ui/Accordion/Accordion";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { MobileHeader } from "@/components/MobileHeader/MobileHeader"
-import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
+import { useSettings } from "../../hooks/settings/useSettings";
+import { RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
+
 import { Button } from "../../components/ui/Button/Button";
+import { Accordion } from "../../components/ui/Accordion/Accordion";
+import { MobileHeader } from "@/components/MobileHeader/MobileHeader"
+import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
+import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
+
 import {
   GeneralSettingsForm,
   RemoteSettingsForm,
@@ -13,10 +18,7 @@ import {
   TimerAlarmSettingsForm,
 } from "../../components/SettingsForm/SettingsForm";
 
-import styles from "./SettingsPage.module.scss";
-
-import { RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
-import { useSettings } from "../../hooks/settings/useSettings";
+import styles from "../GlobalsPage.module.scss";
 
 const EMPTY_YANDEX_TTS: YandexTTS = {
   api_key: "",
@@ -150,53 +152,72 @@ export const SettingsPage = () => {
 
   return (
     <>
-      <MobileHeader />
-
-      <NavigationTabs />
+      <MobileHeader
+        title="Настройки"
+      />
 
       <div className={styles.page}>
+        <NavigationTabs />
+        
+        {!isMobile ? <h1>Настройки</h1> : <></>}
 
-        <h1>Настройки</h1>
+        <div style={{
+          "display": "flex",
+          "flex-direction": "column",
+          "height": "100%",
+          ...(isMobile ? { marginBottom: "150px" } : {}),
+          "gap": "15px"
+        }}>
 
-        <Accordion title="Общие" defaultOpen>
-          <GeneralSettingsForm
-            data={{
-              active_remout: settingsData.active_remout,
-              is_admin: settingsData.is_admin,
-              theme: settingsData.theme,
-              client_id: settingsData.client_id,
-              api_commands_enabled: settingsData.api_commands_enabled,
-              api_commands_token: settingsData.api_commands_token,
-            }}
-            onChange={(generalData) => setSettingsData({ ...settingsData, ...generalData })}
-          />
-        </Accordion>
-
-        <Accordion title="Яндекс TTS">
-          <SettingsForm
-            data={settingsData.yandex_tts}
-            onChange={(yandex_tts) => setSettingsData({ ...settingsData, yandex_tts })}
-          />
-        </Accordion>
-
-        {settingsData.active_remout && (
-          <Accordion title="Remote">
-            <RemoteSettingsForm
-              data={settingsData.remout ?? EMPTY_REMOUT}
-              onChange={(remout) => setSettingsData({ ...settingsData, remout })}
+          <Accordion title="Общие" defaultOpen>
+            <GeneralSettingsForm
+              data={{
+                active_remout: settingsData.active_remout,
+                is_admin: settingsData.is_admin,
+                theme: settingsData.theme,
+                client_id: settingsData.client_id,
+                api_commands_enabled: settingsData.api_commands_enabled,
+                api_commands_token: settingsData.api_commands_token,
+              }}
+              onChange={(generalData) => setSettingsData({ ...settingsData, ...generalData })}
             />
           </Accordion>
-        )}
 
-        <Accordion title="Timer / Alarm">
-          <TimerAlarmSettingsForm
-            data={settingsData.timer_alarm}
-            onChange={(timer_alarm) => setSettingsData({ ...settingsData, timer_alarm })}
-          />
-        </Accordion>
+          <Accordion title="Яндекс TTS">
+            <SettingsForm
+              data={settingsData.yandex_tts}
+              onChange={(yandex_tts) => setSettingsData({ ...settingsData, yandex_tts })}
+            />
+          </Accordion>
 
-        <Button onClick={handleSave}>Сохранить</Button>
-      </div>
+          {settingsData.active_remout && (
+            <Accordion title="Remote">
+              <RemoteSettingsForm
+                data={settingsData.remout ?? EMPTY_REMOUT}
+                onChange={(remout) => setSettingsData({ ...settingsData, remout })}
+              />
+            </Accordion>
+          )}
+
+          <Accordion title="Timer / Alarm">
+            <TimerAlarmSettingsForm
+              data={settingsData.timer_alarm}
+              onChange={(timer_alarm) => setSettingsData({ ...settingsData, timer_alarm })}
+            />
+          </Accordion>
+        </div>
+
+        {!isMobile ? <Button onClick={handleSave}>Сохранить</Button> :
+          <BottomSlideButton>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+            >
+              Сохранить
+            </Button>
+          </BottomSlideButton>
+        }
+      </div >
 
       <MobileNavigation />
     </>

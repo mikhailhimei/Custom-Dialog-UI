@@ -11,21 +11,21 @@ import {
 
 import styles from "./MobileHeader.module.scss";
 
-export const MobileHeader = () => {
+export const MobileHeader = (
+  {
+    title = "",
+  }
+) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const isCommands = location.pathname.startsWith("/commands");
 
-  const title = isCommands
-    ? "Команды"
-    : "Скрипты";
-
   const handleBack = () => {
     if (isCommands) {
       navigate("/scripts");
     } else {
-      navigate("home assistant");
+      navigate("/");
     }
   };
 

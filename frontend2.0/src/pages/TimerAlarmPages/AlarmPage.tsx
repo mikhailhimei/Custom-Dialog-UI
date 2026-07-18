@@ -1,13 +1,15 @@
 import React, { useMemo, useState } from "react";
 
-import { Modal } from "../../components/ui/Modal/Modal";
-import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
-import { Button } from "../../components/ui/Button/Button";
 import { useTimerAlarmRequests } from "../../hooks/useTimerAlarmRequests";
 
-import styles from "./TimerAlarmPages.module.scss";
+import { Modal } from "../../components/ui/Modal/Modal";
+import { Button } from "../../components/ui/Button/Button";
+import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
+
+import styles from "../GlobalsPage.module.scss";
+
 
 export const AlarmPage = () => {
   const isMobile = useIsMobile();

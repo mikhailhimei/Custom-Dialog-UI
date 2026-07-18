@@ -140,7 +140,9 @@ export const CommandMainPage = () => {
   return (
     <>
       {loading && <div>Загрузка...</div>}
-      <MobileHeader />
+      <MobileHeader 
+        title={"Комманды"}
+      />
       <div className={styles.page}>
         <NavigationTabs />
 

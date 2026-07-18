@@ -1,48 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useInView } from "react-intersection-observer";
+import React, { useEffect, useState } from 'react';
 
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { ShortCommand } from '@/types/commandTypes';
+import { useInView } from "react-intersection-observer";
+import { useApiCommands } from '@/hooks/command/useApiCommands';
+
+import { Card } from "@/components/Card/Card"
+import { Pagination } from '@/components/ui/Pagination/Pagination';
+import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
 import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
 import { MobileNavigation } from '@/components/MobileNavigation/MobileNavigation';
-import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
-import { Pagination } from '@/components/ui/Pagination/Pagination';
-import { Button } from '@/components/ui/Button/Button';
-import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { CommandSettingEditorModal } from '@/components/CommandSettingEditorModal/CommandSettingEditorModal';
-import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
-import { useApiCommands } from '@/hooks/command/useApiCommands';
-import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
 
-
-import styles from "../CommandEditorPage.module.scss";
-
-const createComponent = (): ComponentDialog => ({
-  endStatus: true,
-  actionType: "",
-  answerType: "default",
-  voiceCommands: [""],
-  nextDirectControl: [{ uuid: "" }],
-  voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
-  nextAction: [{ actionTypeComponent: "", actionType: "", uuid: "" }],
-});
-
-const createEmptyCommand = (): CommandDetails => {
-  return {
-    status: false,
-    title: "",
-    ["componentDialog"]: {
-      ...createComponent(),
-      ...({ forwardText: false }),
-    },
-  };
-};
+import styles from "@/pages/GlobalsPage.module.scss";
 
 export const CommandSettingsPage = () => {
   const isMobile = useIsMobile();
   const [modalOpen, setModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [formData, setFormData] = useState<CommandDetails>(() => createEmptyCommand());
-  const [actionsCommand, setActionsCommand] = useState<ShortCommand | null>(null);
+  const [formData, setFormData] = useState();
 
   const { ref, inView } = useInView({
     threshold: 1,
@@ -52,26 +28,11 @@ export const CommandSettingsPage = () => {
   const {
     loading,
     loadCommands,
-    deleteCommand,
     detailInformationCommand,
-    saveCommand,
     updateCommand,
-    editStatusCommand,
     commands
 
   } = useApiCommands("get_assistant_settings_short")
-
-  // settings: {
-  //   key: "settings",
-  //   label: "Настройки команды",
-  //   kind: "assistantSettings",
-  //   shortType: "get_assistant_settings_short",
-  //   detailType: "get_assistant_setting",
-  //   saveType: "save_assistant_setting",
-  //   updateType: "update_assistant_setting",
-  //   deleteType: "delete_assistant_setting",
-  //   hasStatus: false,
-  // },
 
   const [canLoadMore, setCanLoadMore] = useState(false);
 
@@ -106,37 +67,15 @@ export const CommandSettingsPage = () => {
     }
   }, [loading, commands]);
 
-  const openCreateModal = () => {
-    setIsEdit(false);
-    setFormData(createEmptyCommand());
-    setModalOpen(true);
-  };
-
   const openEditModal = async (command: ShortCommand) => {
     setIsEdit(true);
 
-    const response = await detailInformationCommand("get_assistant_command", command.uuid)
+    const response = await detailInformationCommand("get_assistant_setting", command.uuid)
 
     setFormData(response.data);
 
     setModalOpen(true);
   };
-
-  const handlerEditStatus = async (uuid: string, status: boolean) => {
-    console.log(uuid, status)
-    const result = await editStatusCommand("update_assistant_setting", uuid, status)
-    loadCommands("get_assistant_settings_short")
-  }
-
-  const handlerDeleteCommand = async (uuid: string) => {
-    const result = await deleteCommand("delete_assistant_setting", uuid)
-    loadCommands("get_assistant_settings_short")
-  }
-
-  const handlerSaveCommand = async () => {
-    const result = await saveCommand("save_assistant_setting", formData)
-    setModalOpen(false);
-  }
 
   const handlerUpdateCommand = async () => {
     const result = await updateCommand("update_assistant_setting", formData)
@@ -145,7 +84,9 @@ export const CommandSettingsPage = () => {
 
   return (
     <>
-      <MobileHeader />
+      <MobileHeader 
+        title={"Настройки команд"}
+      />
 
       <div className={styles.page}>
         {!isMobile ? <NavigationTabs /> : <></>}
@@ -157,46 +98,20 @@ export const CommandSettingsPage = () => {
             <div className={styles.heading}>
               <p className={styles.description}>Создавайте и редактируйте голосовые команды ассистента.</p>
             </div>
-
-            {!isMobile ?
-              <Button
-                variant="primary"
-                onClick={openCreateModal}
-              >
-                Добавить сценарий
-              </Button>
-              :
-              <BottomSlideButton>
-                <Button
-                  variant="primary"
-                  onClick={openCreateModal}
-                >
-                  Добавить сценарий
-                </Button>
-              </BottomSlideButton>
-            }
           </div>
         </div>
 
-        <div className={styles.commandList}>
+        <div className={styles.list}>
           {commands?.data.map((command) => (
-            <div key={command.uuid} className={styles.commandTab}>
-              <button type="button" className={styles.commandButton} onClick={() => openEditModal(command)}>
-                <span>{command.title}</span>
-                <small>{command.status === false ? "Выключена" : "Включена"}</small>
-              </button>
-
-              <button
-                type="button"
-                className={styles.moreButton}
-                aria-label={`Действия команды ${command.title}`}
-                onClick={() => setActionsCommand(command)}
-              >
-                ⋯
-              </button>
-            </div>
+            <Card
+              key={command.uuid}
+              title={command.title}
+              subTitle={command.actionType}
+              onClick={() => openEditModal(command)}
+            />
           ))}
         </div>
+
 
         {!isMobile ?
           <Pagination
@@ -211,20 +126,9 @@ export const CommandSettingsPage = () => {
           open={modalOpen}
           isEdit={isEdit}
           formData={formData}
-          formatData = {"componentDialog"}
           setFormData={setFormData}
           onClose={() => setModalOpen(false)}
-          onSave={handlerSaveCommand}
           onUpdate={handlerUpdateCommand}
-        />
-
-
-        <CommandActionsSheet
-          open={!!actionsCommand}
-          command={actionsCommand}
-          onClose={() => setActionsCommand(null)}
-          onToggleStatus={handlerEditStatus}
-          onDelete={handlerDeleteCommand}
         />
 
       </div>

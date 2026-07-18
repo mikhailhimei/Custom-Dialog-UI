@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-import { Modal } from "../../components/ui/Modal/Modal";
-import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
-import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { Button } from "../../components/ui/Button/Button";
 import { useTimerAlarmRequests } from "../../hooks/useTimerAlarmRequests";
 
-import styles from "./TimerAlarmPages.module.scss";
+import { Modal } from "@/components/ui/Modal/Modal";
+import { Button } from "@/components/ui/Button/Button";
+import { NavigationTabs } from "@/components/NavigationTabs/NavigationTabs";
+import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
+
+import styles from "../GlobalsPage.module.scss";
 
 const QUICK_MINUTES = [5, 10, 15, 30, 60];
 

@@ -149,7 +149,9 @@ export const ScriptsPage = () => {
       {loading && (
         <div>Загрузка...</div>
       )}
-      <MobileHeader />
+      <MobileHeader 
+        title={"Скрипты"}
+      />
       <div className={styles.page}>
         <NavigationTabs />
 

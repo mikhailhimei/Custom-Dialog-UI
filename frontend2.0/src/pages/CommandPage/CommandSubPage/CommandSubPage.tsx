@@ -133,7 +133,9 @@ export const CommandSubPage = () => {
 
   return (
     <>
-      <MobileHeader />
+      <MobileHeader 
+        title={"Второстепенные команды"}
+      />
 
       <div className={styles.page}>
         {!isMobile ? <NavigationTabs /> : <></>}

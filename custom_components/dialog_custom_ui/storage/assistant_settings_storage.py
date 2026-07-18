@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from uuid import uuid4
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
@@ -13,10 +14,27 @@ _STORAGE_VERSION = 1
 _STORAGE_KEY = "dialog_custom_ui_assistant_settings"
 _DEFAULT_ASSISTANT_SETTINGS: list[dict[str, Any]] = [
     {
-        "actionType": "default",
+        "uuid": str(uuid4()),
+        "actionType": "default_main",
         "endStatus": False,
+        "forwardCommandToServer": False,
         "title": "Если ничего не нашел",
         "voiceResponse": "Извините я вас не поняла",
+    },
+    {
+        "uuid": str(uuid4()),
+        "actionType": "not_understand",
+        "endStatus": False,
+        "forwardCommandToServer": False,
+        "title": "Ничего не нашло у дочернего",
+        "voiceResponse": "Извините я вас не поняла, повторите пожалуйста",
+    },{
+        "uuid": str(uuid4()),
+        "actionType": "finish_miss",
+        "endStatus": False,
+        "forwardCommandToServer": False,
+        "title": "Начинаем поиск сначала по родителю",
+        "voiceResponse": "Давайте начнём сначала. Что вы хотите сделать?",
     },
 ]
 
