@@ -26,15 +26,41 @@ def _coerce_volume_start(value: Any) -> float:
 
 
 def _normalize_repeat_type(value: Any) -> str:
-    normalized = _normalize_value(value) or "once"
-    return normalized if normalized in {"once", "daily", "weekdays", "weekends", "custom"} else "once"
+    normalized = _normalize_value(value).lower() or "once"
+    aliases = {
+        "one_time": "once",
+        "single": "once",
+        "once": "once",
+        "daily": "daily",
+        "everyday": "daily",
+        "weekdays": "weekdays",
+        "workdays": "weekdays",
+        "weekends": "weekends",
+        "custom": "custom",
+    }
+    return aliases.get(normalized, "once")
 
 
 def _normalize_repeat_days(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [part.strip() for part in value.split(",")]
     if not isinstance(value, list):
         return []
-    allowed = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
-    return [day for day in (_normalize_value(item) for item in value) if day in allowed]
+    aliases = {
+        "monday": "mon", "mon": "mon", "пн": "mon",
+        "tuesday": "tue", "tue": "tue", "вт": "tue",
+        "wednesday": "wed", "wed": "wed", "ср": "wed",
+        "thursday": "thu", "thu": "thu", "чт": "thu",
+        "friday": "fri", "fri": "fri", "пт": "fri",
+        "saturday": "sat", "sat": "sat", "сб": "sat",
+        "sunday": "sun", "sun": "sun", "вс": "sun",
+    }
+    result: list[str] = []
+    for item in value:
+        day = aliases.get(_normalize_value(item).lower())
+        if day and day not in result:
+            result.append(day)
+    return result
 
 class DialogAlarmManager:
     def __init__(
@@ -155,7 +181,7 @@ class DialogAlarmManager:
             "status": "on",
             "time": alarm_time,
             "volume_start": 0.3,
-            "repeat_type": "once",
+            "repeat_type": _normalize_repeat_type(None),
             "repeat_days": [],
             "created_at": datetime.now().timestamp(),
         }

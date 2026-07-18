@@ -5,6 +5,7 @@ import { AlarmRepeat, useTimerAlarmRequests } from "../../hooks/useTimerAlarmReq
 import { Modal } from "../../components/ui/Modal/Modal";
 import { Button } from "../../components/ui/Button/Button";
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
+import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 
 import styles from "./TimerAlarmPages.module.scss";
@@ -66,7 +67,7 @@ export const AlarmPage = () => {
           <button className={`${styles.card} ${styles.cardButton}`} key={alarm.uuid} type="button" onClick={() => setDetailsAlarmId(alarm.uuid)}>
             <div className={styles.cardHeader}>
               <div className={styles.cardLead}><Speaker className={styles.cardIcon} size={26} /><div><h2 className={styles.cardTitle}>{alarm.time}</h2><div className={styles.meta}>{repeatText(alarm.repeat_type, alarm.repeat_days)} • {deviceName.get(alarm.device_id) || alarm.device_id}</div></div></div>
-              <input className={styles.switch} type="checkbox" checked={alarm.status !== "off"} onClick={(event) => event.stopPropagation()} onChange={(event) => updateAlarm(alarm, { status: event.target.checked ? "on" : "off" })} />
+              <ToggleSwitch label="" checked={alarm.status !== "off"} onClick={(event) => event.stopPropagation()} onChange={(event) => updateAlarm(alarm, { status: event.currentTarget.checked ? "on" : "off" })} />
             </div>
           </button>
         )) : <div className={styles.empty}>Нет будильников.</div>}
@@ -87,7 +88,7 @@ export const AlarmPage = () => {
       </Modal>
 
       <Modal open={Boolean(selectedAlarm)} onClose={() => setDetailsAlarmId(null)} title="Будильник">
-        {selectedAlarm && <div className={styles.form}><div className={styles.time}>{selectedAlarm.time}</div><div className={styles.meta}>{repeatText(selectedAlarm.repeat_type, selectedAlarm.repeat_days)} • {deviceName.get(selectedAlarm.device_id) || selectedAlarm.device_id}</div><label className={`${styles.row} ${styles.meta}`}><input className={styles.switch} type="checkbox" checked={selectedAlarm.status !== "off"} onChange={(event) => updateAlarm(selectedAlarm, { status: event.target.checked ? "on" : "off" })} />{selectedAlarm.status !== "off" ? "Включен" : "Выключен"}</label><Button onClick={() => { setTime(selectedAlarm.time); setDeviceId(selectedAlarm.device_id); setVolumeStart(selectedAlarm.volume_start ?? 0.3); setRepeat(selectedAlarm.repeat_type ?? "once"); setRepeatDays(selectedAlarm.repeat_days ?? []); setEditingAlarmId(selectedAlarm.uuid); setDetailsAlarmId(null); setModalOpen(true); }}>Редактировать</Button><Button variant="ghost" onClick={() => { deleteAlarm(selectedAlarm); setDetailsAlarmId(null); }}><Trash2 size={16} /> Удалить</Button></div>}
+        {selectedAlarm && <div className={styles.form}><div className={styles.time}>{selectedAlarm.time}</div><div className={styles.meta}>{repeatText(selectedAlarm.repeat_type, selectedAlarm.repeat_days)} • {deviceName.get(selectedAlarm.device_id) || selectedAlarm.device_id}</div><ToggleSwitch className={styles.meta} label={selectedAlarm.status !== "off" ? "Включен" : "Выключен"} checked={selectedAlarm.status !== "off"} onChange={(event) => updateAlarm(selectedAlarm, { status: event.currentTarget.checked ? "on" : "off" })} /><Button onClick={() => { setTime(selectedAlarm.time); setDeviceId(selectedAlarm.device_id); setVolumeStart(selectedAlarm.volume_start ?? 0.3); setRepeat(selectedAlarm.repeat_type ?? "once"); setRepeatDays(selectedAlarm.repeat_days ?? []); setEditingAlarmId(selectedAlarm.uuid); setDetailsAlarmId(null); setModalOpen(true); }}>Редактировать</Button><Button variant="ghost" onClick={() => { deleteAlarm(selectedAlarm); setDetailsAlarmId(null); }}><Trash2 size={16} /> Удалить</Button></div>}
       </Modal>
       <MobileNavigation />
     </div>

@@ -10,6 +10,44 @@ from homeassistant.helpers.storage import Store
 from ..const import DOMAIN
 from ..normalize import _normalize_value
 
+
+def _normalize_repeat_type(value: Any) -> str:
+    normalized = _normalize_value(value).lower() or "once"
+    aliases = {
+        "one_time": "once",
+        "single": "once",
+        "once": "once",
+        "daily": "daily",
+        "everyday": "daily",
+        "weekdays": "weekdays",
+        "workdays": "weekdays",
+        "weekends": "weekends",
+        "custom": "custom",
+    }
+    return aliases.get(normalized, "once")
+
+
+def _normalize_repeat_days(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [part.strip() for part in value.split(",")]
+    if not isinstance(value, list):
+        return []
+    aliases = {
+        "monday": "mon", "mon": "mon", "пн": "mon",
+        "tuesday": "tue", "tue": "tue", "вт": "tue",
+        "wednesday": "wed", "wed": "wed", "ср": "wed",
+        "thursday": "thu", "thu": "thu", "чт": "thu",
+        "friday": "fri", "fri": "fri", "пт": "fri",
+        "saturday": "sat", "sat": "sat", "сб": "sat",
+        "sunday": "sun", "sun": "sun", "вс": "sun",
+    }
+    result: list[str] = []
+    for item in value:
+        day = aliases.get(_normalize_value(item).lower())
+        if day and day not in result:
+            result.append(day)
+    return result
+
 _LOGGER = logging.getLogger(__name__)
 _STORAGE_VERSION = 1
 _STORAGE_KEY_PREFIX = f"{DOMAIN}.timer_alarm"
@@ -130,7 +168,12 @@ class AlarmPersistence:
             alarm_id = _normalize_value(alarm.get("id"))
             if not alarm_id:
                 continue
-            normalized[alarm_id] = dict(alarm, id=alarm_id)
+            normalized[alarm_id] = dict(
+                alarm,
+                id=alarm_id,
+                repeat_type=_normalize_repeat_type(alarm.get("repeat_type", alarm.get("repeat"))),
+                repeat_days=_normalize_repeat_days(alarm.get("repeat_days", alarm.get("week_days", alarm.get("days")))),
+            )
         return normalized
 
     def _normalize_presets(self, presets: Any) -> list[str]:

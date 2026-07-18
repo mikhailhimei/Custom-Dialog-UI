@@ -77,15 +77,41 @@ def _coerce_volume_start(value: Any) -> float:
 
 
 def _normalize_repeat_type(value: Any) -> str:
-    normalized = _normalize_value(value) or "once"
-    return normalized if normalized in {"once", "daily", "weekdays", "weekends", "custom"} else "once"
+    normalized = _normalize_value(value).lower() or "once"
+    aliases = {
+        "one_time": "once",
+        "single": "once",
+        "once": "once",
+        "daily": "daily",
+        "everyday": "daily",
+        "weekdays": "weekdays",
+        "workdays": "weekdays",
+        "weekends": "weekends",
+        "custom": "custom",
+    }
+    return aliases.get(normalized, "once")
 
 
 def _normalize_repeat_days(value: Any) -> list[str]:
+    if isinstance(value, str):
+        value = [part.strip() for part in value.split(",")]
     if not isinstance(value, list):
         return []
-    allowed = {"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
-    return [day for day in (_normalize_value(item) for item in value) if day in allowed]
+    aliases = {
+        "monday": "mon", "mon": "mon", "пн": "mon",
+        "tuesday": "tue", "tue": "tue", "вт": "tue",
+        "wednesday": "wed", "wed": "wed", "ср": "wed",
+        "thursday": "thu", "thu": "thu", "чт": "thu",
+        "friday": "fri", "fri": "fri", "пт": "fri",
+        "saturday": "sat", "sat": "sat", "сб": "sat",
+        "sunday": "sun", "sun": "sun", "вс": "sun",
+    }
+    result: list[str] = []
+    for item in value:
+        day = aliases.get(_normalize_value(item).lower())
+        if day and day not in result:
+            result.append(day)
+    return result
 
 
 def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | None = None) -> dict[str, Any]:
@@ -97,8 +123,8 @@ def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | Non
         "status": _normalize_value(data.get("status")),
         "time": _normalize_value(data.get("time")),
         "volume_start": _coerce_volume_start(data.get("volume_start")),
-        "repeat_type": _normalize_repeat_type(data.get("repeat_type")),
-        "repeat_days": _normalize_repeat_days(data.get("repeat_days")),
+        "repeat_type": _normalize_repeat_type(data.get("repeat_type", data.get("repeat"))),
+        "repeat_days": _normalize_repeat_days(data.get("repeat_days", data.get("week_days", data.get("days")))),
     }
 
 
@@ -118,8 +144,8 @@ def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_
         "deviceId": _normalize_value(alarm_request.get("device_id")),
         "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
         "volume_start": _coerce_volume_start(alarm_request.get("volume_start")),
-        "repeat_type": _normalize_repeat_type(alarm_request.get("repeat_type")),
-        "repeat_days": _normalize_repeat_days(alarm_request.get("repeat_days")),
+        "repeat_type": _normalize_repeat_type(alarm_request.get("repeat_type", alarm_request.get("repeat"))),
+        "repeat_days": _normalize_repeat_days(alarm_request.get("repeat_days", alarm_request.get("week_days", alarm_request.get("days")))),
     }
 
 
