@@ -91,7 +91,7 @@ export const CommandSettingsPage = () => {
       <div className={styles.page}>
         {!isMobile ? <NavigationTabs /> : <></>}
 
-        {loading && <div className={styles.state}>Загрузка...</div>}
+        {loading && <Loader />}
 
         <div className={styles.header}>
           <div className={styles.headerTop}>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button/Button";
 import { NavigationTabs } from "@/components/NavigationTabs/NavigationTabs";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
+import { Loader } from "@/components/ui/Loader";
 
 import styles from "./TimerAlarmPages.module.scss";
 
@@ -75,7 +76,7 @@ export const TimerPage = () => {
         <Button onClick={() => setModalOpen(true)}>Создать</Button>
       </div>
 
-      {loading && <div>Загрузка...</div>}
+      {loading && <Loader />}
 
       <div className={styles.grid}>
         {timers.length ? timers.map((timer) => {

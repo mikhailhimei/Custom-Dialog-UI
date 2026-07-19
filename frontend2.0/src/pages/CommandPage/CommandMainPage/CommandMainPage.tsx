@@ -13,6 +13,7 @@ import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation
 import { CommandEditorModal } from "@/components/CommandEditorModal/CommandEditorModal";
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
 import { CommandActionsSheet } from "@/components/CommandActionsSheet/CommandActionsSheet";
+import { Loader } from "@/components/ui/Loader";
 
 import {
   ShortCommand,
@@ -139,7 +140,7 @@ export const CommandMainPage = () => {
 
   return (
     <>
-      {loading && <div>Загрузка...</div>}
+      {loading && <Loader />}
       <MobileHeader 
         title={"Комманды"}
       />

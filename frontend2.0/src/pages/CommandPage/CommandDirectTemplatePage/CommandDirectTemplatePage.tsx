@@ -9,6 +9,7 @@ import { Pagination } from "@/components/ui/Pagination/Pagination";
 import { Button } from "@/components/ui/Button/Button";
 import { Card } from "@/components/Card/Card";
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
+import { Loader } from "@/components/ui/Loader";
 import { CommandDirectTemplateModal } from "@/components/CommandDirectTemplateModal/CommandDirectTemplateModal";
 import { CommandActionsSheet } from "@/components/CommandActionsSheet/CommandActionsSheet";
 
@@ -198,11 +199,7 @@ export const CommandDirectTemplatePage = () => {
       <div className={styles.page}>
         {!isMobile && <NavigationTabs />}
 
-        {loading && (
-          <div className={styles.state}>
-            Загрузка...
-          </div>
-        )}
+        {loading && <Loader />}
 
         <div className={styles.header}>
           <div className={styles.heading}>

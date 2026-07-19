@@ -1,7 +1,7 @@
 .subtitle {
   font-size: 13px;
 
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 
 .card {
@@ -34,12 +34,12 @@
 .card:hover {
   transform: translateY(-2px);
 
-  background: rgba(255,255,255,.04);
+  background: var(--control-background);
 
   border-color: rgba(99,102,241,.35);
 
   box-shadow:
-    0 12px 28px rgba(0,0,0,.30);
+    0 12px 28px var(--shadow);
 }
 
 .card:active {

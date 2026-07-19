@@ -144,10 +144,15 @@ export const SettingsPage = () => {
     setInitialData(normalized);
   }, [settings]);
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("dialog-custom-ui-theme-change", { detail: settingsData.theme }));
+  }, [settingsData.theme]);
+
   const handleSave = () => {
     const payload = getDiff(settingsData, initialData);
 
     saveSettings(payload);
+    setInitialData(settingsData);
   };
 
   return (
