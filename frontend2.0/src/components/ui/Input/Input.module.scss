@@ -34,7 +34,7 @@
 
   border: 1px solid rgba(255,255,255,.08);
 
-  background: rgba(255,255,255,.03);
+  background: var(--control-background);
 
   color: var(--text);
 
@@ -57,7 +57,7 @@
 }
 
 .input:hover {
-  background: rgba(255,255,255,.045);
+  background: var(--control-background-hover);
 
   border-color: rgba(255,255,255,.14);
 }
@@ -65,7 +65,7 @@
 .input:focus {
   outline: none;
 
-  background: rgba(255,255,255,.05);
+  background: var(--control-background-hover);
 
   border-color: var(--primary);
 

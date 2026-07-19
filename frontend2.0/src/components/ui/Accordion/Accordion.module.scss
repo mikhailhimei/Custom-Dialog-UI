@@ -1,5 +1,5 @@
 .accordion {
-  border: 1px solid #374151;
+  border: 1px solid var(--border);
 
   border-radius: 12px;
 
@@ -9,11 +9,11 @@
 .header {
   width: 100%;
 
-  background: #1f2937;
+  background: var(--surface-elevated);
 
   border: none;
 
-  color: white;
+  color: var(--text);
 
   padding: 16px;
 
@@ -31,7 +31,7 @@
 .content {
   padding: 16px;
 
-  border-top: 1px solid #374151;
+  border-top: 1px solid var(--border);
 
   display: flex;
 

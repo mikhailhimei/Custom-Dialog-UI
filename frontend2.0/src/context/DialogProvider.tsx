@@ -7,6 +7,7 @@ import React, {
 import { DialogContext } from "./DialogContext";
 import { DialogApi, type HassLike } from "../api/dialog-api";
 import { createHass, normalizeHass } from "../hooks/hass";
+import { Loader } from "../components/ui/Loader";
 
 interface Props {
   children: React.ReactNode;
@@ -39,7 +40,7 @@ export function DialogProvider({
   }, [hass]);
 
   if (!ready || !apiRef.current) {
-    return <div>Connecting to Home Assistant...</div>;
+    return <Loader label="Подключение к Home Assistant..." fullscreen />;
   }
 
   return (

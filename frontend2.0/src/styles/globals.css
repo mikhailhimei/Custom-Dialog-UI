@@ -4,6 +4,45 @@
   box-sizing: border-box;
 }
 
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --app-background: radial-gradient(circle at top, #182132 0%, #101722 35%, #0b1017 100%);
+  --surface: #111827;
+  --surface-elevated: #1f2937;
+  --surface-hover: #273244;
+  --border: #374151;
+  --border-hover: #4b5563;
+  --text: #f9fafb;
+  --text-secondary: #a1a1aa;
+  --text-muted: #9ca3af;
+  --primary: #6366f1;
+  --primary-strong: #4f46e5;
+  --loader-track: rgba(255, 255, 255, .16);
+  --control-background: rgba(255, 255, 255, .04);
+  --control-background-hover: rgba(255, 255, 255, .06);
+  --shadow: rgba(0, 0, 0, .3);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --app-background: radial-gradient(circle at top, #ffffff 0%, #eef2ff 42%, #e5e7eb 100%);
+  --surface: #ffffff;
+  --surface-elevated: #f8fafc;
+  --surface-hover: #eef2ff;
+  --border: #d4d8e4;
+  --border-hover: #a5b4fc;
+  --text: #111827;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --primary: #4f46e5;
+  --primary-strong: #4338ca;
+  --loader-track: rgba(79, 70, 229, .16);
+  --control-background: rgba(15, 23, 42, .04);
+  --control-background-hover: rgba(15, 23, 42, .08);
+  --shadow: rgba(15, 23, 42, .14);
+}
+
 html {
   color-scheme: dark;
 }
@@ -20,14 +59,7 @@ body {
     sans-serif;
 
   color: var(--text);
-
-  background:
-    radial-gradient(
-      circle at top,
-      #182132 0%,
-      #101722 35%,
-      #0b1017 100%
-    );
+  background: var(--app-background);
 
   min-height: 100vh;
 
@@ -39,6 +71,12 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+.appShell {
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--app-background);
 }
 
 button,

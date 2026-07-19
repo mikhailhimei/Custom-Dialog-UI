@@ -17,6 +17,7 @@ import { ScriptFormModal } from '@/components/ScriptFormModal/ScriptFormModal';
 import { MobileHeader } from '@/components/MobileHeader/MobileHeader';
 import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
+import { Loader } from "@/components/ui/Loader";
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton"
 
 import styles from "../GlobalsPage.module.scss";
@@ -146,9 +147,7 @@ export const ScriptsPage = () => {
   return (
     <>
 
-      {loading && (
-        <div>Загрузка...</div>
-      )}
+      {loading && <Loader />}
       <MobileHeader 
         title={"Скрипты"}
       />

@@ -8,6 +8,7 @@ import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
+import { Loader } from "@/components/ui/Loader";
 
 import styles from "./TimerAlarmPages.module.scss";
 
@@ -63,7 +64,7 @@ export const AlarmPage = () => {
       <div className={styles.page}>
       <NavigationTabs />
       <div className={styles.header}><div><h1 className={styles.title}>Будильник</h1><p className={styles.description}>Создавайте будильники, настраивайте повторы, устройство и громкость.</p></div><Button onClick={() => setModalOpen(true)}>Создать</Button></div>
-      {loading && <div>Загрузка...</div>}
+      {loading && <Loader />}
 
       <div className={styles.grid}>
         {alarms.length ? alarms.map((alarm) => (
