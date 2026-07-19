@@ -304,15 +304,15 @@ def normalize_voice_response_type(response_type, fallback="default"):
 
 
 def canonical_voice_response_type(response_type, fallback="default"):
-    raw_type = str(response_type or "").strip().lower()
-    if not raw_type:
+    raw_value = str(response_type or "").strip()
+    if not raw_value:
         return fallback
 
-    normalized = VOICE_RESPONSE_TYPE_ALIASES.get(raw_type)
+    normalized = VOICE_RESPONSE_TYPE_ALIASES.get(raw_value.lower())
     if normalized in VOICE_RESPONSE_TYPES:
         return normalized
 
-    return raw_type
+    return raw_value
 
 
 def resolve_default_response_type(node, prefer_next_step=False):
