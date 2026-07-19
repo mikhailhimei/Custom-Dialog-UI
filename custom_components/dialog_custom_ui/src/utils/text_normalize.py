@@ -248,6 +248,93 @@ def get_unit(unit, case):
         return parsed.inflect({"plur", "gent"}).word
 
 
+def fix_celsius(text):
+
+    def degree_gent(n):
+        return _inflect_number_text(
+            num2words(n, lang="ru", gender="m"),
+            "gent"
+        )
+
+    def degree_nom(n):
+        return num_with_word(n, "градус")
+
+    # от X до Y градусов Цельсия
+    text = re.sub(
+        r'\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+градус[ао]?\s+Цельсия\b',
+        lambda m:
+            f"от {degree_gent(int(m.group(1)))} "
+            f"до {degree_gent(int(m.group(2)))} градусов Цельсия",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # от/до X градусов Цельсия
+    text = re.sub(
+        r'\b(от|до)\s+(-?\d+)\s+градус[ао]?\s+Цельсия\b',
+        lambda m:
+            f"{m.group(1)} {degree_gent(int(m.group(2)))} градусов Цельсия",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # X градусов Цельсия
+    text = re.sub(
+        r'(-?\d+)\s+градус[ао]?\s+Цельсия\b',
+        lambda m:
+            degree_nom(int(m.group(1))) + " Цельсия",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    return text
+
+
+def fix_distance(text):
+
+    # скорость
+    text = re.sub(
+        r'(\d+)\s+метр\s+секунд[аы]?',
+        lambda m: num_with_word(int(m.group(1)), "метр") + " в секунду",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # с предлогом: в 5 км, до 10 м, от 2 км
+    def replace_with_prep(m):
+        prep = m.group(1)
+        n = int(m.group(2))
+        unit = normalize_unit(m.group(3))
+
+        number = inflect_number_ru(number_to_text(n), "loct")
+        noun = get_unit(unit, "loct")
+
+        return f"{prep} {number} {noun}"
+
+    text = re.sub(
+        r'\b(в|от|до)\s+(\d+)\s+(км|километр[аов]?|м|метр[аов]?)\b',
+        replace_with_prep,
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # без предлога: 3 м, 5 км
+    def replace_plain(m):
+        n = int(m.group(1))
+        unit = normalize_unit(m.group(2))
+
+        return num_with_word(n, unit)
+
+    text = re.sub(
+        r'\b(\d+)\s+(км|километр[аов]?|м|метр[аов]?)\b',
+        replace_plain,
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    return text
+
+
 # -------------------------
 # ОСНОВНАЯ ФУНКЦИЯ
 # -------------------------
@@ -307,29 +394,9 @@ def fix_text(text):
     # =========================
     # 6. ГРАДУСЫ
     # =========================
-    text = re.sub(
-        r'\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+градус[ао]?\s+Цельсия',
-        lambda m: (
-            f"от {_inflect_number_text(num2words(int(m.group(1)), lang='ru', gender='m'), 'gent')} "
-            f"до {num_with_word(int(m.group(2)), 'градус', 'gent')} Цельсия"
-        ),
-        text,
-        flags=re.IGNORECASE,
-    )
+    text = fix_celsius(text)
 
-    text = re.sub(
-        r'\b(от|до)\s+(-?\d+)\s+градус[ао]?\s+Цельсия',
-        lambda m: f"{m.group(1)} {num_with_word(int(m.group(2)), 'градус', 'gent')} Цельсия",
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    text = re.sub(
-        r'(-?\d+)\s+градус[ао]?\s+Цельсия',
-        lambda m: num_with_word(int(m.group(1)), "градус") + " Цельсия",
-        text,
-        flags=re.IGNORECASE,
-    )
+    print(text)
 
 
     MONTHS_REV = {v: k for k, v in _MONTHS_MAP.items()}
@@ -417,71 +484,7 @@ def fix_text(text):
         text
     )
 
-    # =========================
-    # СКОРОСТЬ: м/с (5 метр секунд)
-    # =========================
-    def replace_speed(m):
-        n = int(m.group(1))
-        return num_with_word(n, "метр") + " в секунду"
-
-    text = re.sub(
-        r'(\d+)\s+метр\s+секунд[аы]?',
-        replace_speed,
-        text
-    )
-
-    # =========================
-    # БЕЗ ПРЕДЛОГА
-    # =========================
-    def replace_distance_plain(m):
-        n = int(m.group(1))
-        unit = normalize_unit(m.group(2))
-
-        if unit not in ["километр", "метр"]:
-            return m.group(0)
-
-        number = number_to_text(n)
-        noun = get_unit(unit, "gent")
-
-        return f"{number} {noun}"
-
-
-    # =========================
-    # С ПРЕДЛОГОМ
-    # =========================
-    def replace_distance_with_preposition(m):
-        prep = m.group(1)
-        n = int(m.group(2))
-        unit = normalize_unit(m.group(3))
-
-        if unit not in ["километр", "метр"]:
-            return m.group(0)
-
-        number = number_to_text(n)
-        number = inflect_number_ru(number, "loct")
-
-        noun = get_unit(unit, "loct")
-
-        return f"{prep} {number} {noun}"
-
-
-    # =========================
-    # 1. С ПРЕДЛОГОМ
-    # =========================
-    text = re.sub(
-        r'\b(в|от|до)\s+(\d+)\s+(км|километр[аов]?|м|метр[аов]?)\b',
-        replace_distance_with_preposition,
-        text
-    )
-
-    # =========================
-    # 2. БЕЗ ПРЕДЛОГА
-    # =========================
-    text = re.sub(
-        r'\b(\d+)\s+(км|километр[аов]?|м|метр[аов]?)\b',
-        replace_distance_plain,
-        text
-    )
+    text = fix_distance(text)
 
     # =========================
     # ОСТАВШИЕСЯ ЦЕЛЫЕ ЧИСЛА
