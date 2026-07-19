@@ -4,9 +4,31 @@ import copy
 from ..utils.text_normalize import sanitize_location_text
 from ..utils.type_data_parser import sanitize_by_type_data
 from ..utils.reverse_map import get_section
-from ..service.dialog_runtime import canonical_voice_response_type
 
 _NUMBER_TOKEN_WORDS = set()
+
+VOICE_RESPONSE_TYPE_ALIASES = {
+    "default": "default",
+    "direct": "default",
+    "default_direct": "default",
+    "default_next_step": "default_next_step",
+    "miss": "miss",
+    "error": "error",
+    "next": "default",
+}
+VOICE_RESPONSE_TYPES = {"default", "default_next_step", "miss", "error"}
+
+
+def canonical_voice_response_type(response_type, fallback="default"):
+    raw_type = str(response_type or "").strip().lower()
+    if not raw_type:
+        return fallback
+
+    normalized = VOICE_RESPONSE_TYPE_ALIASES.get(raw_type)
+    if normalized in VOICE_RESPONSE_TYPES:
+        return normalized
+
+    return raw_type
 
 VOICE_PATTERN_META = set("()|?+*[]")
 
