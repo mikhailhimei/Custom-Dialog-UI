@@ -130,7 +130,28 @@ def sanitize_location_text(value: str) -> str:
 # -------------------------
 # ЧИСЛО + СЛОВО
 # -------------------------
-def num_with_word(n, word):
+def _number_noun_form(n: int) -> set[str]:
+    n = abs(n)
+
+    if n % 10 == 1 and n % 100 != 11:
+        return {'sing', 'nomn'}
+    if 2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14):
+        return {'sing', 'gent'}
+    return {'plur', 'gent'}
+
+
+def _inflect_number_text(number_text: str, case: str) -> str:
+    result = []
+
+    for word in number_text.split():
+        parsed = morph.parse(word)[0]
+        inflected = parsed.inflect({case})
+        result.append(inflected.word if inflected else word)
+
+    return " ".join(result)
+
+
+def num_with_word(n, word, number_case=None):
     parsed = morph.parse(word)[0]
 
     gender_map = {
@@ -142,15 +163,10 @@ def num_with_word(n, word):
     gender = gender_map.get(parsed.tag.gender, 'm')
 
     number_text = num2words(n, lang='ru', gender=gender)
+    if number_case:
+        number_text = _inflect_number_text(number_text, number_case)
 
-    if n % 10 == 1 and n % 100 != 11:
-        form = {'sing', 'nomn'}
-    elif 2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14):
-        form = {'sing', 'gent'}
-    else:
-        form = {'plur', 'gent'}
-
-    inflected = parsed.inflect(form)
+    inflected = parsed.inflect(_number_noun_form(n))
     word_form = inflected.word if inflected else word
 
     return f"{number_text} {word_form}"
@@ -292,9 +308,27 @@ def fix_text(text):
     # 6. ГРАДУСЫ
     # =========================
     text = re.sub(
-        r'(\d+)\s+градус[ао]?\s+Цельсия',
+        r'\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+градус[ао]?\s+Цельсия',
+        lambda m: (
+            f"от {_inflect_number_text(num2words(int(m.group(1)), lang='ru', gender='m'), 'gent')} "
+            f"до {num_with_word(int(m.group(2)), 'градус', 'gent')} Цельсия"
+        ),
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    text = re.sub(
+        r'\b(от|до)\s+(-?\d+)\s+градус[ао]?\s+Цельсия',
+        lambda m: f"{m.group(1)} {num_with_word(int(m.group(2)), 'градус', 'gent')} Цельсия",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    text = re.sub(
+        r'(-?\d+)\s+градус[ао]?\s+Цельсия',
         lambda m: num_with_word(int(m.group(1)), "градус") + " Цельсия",
-        text
+        text,
+        flags=re.IGNORECASE,
     )
 
 
