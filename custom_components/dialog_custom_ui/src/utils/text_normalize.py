@@ -250,21 +250,21 @@ def get_unit(unit, case):
 
 def fix_celsius(text):
 
-    def degree_gent(n):
-        return _inflect_number_text(
-            num2words(n, lang="ru", gender="m"),
-            "gent"
-        )
+    degree_forms = "градус"
 
-    def degree_nom(n):
-        return num_with_word(n, "градус")
+    def degree_gent(n):
+        return num_with_word(
+            n,
+            degree_forms,
+            number_case="gent"
+        )
 
     # от X до Y градусов Цельсия
     text = re.sub(
         r'\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+градус[ао]?\s+Цельсия\b',
         lambda m:
             f"от {degree_gent(int(m.group(1)))} "
-            f"до {degree_gent(int(m.group(2)))} градусов Цельсия",
+            f"до {degree_gent(int(m.group(2)))} Цельсия",
         text,
         flags=re.IGNORECASE,
     )
@@ -273,7 +273,7 @@ def fix_celsius(text):
     text = re.sub(
         r'\b(от|до)\s+(-?\d+)\s+градус[ао]?\s+Цельсия\b',
         lambda m:
-            f"{m.group(1)} {degree_gent(int(m.group(2)))} градусов Цельсия",
+            f"{m.group(1)} {degree_gent(int(m.group(2)))} Цельсия",
         text,
         flags=re.IGNORECASE,
     )
@@ -282,7 +282,7 @@ def fix_celsius(text):
     text = re.sub(
         r'(-?\d+)\s+градус[ао]?\s+Цельсия\b',
         lambda m:
-            degree_nom(int(m.group(1))) + " Цельсия",
+            f"{num_with_word(int(m.group(1)), 'градус')} Цельсия",
         text,
         flags=re.IGNORECASE,
     )
@@ -292,22 +292,43 @@ def fix_celsius(text):
 
 def fix_distance(text):
 
-    # скорость
+    # -------------------------
+    # Скорость: X метр(а/ов) в секунду
+    # -------------------------
     text = re.sub(
-        r'(\d+)\s+метр\s+секунд[аы]?',
-        lambda m: num_with_word(int(m.group(1)), "метр") + " в секунду",
+        r'(\d+)\s+метр[аов]?\s+в\s+секунд[уые]?',
+        lambda m:
+            f"{num_with_word(int(m.group(1)), 'метр')} в секунду",
         text,
         flags=re.IGNORECASE,
     )
 
-    # с предлогом: в 5 км, до 10 м, от 2 км
+    # -------------------------
+    # С предлогом:
+    # в 5 км
+    # от 10 м
+    # до 2 километров
+    # -------------------------
     def replace_with_prep(m):
         prep = m.group(1)
         n = int(m.group(2))
         unit = normalize_unit(m.group(3))
 
-        number = inflect_number_ru(number_to_text(n), "loct")
-        noun = get_unit(unit, "loct")
+        # после в/от/до нужен родительный/предложный в зависимости от конструкции
+        if prep.lower() == "в":
+            number = inflect_number_ru(
+                number_to_text(n),
+                "loct"
+            )
+            noun = get_unit(unit, "loct")
+        else:
+            number = inflect_number_ru(
+                number_to_text(n),
+                "gent"
+            )
+            noun = morph.parse(unit)[0].inflect(
+                {"plur", "gent"}
+            ).word
 
         return f"{prep} {number} {noun}"
 
@@ -318,7 +339,12 @@ def fix_distance(text):
         flags=re.IGNORECASE,
     )
 
-    # без предлога: 3 м, 5 км
+    # -------------------------
+    # Без предлога:
+    # 3 м
+    # 5 км
+    # 21 метр
+    # -------------------------
     def replace_plain(m):
         n = int(m.group(1))
         unit = normalize_unit(m.group(2))
