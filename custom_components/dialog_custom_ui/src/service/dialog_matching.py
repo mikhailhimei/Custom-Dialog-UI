@@ -7,29 +7,6 @@ from ..utils.reverse_map import get_section
 
 _NUMBER_TOKEN_WORDS = set()
 
-VOICE_RESPONSE_TYPE_ALIASES = {
-    "default": "default",
-    "direct": "default",
-    "default_direct": "default",
-    "default_next_step": "default_next_step",
-    "miss": "miss",
-    "error": "error",
-    "next": "default",
-}
-VOICE_RESPONSE_TYPES = {"default", "default_next_step", "miss", "error"}
-
-
-def canonical_voice_response_type(response_type, fallback="default"):
-    raw_type = str(response_type or "").strip().lower()
-    if not raw_type:
-        return fallback
-
-    normalized = VOICE_RESPONSE_TYPE_ALIASES.get(raw_type)
-    if normalized in VOICE_RESPONSE_TYPES:
-        return normalized
-
-    return raw_type
-
 VOICE_PATTERN_META = set("()|?+*[]")
 
 STOP_TOKENS = set(get_section("location_stop_words"))
@@ -381,14 +358,14 @@ def build_child_candidates(node, sub_command, error_branch=False):
 
 def build_custom_next_action_candidates(node, sub_command, action_type=None):
     custom_refs = []
-    expected_action_type = canonical_voice_response_type(action_type, fallback=None)
+    action_type = str(action_type or "").strip()
 
     for item in node.get("nextAction", []) or []:
         if item.get("actionTypeComponent") != "custom":
             continue
 
-        item_action_type = canonical_voice_response_type(item.get("actionType"), fallback=None)
-        if expected_action_type and item_action_type != expected_action_type:
+        item_action_type = str(item.get("actionType") or "").strip()
+        if action_type and item_action_type != action_type:
             continue
 
         child_ref = item.get("uuid") or item.get("id")
