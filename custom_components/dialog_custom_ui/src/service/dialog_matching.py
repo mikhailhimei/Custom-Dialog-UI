@@ -4,6 +4,7 @@ import copy
 from ..utils.text_normalize import sanitize_location_text
 from ..utils.type_data_parser import sanitize_by_type_data
 from ..utils.reverse_map import get_section
+from ..service.dialog_runtime import canonical_voice_response_type
 
 _NUMBER_TOKEN_WORDS = set()
 
