@@ -127,7 +127,7 @@ export const CommandSubPage = () => {
   }
 
   const handlerUpdateCommand = async () => {
-    const result = await updateCommand("update_assistant_sub_command_status", formData)
+    const result = await updateCommand("update_assistant_sub_command", formData)
     setModalOpen(false);
   }
 
