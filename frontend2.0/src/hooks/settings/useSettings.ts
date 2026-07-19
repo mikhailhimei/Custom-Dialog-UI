@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { useDialogApi } from "../../context/DialogContext";
 
-import { ApiResponse, RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
+import { ApiResponse, MusicOption, RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
 
 export function useSettings() {
   const api = useDialogApi();
@@ -11,6 +11,7 @@ export function useSettings() {
 
   const [settings, setSettings] =
     useState<Settings | null>(null);
+  const [musicOptions, setMusicOptions] = useState<MusicOption[]>([]);
 
   const loadScripts = useCallback(async () => {
     setLoading(true);
@@ -37,6 +38,17 @@ export function useSettings() {
   }, []);
 
 
+  const loadMusicOptions = useCallback(async () => {
+    const options = await api.getLocalMusicOptions();
+
+    setMusicOptions(options);
+  }, [api]);
+
+  useEffect(() => {
+    void loadMusicOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const saveSettings = async (data: Omit<Partial<Settings>, "remout" | "timer_alarm" | "yandex_tts"> & { remout?: Partial<RemoteSettings>; timer_alarm?: Partial<TimerAlarmSettings>; yandex_tts?: Partial<YandexTTS> }) => {
     await api._save(data, "save_settings")
   }
@@ -44,6 +56,7 @@ export function useSettings() {
   return {
     loading,
     settings,
+    musicOptions,
 
     saveSettings,
     loadScripts,

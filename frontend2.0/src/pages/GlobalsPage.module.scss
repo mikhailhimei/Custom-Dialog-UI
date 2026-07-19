@@ -1,5 +1,6 @@
 :root {
   --mobile-nav-height: 88px;
+  --mobile-fixed-actions-height: 86px;
   --page-padding: 28px;
 }
 
@@ -97,7 +98,7 @@
 
   /* Чтобы последняя карточка не пряталась под нижней навигацией */
   padding-bottom: calc(
-    var(--mobile-nav-height) + 32px + env(safe-area-inset-bottom)
+    var(--mobile-nav-height) + var(--mobile-fixed-actions-height) + 32px + env(safe-area-inset-bottom)
   );
 }
 
@@ -127,7 +128,7 @@
 
   .list {
     padding-bottom: calc(
-      var(--mobile-nav-height) + 32px + env(safe-area-inset-bottom)
+      var(--mobile-nav-height) + var(--mobile-fixed-actions-height) + 32px + env(safe-area-inset-bottom)
     );
   }
 }

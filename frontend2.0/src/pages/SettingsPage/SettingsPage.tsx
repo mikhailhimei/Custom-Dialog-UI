@@ -133,7 +133,7 @@ export const SettingsPage = () => {
   const [settingsData, setSettingsData] = useState<Settings>(EMPTY_SETTINGS);
   const [initialData, setInitialData] = useState<Settings>(EMPTY_SETTINGS);
 
-  const { settings, saveSettings } = useSettings();
+  const { settings, musicOptions, saveSettings } = useSettings();
 
   useEffect(() => {
     if (!settings) return;
@@ -202,6 +202,7 @@ export const SettingsPage = () => {
           <Accordion title="Timer / Alarm">
             <TimerAlarmSettingsForm
               data={settingsData.timer_alarm}
+              musicOptions={musicOptions}
               onChange={(timer_alarm) => setSettingsData({ ...settingsData, timer_alarm })}
             />
           </Accordion>

@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal/Modal";
 import { Button } from "@/components/ui/Button/Button";
 import { NavigationTabs } from "@/components/NavigationTabs/NavigationTabs";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
+import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
 
 import styles from "./TimerAlarmPages.module.scss";
 
@@ -61,7 +62,9 @@ export const TimerPage = () => {
   const setQuickMinutes = (minutes: number) => setDuration(toParts(minutes * 60));
 
   return (
-    <div className={styles.page}>
+    <>
+      <MobileHeader title="Таймер" />
+      <div className={styles.page}>
       <NavigationTabs />
 
       <div className={styles.header}>
@@ -119,7 +122,8 @@ export const TimerPage = () => {
         </div>
       </Modal>
 
-      <MobileNavigation />
-    </div>
+        <MobileNavigation />
+      </div>
+    </>
   );
 };

@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button/Button";
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
+import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
 
 import styles from "./TimerAlarmPages.module.scss";
 
@@ -57,7 +58,9 @@ export const AlarmPage = () => {
   const toggleDay = (day: string) => setRepeatDays((current) => current.includes(day) ? current.filter((item) => item !== day) : [...current, day]);
 
   return (
-    <div className={styles.page}>
+    <>
+      <MobileHeader title="Будильник" />
+      <div className={styles.page}>
       <NavigationTabs />
       <div className={styles.header}><div><h1 className={styles.title}>Будильник</h1><p className={styles.description}>Создавайте будильники, настраивайте повторы, устройство и громкость.</p></div><Button onClick={() => setModalOpen(true)}>Создать</Button></div>
       {loading && <div>Загрузка...</div>}
@@ -90,7 +93,8 @@ export const AlarmPage = () => {
       <Modal open={Boolean(selectedAlarm)} onClose={() => setDetailsAlarmId(null)} title="Будильник">
         {selectedAlarm && <div className={styles.form}><div className={styles.time}>{selectedAlarm.time}</div><div className={styles.meta}>{repeatText(selectedAlarm.repeat_type, selectedAlarm.repeat_days)} • {deviceName.get(selectedAlarm.device_id) || selectedAlarm.device_id}</div><ToggleSwitch className={styles.meta} label={selectedAlarm.status !== "off" ? "Включен" : "Выключен"} checked={selectedAlarm.status !== "off"} onChange={(event) => updateAlarm(selectedAlarm, { status: event.currentTarget.checked ? "on" : "off" })} /><Button onClick={() => { setTime(selectedAlarm.time); setDeviceId(selectedAlarm.device_id); setVolumeStart(selectedAlarm.volume_start ?? 0.3); setRepeat(selectedAlarm.repeat_type ?? "once"); setRepeatDays(selectedAlarm.repeat_days ?? []); setEditingAlarmId(selectedAlarm.uuid); setDetailsAlarmId(null); setModalOpen(true); }}>Редактировать</Button><Button variant="ghost" onClick={() => { deleteAlarm(selectedAlarm); setDetailsAlarmId(null); }}><Trash2 size={16} /> Удалить</Button></div>}
       </Modal>
-      <MobileNavigation />
-    </div>
+        <MobileNavigation />
+      </div>
+    </>
   );
 };
