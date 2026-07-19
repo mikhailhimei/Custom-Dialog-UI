@@ -355,6 +355,98 @@ def build_child_candidates(node, sub_command, error_branch=False):
     return children_list
 
 
+
+def build_custom_next_action_candidates(node, sub_command, action_type=None):
+    custom_refs = []
+    action_type = str(action_type or "").strip()
+
+    for item in node.get("nextAction", []) or []:
+        if item.get("actionTypeComponent") != "custom":
+            continue
+
+        item_action_type = str(item.get("actionType") or "").strip()
+        if action_type and item_action_type != action_type:
+            continue
+
+        child_ref = item.get("uuid") or item.get("id")
+        if child_ref:
+            custom_refs.append(child_ref)
+
+    candidates = []
+    for child in sub_command or []:
+        if child.get("id") in custom_refs or child.get("uuid") in custom_refs:
+            candidates.append(child)
+
+    return candidates
+
+
+def find_matching_node_by_voice_command(nodes, client_text):
+    nodes = [node for node in (nodes or []) if isinstance(node, dict)]
+    has_forward_text = any(node.get("forwardText") for node in nodes)
+
+    for node in nodes:
+        if node.get("forwardText"):
+            continue
+        voice_commands = node.get("voiceCommands", [])
+        if not isinstance(voice_commands, list):
+            voice_commands = [voice_commands]
+        if any(voice_command_matches(voice_command, client_text) for voice_command in voice_commands):
+            return node, False, None
+
+    for node in nodes:
+        if node.get("forwardText"):
+            continue
+        voice_commands = node.get("voiceCommands", [])
+        if not isinstance(voice_commands, list):
+            voice_commands = [voice_commands]
+        template_vars = match_template_command(
+            voice_commands,
+            client_text,
+            require_fixed_start=has_forward_text,
+            keep_stopword_vars=collect_all_type_template_vars(node),
+        )
+        if template_vars:
+            return node, False, template_vars
+
+    if not has_forward_text:
+        for node in nodes:
+            if node.get("forwardText"):
+                continue
+            voice_commands = node.get("voiceCommands", [])
+            if not isinstance(voice_commands, list):
+                voice_commands = [voice_commands]
+            template_vars = find_weighted_template_match(
+                voice_commands,
+                client_text,
+                min_score=0.5,
+                keep_stopword_vars=collect_all_type_template_vars(node),
+            )
+            if template_vars:
+                return node, False, template_vars
+
+        weighted_node = find_weighted_command_node(
+            client_text,
+            [node for node in nodes if not node.get("forwardText")],
+        )
+        if weighted_node:
+            return weighted_node, False, None
+
+    if has_forward_text:
+        for node in nodes:
+            if node.get("forwardText"):
+                return node, True, None
+
+    return None, False, None
+
+
+def find_matching_custom_next_action(node, client_text, sub_command, action_type=None):
+    custom_candidates = build_custom_next_action_candidates(
+        node,
+        sub_command,
+        action_type=action_type,
+    )
+    return find_matching_node_by_voice_command(custom_candidates, client_text)
+
 def find_weighted_command_node(query_text, nodes, min_score=6):
     ranked_nodes = get_ranked_ai_nodes(query_text, nodes)
     if not ranked_nodes:
@@ -665,54 +757,7 @@ def collect_all_type_template_vars(node):
 
 def find_matching_subcommand(node, client_text, sub_command, error_branch=False):
     children_list = build_child_candidates(node, sub_command, error_branch=error_branch)
-    has_forward_text = any(sub.get("forwardText") for sub in children_list)
-
-    for sub in children_list:
-        if not sub.get("forwardText") and any(
-            voice_command_matches(voice_command, client_text)
-            for voice_command in sub.get("voiceCommands", [])
-        ):
-            return sub, False, None
-
-    for sub in children_list:
-        if sub.get("forwardText"):
-            continue
-        keep_stopword_vars = collect_all_type_template_vars(sub)
-        template_vars = match_template_command(
-            sub.get("voiceCommands", []),
-            client_text,
-            require_fixed_start=has_forward_text,
-            keep_stopword_vars=keep_stopword_vars,
-        )
-        if template_vars:
-            return sub, False, template_vars
-
-    if not has_forward_text:
-        for sub in children_list:
-            if sub.get("forwardText"):
-                continue
-            template_vars = find_weighted_template_match(
-                sub.get("voiceCommands", []),
-                client_text,
-                min_score=0.5,
-                keep_stopword_vars=collect_all_type_template_vars(sub),
-            )
-            if template_vars:
-                return sub, False, template_vars
-
-        weighted_sub = find_weighted_command_node(
-            client_text,
-            [sub for sub in children_list if not sub.get("forwardText")],
-        )
-        if weighted_sub:
-            return weighted_sub, False, None
-
-    if has_forward_text:
-        for sub in children_list:
-            if sub.get("forwardText"):
-                return sub, True, None
-
-    return None, False, None
+    return find_matching_node_by_voice_command(children_list, client_text)
 
 
 def match_template_command(voice_commands, client_text, require_fixed_start=False, keep_stopword_vars=None):
