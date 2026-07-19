@@ -248,20 +248,73 @@ def get_unit(unit, case):
         return parsed.inflect({"plur", "gent"}).word
 
 
+def num_with_word_case(n, word, number_case, noun_case):
+    parsed = morph.parse(word)[0]
+
+    gender_map = {
+        'masc': 'm',
+        'femn': 'f',
+        'neut': 'n'
+    }
+
+    gender = gender_map.get(parsed.tag.gender, 'm')
+
+    number_text = num2words(
+        n,
+        lang='ru',
+        gender=gender
+    )
+
+    number_text = _inflect_number_text(
+        number_text,
+        number_case
+    )
+
+    # форма существительного отдельно от формы числа
+    if n % 10 == 1 and n % 100 != 11:
+        number = "sing"
+    elif 2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14):
+        number = "sing"
+    else:
+        number = "plur"
+
+    inflected = parsed.inflect({
+        number,
+        noun_case
+    })
+
+    word_form = inflected.word if inflected else word
+
+    return f"{number_text} {word_form}"
+
+
 def fix_celsius(text):
 
-    degree_forms = "градус"
-
-    def degree_gent(n):
-        return num_with_word(
-            n,
-            degree_forms,
-            number_case="gent"
+    # число в родительном без единицы:
+    # 18 -> восемнадцати
+    def degree_number_gent(n):
+        return _inflect_number_text(
+            num2words(
+                n,
+                lang="ru",
+                gender="m"
+            ),
+            "gent"
         )
 
-    # -------------------------
-    # от X градусов до Y градус Цельсия
-    # -------------------------
+    # число + градус в родительном:
+    # 21 -> двадцати одного градуса
+    def degree_gent(n):
+        return num_with_word_case(
+            n,
+            "градус",
+            "gent",
+            "gent"
+        )
+
+    # -----------------------------------
+    # от 18 градусов до 21 градус Цельсия
+    # -----------------------------------
     text = re.sub(
         r'\bот\s+(-?\d+)\s+градус[аов]?\s+до\s+(-?\d+)\s+градус[аов]?\s+Цельсия\b',
         lambda m:
@@ -271,21 +324,21 @@ def fix_celsius(text):
         flags=re.IGNORECASE,
     )
 
-    # -------------------------
-    # от X до Y градус Цельсия
-    # -------------------------
+    # -----------------------------------
+    # от 18 до 21 градус Цельсия
+    # -----------------------------------
     text = re.sub(
         r'\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+градус[аов]?\s+Цельсия\b',
         lambda m:
-            f"от {degree_gent(int(m.group(1)))} "
+            f"от {degree_number_gent(int(m.group(1)))} "
             f"до {degree_gent(int(m.group(2)))} Цельсия",
         text,
         flags=re.IGNORECASE,
     )
 
-    # -------------------------
-    # от/до X градусов Цельсия
-    # -------------------------
+    # -----------------------------------
+    # от/до 18 градусов Цельсия
+    # -----------------------------------
     text = re.sub(
         r'\b(от|до)\s+(-?\d+)\s+градус[аов]?\s+Цельсия\b',
         lambda m:
@@ -294,9 +347,9 @@ def fix_celsius(text):
         flags=re.IGNORECASE,
     )
 
-    # -------------------------
-    # X градусов Цельсия
-    # -------------------------
+    # -----------------------------------
+    # 18 градусов Цельсия
+    # -----------------------------------
     text = re.sub(
         r'(-?\d+)\s+градус[аов]?\s+Цельсия\b',
         lambda m:
