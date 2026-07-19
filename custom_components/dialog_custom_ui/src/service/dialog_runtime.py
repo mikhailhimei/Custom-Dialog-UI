@@ -134,7 +134,7 @@ def set_current_node_state(client_id, uuid, device_id, error_branch=False, custo
     command = {
         "uuid": uuid,
         "parent_type": parent_type,
-        "custom": custom or ""
+        "custom": canonical_voice_response_type(custom, fallback="") if custom else ""
     }
     set_dialog_state_value(CURRENT_NODE_KEY, client_id, device_id, json.dumps(command), ttl=120)
     set_dialog_state_value(MISS_COUNT_KEY, client_id, device_id, 0, ttl=120)

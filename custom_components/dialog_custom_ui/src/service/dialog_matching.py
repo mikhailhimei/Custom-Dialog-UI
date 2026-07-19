@@ -358,14 +358,14 @@ def build_child_candidates(node, sub_command, error_branch=False):
 
 def build_custom_next_action_candidates(node, sub_command, action_type=None):
     custom_refs = []
-    action_type = str(action_type or "").strip()
+    expected_action_type = canonical_voice_response_type(action_type, fallback=None)
 
     for item in node.get("nextAction", []) or []:
         if item.get("actionTypeComponent") != "custom":
             continue
 
-        item_action_type = str(item.get("actionType") or "").strip()
-        if action_type and item_action_type != action_type:
+        item_action_type = canonical_voice_response_type(item.get("actionType"), fallback=None)
+        if expected_action_type and item_action_type != expected_action_type:
             continue
 
         child_ref = item.get("uuid") or item.get("id")
