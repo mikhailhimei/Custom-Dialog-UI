@@ -60,8 +60,8 @@ export const CommandDirectTemplatePage = () => {
   ];
 
   const { ref, inView } = useInView({
-    threshold: 1,
-    rootMargin: "0px",
+    threshold: 0,
+    rootMargin: "0px 0px 180px 0px",
   });
 
   const {

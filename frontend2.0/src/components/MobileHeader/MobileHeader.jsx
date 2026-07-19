@@ -29,6 +29,15 @@ export const MobileHeader = (
     }
   };
 
+  const handleHome = () => {
+    if (isCommands) {
+      navigate("/scripts");
+      return;
+    }
+
+    window.location.assign("/");
+  };
+
   return (
     <header className={styles.header}>
       <button
@@ -44,7 +53,7 @@ export const MobileHeader = (
 
       <button
         className={styles.homeButton}
-        onClick={() => navigate("/scripts")}
+        onClick={handleHome}
       >
         <Home size={18} />
       </button>

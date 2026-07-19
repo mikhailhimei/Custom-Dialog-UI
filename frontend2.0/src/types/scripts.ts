@@ -47,6 +47,11 @@ export interface TimerAlarmSettings {
   global_music_alarm?: string;
 }
 
+export interface MusicOption {
+  value: string;
+  label: string;
+}
+
 export interface YandexTTS {
   api_key?: string;
   folderId?: string;

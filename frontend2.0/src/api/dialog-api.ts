@@ -1,3 +1,5 @@
+import type { MusicOption } from "../types/scripts";
+
 export interface HassLike {
   connection: {
     sendMessagePromise<T>(msg: any): Promise<T>;
@@ -87,6 +89,65 @@ export class DialogApi {
         id: entity.entity_id,
         name: entity.attributes?.friendly_name ?? entity.entity_id,
       }));
+  }
+
+  async getLocalMusicOptions(): Promise<MusicOption[]> {
+    const audioExtensions = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac|webm)$/i;
+    const roots = [
+      "media-source://media_source/local",
+      "media-source://media_source",
+    ];
+    const visited = new Set<string>();
+    const options = new Map<string, MusicOption>();
+
+    const browse = async (mediaContentId: string) => {
+      if (visited.has(mediaContentId)) return;
+
+      visited.add(mediaContentId);
+
+      const response: any = await this.hass.connection.sendMessagePromise({
+        type: "media_source/browse_media",
+        media_content_id: mediaContentId,
+      });
+
+      const children = Array.isArray(response?.children) ? response.children : [];
+
+      await Promise.all(children.map(async (item: any) => {
+        const contentId = String(item?.media_content_id || "");
+        const title = String(item?.title || contentId);
+
+        if (!contentId) return;
+
+        if (item?.can_expand) {
+          await browse(contentId);
+          return;
+        }
+
+        if (audioExtensions.test(title) || audioExtensions.test(contentId) || item?.media_content_type === "music") {
+          const localPrefix = "media-source://media_source/local/";
+          const value = contentId.startsWith(localPrefix)
+            ? contentId.slice(localPrefix.length)
+            : contentId;
+
+          options.set(value, {
+            value,
+            label: title,
+          });
+        }
+      }));
+    };
+
+    for (const root of roots) {
+      try {
+        await browse(root);
+      } catch (error) {
+        console.warn("Failed to browse media source", root, error);
+      }
+    }
+
+    return Array.from(options.values()).sort((left, right) =>
+      left.label.localeCompare(right.label),
+    );
   }
 
   getScripts() {

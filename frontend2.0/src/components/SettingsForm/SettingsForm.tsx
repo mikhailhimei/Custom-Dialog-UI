@@ -1,6 +1,6 @@
 import React from "react";
 
-import { RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
+import { MusicOption, RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
 import { Input } from "../ui/Input/Input";
 import { ToggleSwitch } from "../ui/ToggleSwitch";
 
@@ -18,6 +18,7 @@ interface RemoteProps {
 
 interface TimerAlarmProps {
   data: TimerAlarmSettings;
+  musicOptions: MusicOption[];
   onChange: (data: TimerAlarmSettings) => void;
 }
 
@@ -82,7 +83,7 @@ export const RemoteSettingsForm = ({ data, onChange }: RemoteProps) => {
   );
 };
 
-export const TimerAlarmSettingsForm = ({ data, onChange }: TimerAlarmProps) => {
+export const TimerAlarmSettingsForm = ({ data, musicOptions, onChange }: TimerAlarmProps) => {
   const updateField = (key: keyof TimerAlarmSettings, value: string) => {
     onChange({
       ...data,
@@ -90,10 +91,50 @@ export const TimerAlarmSettingsForm = ({ data, onChange }: TimerAlarmProps) => {
     });
   };
 
+  const renderMusicSelect = (
+    label: string,
+    key: keyof TimerAlarmSettings,
+    value = "",
+  ) => {
+    const hasCurrentOption = musicOptions.some((option) => option.value === value);
+
+    return (
+      <label className={styles.field}>
+        <span className={styles.label}>{label}</span>
+        <select
+          className={styles.input}
+          value={value}
+          onChange={(event) => updateField(key, event.target.value)}
+        >
+          <option value="">Не выбрано</option>
+          {value && !hasCurrentOption && (
+            <option value={value}>{value}</option>
+          )}
+          {musicOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  };
+
   return (
     <div className={styles.form}>
-      <Input label="Global music timer" value={data.global_music_timer ?? ""} onChange={(e) => updateField("global_music_timer", e.target.value)} />
-      <Input label="Global music alarm" value={data.global_music_alarm ?? ""} onChange={(e) => updateField("global_music_alarm", e.target.value)} />
+      {renderMusicSelect(
+        "Global music timer",
+        "global_music_timer",
+        data.global_music_timer,
+      )}
+      {renderMusicSelect(
+        "Global music alarm",
+        "global_music_alarm",
+        data.global_music_alarm,
+      )}
+      {musicOptions.length === 0 && (
+        <span className={styles.help}>Музыка на сервере не найдена.</span>
+      )}
     </div>
   );
 };
