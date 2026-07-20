@@ -9,7 +9,7 @@ from ..config import CURRENT_NODE_KEY, ERR_BRANCH_KEY, MISS_COUNT_KEY
 from ...const import DOMAIN, EVENT_ACTIVE_COMMAND, EVENT_DIALOG_MESSAGE
 from ..handler.commands_mapper import generate_ai_response
 from ..utils.dialog_response import build_dialog_response
-from ..utils.text_normalize import fix_text
+from ..utils.text_normalization import fix_text
 
 logger = logging.getLogger(__name__)
 # Latest hass instance to avoid stale references

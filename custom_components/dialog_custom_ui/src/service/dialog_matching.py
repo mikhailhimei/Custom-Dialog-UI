@@ -1,7 +1,7 @@
 import re
 import copy
 
-from ..utils.text_normalize import sanitize_location_text
+from ..utils.text_normalization import sanitize_location_text
 from ..utils.type_data_parser import sanitize_by_type_data
 from ..utils.reverse_map import get_section
 

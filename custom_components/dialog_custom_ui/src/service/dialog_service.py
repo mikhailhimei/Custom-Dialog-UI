@@ -26,7 +26,7 @@ from ..service.dialog_runtime import (
     get_service_response
 )
 from ..utils.dialog_response import build_dialog_response
-from ..utils.text_normalize import normalize_numbers
+from ..utils.text_normalization import normalize_numbers
 
 
 def _format_voice_commands(node):
