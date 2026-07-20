@@ -5,7 +5,7 @@ from words2numsrus import NumberExtractor
 
 from ..reverse_map import get_section
 from .common import normalize_token
-from .inflections import inflect_number_text, num_with_word, num_with_word_range
+from .inflections import inflect_number_text, inflect_word, num_with_word, num_with_word_range
 
 extractor = NumberExtractor()
 
@@ -124,7 +124,17 @@ def sanitize_location_text(value: str) -> str:
     return " ".join(tokens).strip()
 
 
+def _unit_rate_text(word: str) -> str:
+    return f"в {inflect_word(word, {'sing', 'accs'})}"
+
+
 def fix_marked_words(text: str) -> str:
+    text = re.sub(
+        r"(-?\d+)\s+<<([^<>]+)>>\s+<<([^<>]+)>>",
+        lambda m: f"{num_with_word(int(m.group(1)), m.group(2))} {_unit_rate_text(m.group(3))}",
+        text,
+    )
+
     text = re.sub(
         r"\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+<<([^<>]+)>>",
         lambda m: (

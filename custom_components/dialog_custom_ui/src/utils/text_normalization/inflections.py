@@ -25,6 +25,13 @@ def inflect_number_text(number_text: str, case: str) -> str:
     return " ".join(result)
 
 
+def inflect_word(word: str, grammemes: set[str]) -> str:
+    parsed = morph.parse(word)[0]
+    inflected = parsed.inflect(grammemes)
+
+    return inflected.word if inflected else word
+
+
 def num_with_word(n: int, word: str, number_case: str | None = None) -> str:
     parsed = morph.parse(word)[0]
 

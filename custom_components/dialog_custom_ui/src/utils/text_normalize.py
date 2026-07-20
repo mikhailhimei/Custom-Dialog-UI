@@ -1,6 +1,7 @@
 from .text_normalization import (
     fix_marked_words,
     fix_text,
+    inflect_word,
     normalize_numbers,
     num_with_word,
     num_with_word_range,
@@ -12,6 +13,7 @@ from .text_normalization import (
 __all__ = [
     "fix_marked_words",
     "fix_text",
+    "inflect_word",
     "normalize_numbers",
     "num_with_word",
     "num_with_word_range",
