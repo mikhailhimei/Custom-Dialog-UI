@@ -14,7 +14,6 @@ _TENS = get_section("tens")
 _HUNDREDS = get_section("hundreds")
 _THOUSANDS = get_section("thousands")
 _LOCATION_STOP_WORDS = get_section("location_stop_words")
-_MEASUREMENT = get_section("measurement_units")
 _SPECIAL_CHARACTERS = get_section('special_characters')
 
 _MONTHS_MAP = get_subsection("genitive_day",'months_map')
@@ -186,252 +185,67 @@ def year_to_text(year):
 
     return f"{words} года"
 
-def number_to_ru_phrase(n):
-        words = num2words(n, lang='ru')
-
-        # разбиваем число на слова
-        parts = words.split()
-
-        inflected_parts = []
-
-        for p in parts:
-            parsed = morph.parse(p)[0]
-
-            # если это числительное — склоняем
-            if 'NUMR' in parsed.tag:
-                inflected = parsed.inflect({'gent'})  # родительный (универсально для таких конструкций)
-                inflected_parts.append(inflected.word if inflected else p)
-            else:
-                inflected_parts.append(p)
-
-        return " ".join(inflected_parts)
-
-# =========================
-# ЧИСЛО → ТЕКСТ
-# =========================
-def number_to_text(n):
-    return num2words(n, lang='ru')
-
-
-# =========================
-# СКЛОНЕНИЕ ЧИСЛИТЕЛЬНОГО
-# =========================
-def inflect_number_ru(text, case):
-    words = text.split()
-    result = []
-
-    for w in words:
-        parsed = morph.parse(w)[0]
-        inf = parsed.inflect({case})
-        result.append(inf.word if inf else w)
-
-    return " ".join(result)
-
-
-# =========================
-# НОРМАЛИЗАЦИЯ ЕДИНИЦ
-# =========================
-def normalize_unit(u):
-    u = u.lower().strip().strip(".")
-    return _MEASUREMENT.get(u, u)
-
-
-# =========================
-# ЕДИНИЦА В НУЖНОМ ПАДЕЖЕ
-# =========================
-def get_unit(unit, case):
-    parsed = morph.parse(unit)[0]
-
-    if case == "loct":
-        return parsed.inflect({"plur", "loct"}).word
-    else:
-        return parsed.inflect({"plur", "gent"}).word
-
-
-def num_with_word_case(n, word, number_case, noun_case):
+def num_with_word_range(n, word):
     parsed = morph.parse(word)[0]
 
     gender_map = {
-        'masc': 'm',
-        'femn': 'f',
-        'neut': 'n'
+        "masc": "m",
+        "femn": "f",
+        "neut": "n"
     }
 
-    gender = gender_map.get(parsed.tag.gender, 'm')
+    gender = gender_map.get(parsed.tag.gender, "m")
 
-    number_text = num2words(
-        n,
-        lang='ru',
-        gender=gender
-    )
-
+    # число в родительном
     number_text = _inflect_number_text(
-        number_text,
-        number_case
+        num2words(n, lang="ru", gender=gender),
+        "gent"
     )
 
-    # форма существительного отдельно от формы числа
-    if n % 10 == 1 and n % 100 != 11:
-        number = "sing"
-    elif 2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14):
-        number = "sing"
-    else:
-        number = "plur"
-
-    inflected = parsed.inflect({
-        number,
-        noun_case
-    })
-
-    word_form = inflected.word if inflected else word
+    # существительное ВСЕГДА во множественном родительном
+    noun = parsed.inflect({"plur", "gent"})
+    word_form = noun.word if noun else word
 
     return f"{number_text} {word_form}"
 
 
-def fix_celsius(text):
-
-    # число в родительном без единицы:
-    # 18 -> восемнадцати
-    def degree_number_gent(n):
-        return _inflect_number_text(
-            num2words(
-                n,
-                lang="ru",
-                gender="m"
-            ),
-            "gent"
-        )
-
-    # число + градус в родительном:
-    # 21 -> двадцати одного градуса
-    def degree_gent(n):
-        return num_with_word_case(
-            n,
-            "градус",
-            "gent",
-            "gent"
-        )
-
-    # -----------------------------------
-    # от 18 градусов до 21 градус Цельсия
-    # -----------------------------------
+def fix_marked_words(text):
+    # от X до Y <<слово>>
     text = re.sub(
-        r'\bот\s+(-?\d+)\s+градус[аов]?\s+до\s+(-?\d+)\s+градус[аов]?\s+Цельсия\b',
+        r"\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+<<([^<>]+)>>",
         lambda m:
-            f"от {degree_gent(int(m.group(1)))} "
-            f"до {degree_gent(int(m.group(2)))} Цельсия",
+            f"от {_inflect_number_text(num2words(int(m.group(1)), lang='ru'), 'gent')} "
+            f"до {num_with_word_range(int(m.group(2)), m.group(3))}",
         text,
         flags=re.IGNORECASE,
     )
 
-    # -----------------------------------
-    # от 18 до 21 градус Цельсия
-    # -----------------------------------
+    # до X <<слово>>
     text = re.sub(
-        r'\bот\s+(-?\d+)\s+до\s+(-?\d+)\s+градус[аов]?\s+Цельсия\b',
+        r"\bдо\s+(-?\d+)\s+<<([^<>]+)>>",
         lambda m:
-            f"от {degree_number_gent(int(m.group(1)))} "
-            f"до {degree_gent(int(m.group(2)))} Цельсия",
+            f"до {num_with_word_range(int(m.group(1)), m.group(2))}",
         text,
         flags=re.IGNORECASE,
     )
 
-    # -----------------------------------
-    # от/до 18 градусов Цельсия
-    # -----------------------------------
+    # от X <<слово>>
     text = re.sub(
-        r'\b(от|до)\s+(-?\d+)\s+градус[аов]?\s+Цельсия\b',
+        r"\bот\s+(-?\d+)\s+<<([^<>]+)>>",
         lambda m:
-            f"{m.group(1)} {degree_gent(int(m.group(2)))} Цельсия",
+            f"от {num_with_word_range(int(m.group(1)), m.group(2))}",
         text,
         flags=re.IGNORECASE,
     )
 
-    # -----------------------------------
-    # 18 градусов Цельсия
-    # -----------------------------------
+    # обычный случай
     text = re.sub(
-        r'(-?\d+)\s+градус[аов]?\s+Цельсия\b',
-        lambda m:
-            f"{num_with_word(int(m.group(1)), 'градус')} Цельсия",
+        r"(-?\d+)\s+<<([^<>]+)>>",
+        lambda m: num_with_word(int(m.group(1)), m.group(2)),
         text,
-        flags=re.IGNORECASE,
     )
 
     return text
-
-
-def fix_distance(text):
-
-    # -------------------------
-    # Скорость: X метр(а/ов) в секунду
-    # -------------------------
-    text = re.sub(
-        r'(\d+)\s+метр[аов]?\s+в\s+секунд[уые]?',
-        lambda m:
-            f"{num_with_word(int(m.group(1)), 'метр')} в секунду",
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    # -------------------------
-    # С предлогом:
-    # в 5 км
-    # от 10 м
-    # до 2 километров
-    # -------------------------
-    def replace_with_prep(m):
-        prep = m.group(1)
-        n = int(m.group(2))
-        unit = normalize_unit(m.group(3))
-
-        # после в/от/до нужен родительный/предложный в зависимости от конструкции
-        if prep.lower() == "в":
-            number = inflect_number_ru(
-                number_to_text(n),
-                "loct"
-            )
-            noun = get_unit(unit, "loct")
-        else:
-            number = inflect_number_ru(
-                number_to_text(n),
-                "gent"
-            )
-            noun = morph.parse(unit)[0].inflect(
-                {"plur", "gent"}
-            ).word
-
-        return f"{prep} {number} {noun}"
-
-    text = re.sub(
-        r'\b(в|от|до)\s+(\d+)\s+(км|километр[аов]?|м|метр[аов]?)\b',
-        replace_with_prep,
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    # -------------------------
-    # Без предлога:
-    # 3 м
-    # 5 км
-    # 21 метр
-    # -------------------------
-    def replace_plain(m):
-        n = int(m.group(1))
-        unit = normalize_unit(m.group(2))
-
-        return num_with_word(n, unit)
-
-    text = re.sub(
-        r'\b(\d+)\s+(км|километр[аов]?|м|метр[аов]?)\b',
-        replace_plain,
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    return text
-
-
 # -------------------------
 # ОСНОВНАЯ ФУНКЦИЯ
 # -------------------------
@@ -487,14 +301,6 @@ def fix_text(text):
         lambda m: num_with_word(int(m.group(1)), "час"),
         text
     )
-
-    # =========================
-    # 6. ГРАДУСЫ
-    # =========================
-    text = fix_celsius(text)
-
-    print(text)
-
 
     MONTHS_REV = {v: k for k, v in _MONTHS_MAP.items()}
 
@@ -581,14 +387,11 @@ def fix_text(text):
         text
     )
 
-    text = fix_distance(text)
+    text = fix_marked_words(text)
 
     # =========================
     # ОСТАВШИЕСЯ ЦЕЛЫЕ ЧИСЛА
     # =========================
-    # После обработки дат, времени и единиц измерения проговариваем любые
-    # отдельные числа, чтобы в ответах не оставались цифры вроде "18".
-    # Не трогаем числа внутри десятичных дробей, дат, путей, URL и идентификаторов.
     text = re.sub(
         r'(?<![\w:./-])(-?\d+)(?![\w:./-])',
         lambda m: num2words(int(m.group(1)), lang='ru'),
