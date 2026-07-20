@@ -4,13 +4,16 @@ import styles from "./BottomSlideButton.module.scss";
 type BottomSlideButtonProps = {
   children: React.ReactNode;
   offset?: number;
+  startVisible?: boolean
 };
 
 export const BottomSlideButton = ({
   children,
-  offset = 100,
+  offset = 10,
+  startVisible = false
+
 }: BottomSlideButtonProps) => {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(startVisible);
 
   useEffect(() => {
     let lastScrollY = window.scrollY;

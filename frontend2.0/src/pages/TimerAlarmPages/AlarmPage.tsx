@@ -9,8 +9,12 @@ import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 import { MobileHeader } from "@/components/MobileHeader/MobileHeader";
 import { Loader } from "@/components/ui/Loader";
+import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { AlarmActionsSheet } from "@/components/ModalEditAlarm/AlarmActionsSheet"
 
-import styles from "./TimerAlarmPages.module.scss";
+import pageStyles from "./TimerAlarmPages.module.scss";
+import styles from "../GlobalsPage.module.scss"
 
 const WEEK_DAYS = [
   { key: "mon", label: "Пн" }, { key: "tue", label: "Вт" }, { key: "wed", label: "Ср" }, { key: "thu", label: "Чт" }, { key: "fri", label: "Пт" }, { key: "sat", label: "Сб" }, { key: "sun", label: "Вс" },
@@ -28,6 +32,8 @@ const repeatText = (repeat: AlarmRepeat = "once", days: string[] = []) => {
 };
 
 export const AlarmPage = () => {
+  const isMobile = useIsMobile();
+
   const { alarmTimeWidgets, alarms, createAlarm, deleteAlarm, devices, loading, updateAlarm } = useTimerAlarmRequests();
   const [modalOpen, setModalOpen] = useState(false);
   const [repeatOpen, setRepeatOpen] = useState(false);
@@ -56,44 +62,99 @@ export const AlarmPage = () => {
     setModalOpen(false);
   };
 
+  const handleOpenEditModal = (command) => {
+    setTime(command.time);
+    setDeviceId(command.device_id);
+    setVolumeStart(command.volume_start ?? 0.3);
+    setRepeat(command.repeat_type ?? "once");
+    setRepeatDays(command.repeat_days ?? []);
+    setEditingAlarmId(command.uuid);
+    setDetailsAlarmId(null);
+    setModalOpen(true);
+  }
+
   const toggleDay = (day: string) => setRepeatDays((current) => current.includes(day) ? current.filter((item) => item !== day) : [...current, day]);
 
   return (
     <>
       <MobileHeader title="Будильник" />
       <div className={styles.page}>
-      <NavigationTabs />
-      <div className={styles.header}><div><h1 className={styles.title}>Будильник</h1><p className={styles.description}>Создавайте будильники, настраивайте повторы, устройство и громкость.</p></div><Button onClick={() => setModalOpen(true)}>Создать</Button></div>
-      {loading && <Loader />}
+        <NavigationTabs />
+        <div className={styles.header}>
+          <div className={styles.heading}>
+            {!isMobile ?
+              <h1 className={styles.title}>
+                Будильник
+              </h1> : <></>
+            }
 
-      <div className={styles.grid}>
-        {alarms.length ? alarms.map((alarm) => (
-          <button className={`${styles.card} ${styles.cardButton}`} key={alarm.uuid} type="button" onClick={() => setDetailsAlarmId(alarm.uuid)}>
-            <div className={styles.cardHeader}>
-              <div className={styles.cardLead}><Speaker className={styles.cardIcon} size={26} /><div><h2 className={styles.cardTitle}>{alarm.time}</h2><div className={styles.meta}>{repeatText(alarm.repeat_type, alarm.repeat_days)} • {deviceName.get(alarm.device_id) || alarm.device_id}</div></div></div>
-              <ToggleSwitch label="" checked={alarm.status !== "off"} onClick={(event) => event.stopPropagation()} onChange={(event) => updateAlarm(alarm, { status: event.currentTarget.checked ? "on" : "off" })} />
-            </div>
-          </button>
-        )) : <div className={styles.empty}>Нет будильников.</div>}
-      </div>
+            <p className={styles.description}>
+              Создавайте будильники, настраивайте повторы, устройство и громкость.
+            </p>
 
-      <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditingAlarmId(null); }} title={editingAlarmId ? "Редактировать будильник" : "Создать будильник"} footer={<Button onClick={submit} disabled={!deviceId || !time}>Сохранить</Button>}>
-        <div className={styles.form}>
-          <label className={styles.wheelColumn}><span className={styles.label}>Круговая чч мм</span><input className={`${styles.input} ${styles.timeInput}`} type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label>
-          <div className={styles.field}><span className={styles.label}>Ранее заводимые</span><div className={styles.quickTabs}>{quickTimes.length ? quickTimes.map((value) => <button key={value} type="button" className={`${styles.quickTab} ${time === value ? styles.activeQuickTab : ""}`} onClick={() => setTime(value)}>{value}</button>) : <span className={styles.meta}>Нет быстрых значений.</span>}</div></div>
-          <label className={styles.field}><span className={styles.label}>Повторы</span><button type="button" className={styles.selectButton} onClick={() => setRepeatOpen(true)}>{repeatText(repeat, repeatDays)}</button></label>
-          <label className={styles.field}><span className={styles.label}>Устройство воспроизведения</span><select className={styles.select} value={deviceId} onChange={(event) => setDeviceId(event.target.value)}><option value="">Выберите устройство</option>{devices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}</select></label>
-          <label className={styles.field}><span className={styles.label}>Стартовая громкость</span><input className={styles.input} type="range" min="0" max="1" step="0.05" value={volumeStart} onChange={(event) => setVolumeStart(Number(event.target.value))} /><span className={styles.meta}>{Math.round(volumeStart * 100)}%</span></label>
+          </div>
+
+          <div className={styles.actions}>
+            {!isMobile ? (
+              <Button
+                variant="primary"
+                onClick={() => setModalOpen(true)}
+              >
+                🞢 Создать
+              </Button>
+            ) : (
+              <BottomSlideButton startVisible={true}>
+                <Button
+                  variant="primary"
+                  onClick={() => setModalOpen(true)}
+                >
+                  Добавить сценарий
+                </Button>
+              </BottomSlideButton>
+            )}
+          </div>
         </div>
-      </Modal>
 
-      <Modal open={repeatOpen} onClose={() => setRepeatOpen(false)} title="Повторы" footer={<Button onClick={() => setRepeatOpen(false)}>Готово</Button>}>
-        <div className={styles.form}>{REPEAT_OPTIONS.map((option) => <button key={option.value} type="button" className={`${styles.quickTab} ${repeat === option.value ? styles.activeQuickTab : ""}`} onClick={() => setRepeat(option.value)}>{option.label}</button>)}{repeat === "custom" && <div className={styles.quickTabs}>{WEEK_DAYS.map((day) => <button key={day.key} type="button" className={`${styles.quickTab} ${repeatDays.includes(day.key) ? styles.activeQuickTab : ""}`} onClick={() => toggleDay(day.key)}>{day.label}</button>)}</div>}</div>
-      </Modal>
+        {loading && <Loader />}
 
-      <Modal open={Boolean(selectedAlarm)} onClose={() => setDetailsAlarmId(null)} title="Будильник">
-        {selectedAlarm && <div className={styles.form}><div className={styles.time}>{selectedAlarm.time}</div><div className={styles.meta}>{repeatText(selectedAlarm.repeat_type, selectedAlarm.repeat_days)} • {deviceName.get(selectedAlarm.device_id) || selectedAlarm.device_id}</div><ToggleSwitch className={styles.meta} label={selectedAlarm.status !== "off" ? "Включен" : "Выключен"} checked={selectedAlarm.status !== "off"} onChange={(event) => updateAlarm(selectedAlarm, { status: event.currentTarget.checked ? "on" : "off" })} /><Button onClick={() => { setTime(selectedAlarm.time); setDeviceId(selectedAlarm.device_id); setVolumeStart(selectedAlarm.volume_start ?? 0.3); setRepeat(selectedAlarm.repeat_type ?? "once"); setRepeatDays(selectedAlarm.repeat_days ?? []); setEditingAlarmId(selectedAlarm.uuid); setDetailsAlarmId(null); setModalOpen(true); }}>Редактировать</Button><Button variant="ghost" onClick={() => { deleteAlarm(selectedAlarm); setDetailsAlarmId(null); }}><Trash2 size={16} /> Удалить</Button></div>}
-      </Modal>
+        <div className={pageStyles.grid}>
+          {alarms.length ? alarms.map((alarm) => (
+            <button className={`${pageStyles.card} ${pageStyles.cardButton}`} key={alarm.uuid} type="button" onClick={() => setDetailsAlarmId(alarm.uuid)}>
+              <div className={pageStyles.cardHeader}>
+                <div className={pageStyles.cardLead}><Speaker className={pageStyles.cardIcon} size={26} /><div><h2 className={pageStyles.cardTitle}>{alarm.time}</h2><div className={pageStyles.meta}>{repeatText(alarm.repeat_type, alarm.repeat_days)} • {deviceName.get(alarm.device_id) || alarm.device_id}</div></div></div>
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}>
+                  <ToggleSwitch label="" checked={alarm.status !== "off"} onClick={(event) => event.stopPropagation()} onChange={(event) => updateAlarm(alarm, { status: event.currentTarget.checked ? "on" : "off" })} />
+                </div>
+              </div>
+            </button>
+          )) : <div className={pageStyles.empty}>Нет будильников.</div>}
+        </div>
+
+        <Modal open={modalOpen} onClose={() => { setModalOpen(false); setEditingAlarmId(null); }} title={editingAlarmId ? "Редактировать будильник" : "Создать будильник"} footer={<Button onClick={submit} disabled={!deviceId || !time}>Сохранить</Button>}>
+          <div className={pageStyles.form}>
+            <label className={pageStyles.wheelColumn}><span className={pageStyles.label}>Круговая чч мм</span><input className={`${pageStyles.input} ${pageStyles.timeInput}`} type="time" value={time} onChange={(event) => setTime(event.target.value)} /></label>
+            <div className={pageStyles.field}><span className={pageStyles.label}>Ранее заводимые</span><div className={pageStyles.quickTabs}>{quickTimes.length ? quickTimes.map((value) => <button key={value} type="button" className={`${pageStyles.quickTab} ${time === value ? pageStyles.activeQuickTab : ""}`} onClick={() => setTime(value)}>{value}</button>) : <span className={pageStyles.meta}>Нет быстрых значений.</span>}</div></div>
+            <label className={pageStyles.field}><span className={pageStyles.label}>Повторы</span><button type="button" className={pageStyles.selectButton} onClick={() => setRepeatOpen(true)}>{repeatText(repeat, repeatDays)}</button></label>
+            <label className={pageStyles.field}><span className={pageStyles.label}>Устройство воспроизведения</span><select className={pageStyles} value={deviceId} onChange={(event) => setDeviceId(event.target.value)}><option value="">Выберите устройство</option>{devices.map((device) => <option key={device.id} value={device.id}>{device.name}</option>)}</select></label>
+            <label className={pageStyles.field}><span className={pageStyles.label}>Стартовая громкость</span><input className={pageStyles.input} type="range" min="0" max="1" step="0.05" value={volumeStart} onChange={(event) => setVolumeStart(Number(event.target.value))} /><span className={pageStyles.meta}>{Math.round(volumeStart * 100)}%</span></label>
+          </div>
+        </Modal>
+
+        <Modal open={repeatOpen} onClose={() => setRepeatOpen(false)} title="Повторы" footer={<Button onClick={() => setRepeatOpen(false)}>Готово</Button>}>
+          <div className={pageStyles.form}>{REPEAT_OPTIONS.map((option) => <button key={option.value} type="button" className={`${pageStyles.quickTab} ${repeat === option.value ? pageStyles.activeQuickTab : ""}`} onClick={() => setRepeat(option.value)}>{option.label}</button>)}{repeat === "custom" && <div className={pageStyles.quickTabs}>{WEEK_DAYS.map((day) => <button key={day.key} type="button" className={`${pageStyles.quickTab} ${repeatDays.includes(day.key) ? pageStyles.activeQuickTab : ""}`} onClick={() => toggleDay(day.key)}>{day.label}</button>)}</div>}</div>
+        </Modal>
+
+        <AlarmActionsSheet
+          open={Boolean(selectedAlarm)}
+          onClose={() => setDetailsAlarmId(null)}
+          command={selectedAlarm}
+          onEdit={(command) => handleOpenEditModal(command)}
+          onToggleStatus={(command, status) => updateAlarm(command, { status: status })}
+          onDelete={(command) => { deleteAlarm(command); setDetailsAlarmId(null) }}
+        />
+        
         <MobileNavigation />
       </div>
     </>

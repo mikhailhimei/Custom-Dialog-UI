@@ -6,6 +6,7 @@ import { useInView } from "react-intersection-observer";
 import { useApiCommands } from '@/hooks/command/useApiCommands';
 
 import { Card } from "@/components/Card/Card"
+import { Loader } from "@/components/ui/Loader/Loader"
 import { Pagination } from '@/components/ui/Pagination/Pagination';
 import { MobileHeader } from '@/components/MobileHeader/MobileHeader'
 import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';

@@ -6,6 +6,7 @@ import { useApiCommands } from '@/hooks/command/useApiCommands';
 import { ShortCommand, CommandDetails, ComponentDialog } from '@/types/commandTypes';
 
 import { Card } from '@/components/Card/Card';
+import { Loader } from "@/components/ui/Loader/Loader"
 import { Button } from '@/components/ui/Button/Button';
 import { Pagination } from '@/components/ui/Pagination/Pagination';
 import { MobileHeader } from '@/components/MobileHeader/MobileHeader'

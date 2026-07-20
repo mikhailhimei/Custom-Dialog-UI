@@ -135,7 +135,8 @@ export function useTimerAlarmRequests() {
     await loadAlarms();
   };
 
-  const updateAlarm = async (alarm: AlarmRequest, data: Partial<AlarmRequest>) => {
+  const updateAlarm = async (alarm: any, data: Partial<AlarmRequest>) => {
+    console.log(alarm)
     await api._update(alarm.uuid, "update_alarm_request", { ...alarm, action_type: "edit_alarm", ...data });
     await loadAlarms();
   };
