@@ -208,6 +208,40 @@ def num_with_word_range(n, word):
 
     return f"{number_text} {word_form}"
 
+def time_to_text(hour: int, minute: int, prefix: str = "") -> str:
+    prefix = prefix.lower()
+
+    if prefix in ("с", "до"):
+        case = "gent"
+        hour_word = "часов"
+        minute_word = "минут"
+
+    elif prefix == "к":
+        case = "datv"
+        hour_word = "часам"
+        minute_word = "минутам"
+
+    else:
+        case = None
+        hour_word = "часов"
+        minute_word = "минут"
+
+    hour_text = num2words(hour, lang="ru")
+
+    if case:
+        hour_text = _inflect_number_text(hour_text, case)
+
+    result = f"{hour_text} {hour_word}"
+
+    if minute != 0:
+        minute_text = num2words(minute, lang="ru")
+
+        if case:
+            minute_text = _inflect_number_text(minute_text, case)
+
+        result += f" {minute_text} {minute_word}"
+
+    return result
 
 def fix_marked_words(text):
     # от X до Y <<слово>>
@@ -252,15 +286,30 @@ def fix_marked_words(text):
 def fix_text(text):
 
     # =========================
-    # 1. ВРЕМЯ HH:MM (защита от конфликтов)
+    # 1. ВРЕМЯ HH:MM
     # =========================
     time_blocks = []
 
     def mark_time(m):
         time_blocks.append(m.span())
-        return f"__TIME__{m.group(1)}:{m.group(2)}__"
 
-    text = re.sub(r'\b(\d{1,2}):(\d{2})\b', mark_time, text)
+        prefix = m.group(1) or ""
+
+        return f"__TIME__{prefix}|{m.group(2)}:{m.group(3)}__"
+
+
+    text = re.sub(
+        r'(?<!\w)(с|в|до|к)\s+(\d{1,2}):(\d{2})\b'
+        r'|'
+        r'(?<!\w)(\d{1,2}):(\d{2})\b',
+        lambda m: (
+            f"__TIME__{m.group(1)}|{m.group(2)}:{m.group(3)}__"
+            if m.group(1)
+            else f"__TIME__|{m.group(4)}:{m.group(5)}__"
+        ),
+        text,
+        flags=re.IGNORECASE
+    )
 
     # =========================
     # 2. НОМЕРА
@@ -371,10 +420,28 @@ def fix_text(text):
     # 10. ВОССТАНОВЛЕНИЕ ВРЕМЕНИ
     # =========================
     def restore_time(m):
-        h, mm = m.group(1).split(":")
-        return f"{num_with_word(int(h), 'час')} {num_with_word(int(mm), 'минута')}"
+        prefix = m.group(1) or ""
 
-    text = re.sub(r'__TIME__(\d{1,2}:\d{2})__', restore_time, text)
+        h, mm = map(int, m.group(2).split(":"))
+
+        result = time_to_text(
+            h,
+            mm,
+            prefix
+        )
+
+        if prefix:
+            return f"{prefix} {result}"
+
+        return result
+
+
+    text = re.sub(
+        r'__TIME__(с|в|до|к)?\|(\d{1,2}:\d{2})__',
+        restore_time,
+        text,
+        flags=re.IGNORECASE
+    )
 
     def replace_day_only(m):
         day = int(m.group(1))
