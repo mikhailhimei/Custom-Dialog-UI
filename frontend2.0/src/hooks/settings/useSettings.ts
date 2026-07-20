@@ -20,8 +20,6 @@ export function useSettings() {
       const response: ApiResponse<any> =
         await api._getShort("get_settings");
 
-      console.log(response)
-
       setSettings(response?.result ?? response);
 
     } finally {

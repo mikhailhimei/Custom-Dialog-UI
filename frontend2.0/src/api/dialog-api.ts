@@ -26,8 +26,6 @@ export class DialogApi {
         ...(pageSize ? { page_size: pageSize } : {}),
       });
 
-    console.log("WS <=", result);
-
     return result;
   }
 

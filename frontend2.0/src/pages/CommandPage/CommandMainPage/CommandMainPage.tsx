@@ -114,7 +114,6 @@ export const CommandMainPage = () => {
   };
 
   const handlerEditStatus = async (uuid: string, status: boolean) => {
-    console.log(uuid, status);
     const result = await editStatusCommand(
       "update_assistant_command_status",
       uuid,

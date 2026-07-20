@@ -69,7 +69,6 @@ export function useApiCommands(storageName: string) {
     };
 
     const updateCommand = async (storageName: string, formData: any) => {
-        console.log(formData)
         if (!formData.uuid) return
 
         const { uuid, ...payload } = formData;

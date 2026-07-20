@@ -15,12 +15,10 @@ export const AlarmActionsSheet = ({
   onDelete,
 }: Props) => {
   const isMobile = useIsMobile();
-  console.log(command)
   if (!command) return null;
 
   const handleUpdateStatus = (command) => {
     const status = command.status == 'on' ? 'off' : 'on' 
-    console.log(command)
     onToggleStatus(command, status);
     onClose();
   }
