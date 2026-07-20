@@ -217,8 +217,8 @@ _INFO_SCHEMA = vol.Schema(
 
 _ALARM_CREATE_SCHEMA = vol.Schema(
     {
-        vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_HH, default=0): vol.Any(str, int),
+        vol.Optional(ATTR_MM, default=0): vol.Any(str, int),
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
         vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
         vol.Optional(ATTR_REPEAT_TYPE, default="once"): _REPEAT_SCHEMA,
@@ -235,9 +235,9 @@ _ALARM_DELETE_SCHEMA = vol.Schema(
 
 _TIMER_CREATE_SCHEMA = vol.Schema(
     {
-        vol.Optional(ATTR_HH, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_MM, default=0): vol.Coerce(int),
-        vol.Optional(ATTR_SS, default=0): vol.Coerce(int),
+        vol.Optional(ATTR_HH, default=0): vol.Any(str, int),
+        vol.Optional(ATTR_MM, default=0): vol.Any(str, int),
+        vol.Optional(ATTR_SS, default=0): vol.Any(str, int),
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
         vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
     }
