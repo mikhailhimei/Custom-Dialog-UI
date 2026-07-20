@@ -24,6 +24,9 @@ def build_dialog_response(
             return {"message": fallback_message}
         return {}
 
+    if "message" not in text_result and text_result.get("voiceResponse"):
+        text_result["message"] = text_result["voiceResponse"]
+
     text_result = map_message_template(text_result, normalized_variables)
 
     if "message" not in text_result or not text_result["message"]:

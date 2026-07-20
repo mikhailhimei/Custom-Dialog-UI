@@ -156,7 +156,7 @@ def get_commands():
         return {"source": "error", "body": _empty_commands_body(), "detail": str(e)}
 
 def get_dialog_settings():
-    allowed_keys = {"actionType", "title", "message", "endStatus", "system", "LLM"}
+    allowed_keys = {"actionType", "title", "message", "voiceResponse", "endStatus", "system", "LLM", "forwardCommandToServer"}
 
     def normalize_dialog_setting(item):
         normalized = {}
@@ -168,6 +168,9 @@ def get_dialog_settings():
             if isinstance(value, str) and value == "":
                 continue
             normalized[key] = value
+
+        if "message" not in normalized and normalized.get("voiceResponse"):
+            normalized["message"] = normalized["voiceResponse"]
 
         return normalized
 

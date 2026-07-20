@@ -23,7 +23,8 @@ from ..service.dialog_runtime import (
     get_current_hass,
     get_voice_response,
     store_command_data,
-    get_service_response
+    get_service_response,
+    apply_service_payload
 )
 from ..utils.dialog_response import build_dialog_response
 from ..utils.text_normalization import normalize_numbers
@@ -194,6 +195,69 @@ def get_dialog_settings_list():
     settings_text = get_dialog_settings()
     return (settings_text.get("body") or {}).get("dialogSettings", [])
 
+
+
+def _is_forward_command_to_server_enabled(setting):
+    if not isinstance(setting, dict):
+        return False
+
+    value = setting.get("forwardCommandToServer")
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+    return bool(value)
+
+
+def _setting_to_service_node(setting):
+    message = (setting or {}).get("message") or (setting or {}).get("voiceResponse") or ""
+    return {
+        "endStatus": (setting or {}).get("endStatus", True),
+        "nextAction": [],
+        "voiceResponseArray": [
+            {
+                "actionType": "default",
+                "voiceResponse": message,
+                "LLM": (setting or {}).get("LLM"),
+                "system": (setting or {}).get("system"),
+            }
+        ] if message else [],
+    }
+
+
+async def _build_default_main_response(hass, client_text, client_id, device_id, dialog_settings, command_data):
+    dialog_cms_response = build_dialog_response(dialog_settings, "default_main")
+
+    if _is_forward_command_to_server_enabled(dialog_cms_response):
+        forward_command_data = command_data or [
+            build_command_data(
+                '',
+                "default_main",
+                {"commands": client_text} if client_text else {},
+                client_id,
+                device_id,
+                [],
+                None,
+            )
+        ]
+        service = await get_service_response(hass, "ha_storage", forward_command_data, client_id, device_id)
+        if service is not None:
+            response_text, end_status, _response_type, use_declension = apply_service_payload(
+                service,
+                _setting_to_service_node(dialog_cms_response),
+                dialog_cms_response.get("endStatus", True),
+                "default",
+                {"commands": client_text, "client_id": client_id},
+            )
+            if response_text not in (None, ""):
+                return build_text_response(response_text, end_status, use_declension)
+
+    return build_text_response(
+        dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
+        dialog_cms_response.get("endStatus", True),
+    )
 
 def handle_stop_command(hass, top_level_nodes, client_text, client_id, device_id):
     stop_node = next((node for node in top_level_nodes if node.get("actionType") == "stop"), None)
@@ -395,11 +459,13 @@ async def handle_top_level_command(hass, top_level_nodes, client_text, client_id
     if main_node:
         return await execute_top_level_command(hass, main_node, client_id, device_id, client_text, command_data)
 
-    dialog_cms_response = build_dialog_response(dialog_settings, "default_main")
-    
-    return build_text_response(
-        dialog_cms_response.get("message", "Диалоговые сценарии временно недоступны."),
-        dialog_cms_response.get("endStatus", True),
+    return await _build_default_main_response(
+        hass,
+        client_text,
+        client_id,
+        device_id,
+        dialog_settings,
+        command_data,
     )
 
 
