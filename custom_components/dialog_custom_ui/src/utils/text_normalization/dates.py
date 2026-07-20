@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 from num2words import num2words
 
@@ -88,5 +89,49 @@ def time_to_text(hour: int, minute: int, prefix: str = "") -> str:
             minute_text = inflect_number_text(minute_text, case)
 
         result += f" {minute_text} {minute_word}"
+
+    return result
+
+
+def mark_time(match: re.Match) -> str:
+    if match.group(1):
+        return f"__TIME__{match.group(1)}|{match.group(2)}:{match.group(3)}__"
+
+    return f"__TIME__|{match.group(4)}:{match.group(5)}__"
+
+
+def replace_date_match(match: re.Match) -> str:
+    if match.group("y1"):
+        return date_to_text(
+            int(match.group("d1")),
+            int(match.group("m1")),
+            int(match.group("y1")),
+        )
+
+    if match.group("d2"):
+        return date_to_text(
+            int(match.group("d2")),
+            int(match.group("m2")),
+            int(match.group("y2")),
+        )
+
+    if match.group("d3"):
+        return date_to_text(
+            int(match.group("d3")),
+            int(match.group("m3")),
+            0,
+            current_year=0,
+        )
+
+    return match.group(0)
+
+
+def restore_time(match: re.Match) -> str:
+    prefix = match.group(1) or ""
+    hour, minute = map(int, match.group(2).split(":"))
+    result = time_to_text(hour, minute, prefix)
+
+    if prefix:
+        return f"{prefix} {result}"
 
     return result
