@@ -7,22 +7,9 @@ from ..reverse_map import get_subsection
 from .inflections import inflect_number_text
 
 _MONTHS_MAP = get_subsection("genitive_day", "months_map")
+_MONTH_MARKERS = get_subsection("genitive_day", "month_markers")
 MONTHS_REV = {v: k for k, v in _MONTHS_MAP.items()}
-MONTH_MARKERS = {
-    "январь": "января",
-    "февраль": "февраля",
-    "март": "марта",
-    "апрель": "апреля",
-    "май": "мая",
-    "июнь": "июня",
-    "июль": "июля",
-    "август": "августа",
-    "сентябрь": "сентября",
-    "октябрь": "октября",
-    "ноябрь": "ноября",
-    "декабрь": "декабря",
-}
-MONTH_MARKERS.update(_MONTHS_MAP)
+MONTH_MARKERS = {**_MONTH_MARKERS, **_MONTHS_MAP}
 
 
 def year_to_text(year: int) -> str:
