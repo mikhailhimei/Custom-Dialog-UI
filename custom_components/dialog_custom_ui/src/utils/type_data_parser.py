@@ -2,7 +2,7 @@ import calendar
 import re
 from datetime import date, datetime, timedelta
 from .reverse_map import get_section, get_subsection
-from .text_normalize import sanitize_location_text
+from .text_normalization import sanitize_location_text
 
 
 _MONTH_DATA = get_section("months")
