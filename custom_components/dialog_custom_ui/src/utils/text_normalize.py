@@ -376,7 +376,6 @@ def fix_text(text):
 
     text = re.sub(r'__TIME__(\d{1,2}:\d{2})__', restore_time, text)
 
-
     def replace_day_only(m):
         day = int(m.group(1))
         return f"{num2words(day, lang='ru', to='ordinal', gender='neuter')} число"
