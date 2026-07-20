@@ -5,6 +5,7 @@ from words2numsrus import NumberExtractor
 
 from ..reverse_map import get_section
 from .common import normalize_token
+from .dates import MONTH_MARKERS, day_month_to_text
 from .inflections import inflect_number_text, inflect_word, num_with_word, num_with_word_range
 
 extractor = NumberExtractor()
@@ -129,6 +130,15 @@ def _unit_rate_text(word: str) -> str:
 
 
 def fix_marked_words(text: str) -> str:
+    text = re.sub(
+        r"(-?\d+)\s+<<([^<>]+)>>",
+        lambda m: day_month_to_text(int(m.group(1)), m.group(2))
+        if m.group(2).lower() in MONTH_MARKERS
+        else m.group(0),
+        text,
+        flags=re.IGNORECASE,
+    )
+
     text = re.sub(
         r"(-?\d+)\s+<<([^<>]+)>>\s+<<([^<>]+)>>",
         lambda m: f"{num_with_word(int(m.group(1)), m.group(2))} {_unit_rate_text(m.group(3))}",

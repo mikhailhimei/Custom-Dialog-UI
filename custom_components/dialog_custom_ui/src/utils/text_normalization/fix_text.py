@@ -29,6 +29,14 @@ def _replace_date(match: re.Match) -> str:
             int(match.group("y2")),
         )
 
+    if match.group("d3"):
+        return date_to_text(
+            int(match.group("d3")),
+            int(match.group("m3")),
+            0,
+            current_year=0,
+        )
+
     return match.group(0)
 
 
@@ -86,7 +94,9 @@ def fix_text(text: str) -> str:
     text = re.sub(
         r"(?P<y1>\d{4})-(?P<m1>\d{1,2})-(?P<d1>\d{1,2})"
         r"|"
-        r"(?P<d2>\d{1,2})\.(?P<m2>\d{1,2})\.(?P<y2>\d{4})",
+        r"(?P<d2>\d{1,2})\.(?P<m2>\d{1,2})\.(?P<y2>\d{4})"
+        r"|"
+        r"(?P<d3>\d{1,2})\.(?P<m3>\d{1,2})(?!\.\d)",
         _replace_date,
         text,
     )

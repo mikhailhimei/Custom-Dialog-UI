@@ -7,6 +7,21 @@ from .inflections import inflect_number_text
 
 _MONTHS_MAP = get_subsection("genitive_day", "months_map")
 MONTHS_REV = {v: k for k, v in _MONTHS_MAP.items()}
+MONTH_MARKERS = {
+    "январь": "января",
+    "февраль": "февраля",
+    "март": "марта",
+    "апрель": "апреля",
+    "май": "мая",
+    "июнь": "июня",
+    "июль": "июля",
+    "август": "августа",
+    "сентябрь": "сентября",
+    "октябрь": "октября",
+    "ноябрь": "ноября",
+    "декабрь": "декабря",
+}
+MONTH_MARKERS.update(_MONTHS_MAP)
 
 
 def year_to_text(year: int) -> str:
@@ -22,6 +37,7 @@ def year_to_text(year: int) -> str:
 
 
 def day_month_to_text(day: int, month_word: str) -> str:
+    month_word = MONTH_MARKERS.get(month_word, month_word)
     month = _MONTHS_MAP[month_word]
     day_text = num2words(day, lang="ru", to="ordinal", gender="neuter")
 
@@ -29,7 +45,7 @@ def day_month_to_text(day: int, month_word: str) -> str:
 
 
 def date_to_text(day: int, month: int, year: int, current_year: int | None = None) -> str:
-    current_year = current_year or datetime.now().year
+    current_year = datetime.now().year if current_year is None else current_year
     result = f"{num2words(day, lang='ru', to='ordinal', gender='neuter')} {MONTHS_REV[month]}"
 
     if year != current_year:
