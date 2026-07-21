@@ -10,6 +10,7 @@ import { MobileHeader } from "@/components/MobileHeader/MobileHeader"
 import { NavigationTabs } from "../../components/NavigationTabs/NavigationTabs";
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation"
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton";
+import { downloadJson } from "@/utils/downloadJson";
 
 import {
   GeneralSettingsForm,
@@ -213,8 +214,14 @@ export const SettingsPage = () => {
           </Accordion>
         </div>
 
-        {!isMobile ? <Button onClick={handleSave}>Сохранить</Button> :
+        {!isMobile ? <div className={styles.actions}>
+          <Button onClick={() => downloadJson("dialog-custom-ui-tts.json", settingsData.yandex_tts)}>Скачать TTS</Button>
+          <Button onClick={() => downloadJson("dialog-custom-ui-settings.json", settingsData)}>Скачать настройки</Button>
+          <Button onClick={handleSave}>Сохранить</Button>
+        </div> :
           <BottomSlideButton>
+            <Button onClick={() => downloadJson("dialog-custom-ui-tts.json", settingsData.yandex_tts)}>Скачать TTS</Button>
+            <Button onClick={() => downloadJson("dialog-custom-ui-settings.json", settingsData)}>Скачать настройки</Button>
             <Button
               variant="primary"
               onClick={handleSave}

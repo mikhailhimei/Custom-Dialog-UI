@@ -83,6 +83,10 @@ export function useApiCommands(storageName: string) {
         return result
     };
 
+    const getAllCommands = async (storageName: string) => {
+        return api._getAllShort(storageName);
+    };
+
     const detailInformationCommand = async (storageName: string, uuid: string) => {
         const response: any = await api._getDetail(uuid, storageName);
         return response
@@ -98,6 +102,7 @@ export function useApiCommands(storageName: string) {
         deleteCommand,
         updateCommand,
         editStatusCommand,
+        getAllCommands,
         detailInformationCommand
     };
 }

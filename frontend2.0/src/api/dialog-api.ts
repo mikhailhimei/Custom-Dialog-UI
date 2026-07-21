@@ -29,6 +29,36 @@ export class DialogApi {
     return result;
   }
 
+  async _getAllShort(type: string, pageSize = 100) {
+    const firstPage: any = await this._getShort(type, 1, pageSize);
+    const totalPages = firstPage?.total_pages ?? 1;
+    const firstData = Array.isArray(firstPage?.data)
+      ? firstPage.data
+      : Array.isArray(firstPage?.script_actions)
+        ? firstPage.script_actions
+        : [];
+
+    if (totalPages <= 1) {
+      return firstData;
+    }
+
+    const restPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) =>
+        this._getShort(type, index + 2, pageSize),
+      ),
+    );
+
+    return restPages.reduce((items: any[], page: any) => {
+      const pageData = Array.isArray(page?.data)
+        ? page.data
+        : Array.isArray(page?.script_actions)
+          ? page.script_actions
+          : [];
+
+      return [...items, ...pageData];
+    }, firstData);
+  }
+
   async _getDetail(uuid: string, type: string) {
     return this.hass.connection.sendMessagePromise({
       type: `dialog_custom_ui/${type}`,

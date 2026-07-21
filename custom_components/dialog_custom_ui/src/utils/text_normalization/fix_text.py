@@ -16,9 +16,9 @@ from .numbers import fix_marked_words
 
 def fix_text(text: str) -> str:
     text = re.sub(
-        r"(?<!\w)(с|в|до|к)\s+(\d{1,2}):(\d{2})\b"
+        r"(?<!\w)(с|в|до|к)\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\b"
         r"|"
-        r"(?<!\w)(\d{1,2}):(\d{2})\b",
+        r"(?<!\w)(\d{1,2}):(\d{2})(?::(\d{2}))?\b",
         mark_time,
         text,
         flags=re.IGNORECASE,
@@ -71,7 +71,7 @@ def fix_text(text: str) -> str:
     )
 
     text = re.sub(
-        r"__TIME__(с|в|до|к)?\|(\d{1,2}:\d{2})__",
+        r"__TIME__(с|в|до|к)?\|(\d{1,2}:\d{2}:\d{2})__",
         restore_time,
         text,
         flags=re.IGNORECASE,

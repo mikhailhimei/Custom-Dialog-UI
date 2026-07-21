@@ -16,12 +16,14 @@ import { CommandEditorModal } from '@/components/CommandEditorModal/CommandEdito
 import { BottomSlideButton } from '@/components/ui/BottomSlideButton/BottomSlideButton';
 import { CommandActionsSheet } from '@/components/CommandActionsSheet/CommandActionsSheet';
 
+import { downloadJson } from "@/utils/downloadJson";
+
 import styles from "@/pages/GlobalsPage.module.scss";
 
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
   actionType: "",
-  answerType: "default",
+  answerType: "ha_storage",
   voiceCommands: [""],
   nextDirectControl: [{ uuid: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
@@ -59,6 +61,7 @@ export const CommandSubPage = () => {
     saveCommand,
     updateCommand,
     editStatusCommand,
+    getAllCommands,
     commands
 
   } = useApiCommands("get_assistant_sub_commands_short")
@@ -132,6 +135,10 @@ export const CommandSubPage = () => {
     setModalOpen(false);
   }
 
+  const handleDownloadScenarios = async () => {
+    downloadJson("dialog-custom-ui-scenarios.json", await getAllCommands("get_assistant_sub_commands_short"));
+  }
+
   return (
     <>
       <MobileHeader 
@@ -155,11 +162,15 @@ export const CommandSubPage = () => {
 
           <div className={styles.actions}>
             {!isMobile ? (
-              <Button variant="primary" onClick={openCreateModal}>
-                🞢 Добавить сценарий
-              </Button>
+              <>
+                <Button onClick={handleDownloadScenarios}>Скачать сценарии</Button>
+                <Button variant="primary" onClick={openCreateModal}>
+                  🞢 Добавить сценарий
+                </Button>
+              </>
             ) : (
               <BottomSlideButton>
+                <Button onClick={handleDownloadScenarios}>Скачать сценарии</Button>
                 <Button variant="primary" onClick={openCreateModal}>
                   Добавить сценарий
                 </Button>

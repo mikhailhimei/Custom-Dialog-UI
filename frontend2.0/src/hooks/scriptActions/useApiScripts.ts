@@ -95,6 +95,8 @@ export function useApiScripts() {
     await loadScripts(1);
   };
 
+  const getAllScripts = () => api._getAllShort("get_script_actions_short");
+
   const scriptData = () => {
     const result = api.getScripts();
     return result;
@@ -107,6 +109,7 @@ export function useApiScripts() {
     loadScripts,
 
     scriptData,
+    getAllScripts,
 
     saveScript,
     updateScript,
