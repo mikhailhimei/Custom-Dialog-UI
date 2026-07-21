@@ -1303,25 +1303,30 @@ def apply_main_command(nodes):
         return nodes
 
     # =========================
-    # 1. PRIORITY 0: default + nextAction
+    # 1. PRIORITY 0: legacy local answer + nextAction
     # =========================
-    def is_high_priority_default(n):
+    # Важно: это НЕ fallback-команда из настроек команд (`actionType=default_main`).
+    # `answerType=default` здесь — старый тип локального ответа в уже сохранённых
+    # командах. В новом UI он не создаётся, но оставляем поведение для обратной
+    # совместимости: если такой legacy-узел ведёт к nextAction и не содержит
+    # template_var, он должен стать основным исполняемым узлом.
+    def is_legacy_local_next_action_priority(n):
         return (
             n.get("answerType") == "default"
             and bool(n.get("nextAction"))
             and not n.get('template_var')
         )
 
-    default_priority_nodes = [
-        n for n in nodes if is_high_priority_default(n)
+    legacy_priority_nodes = [
+        n for n in nodes if is_legacy_local_next_action_priority(n)
     ]
 
-    if default_priority_nodes:
-        # первый default + nextAction = главный
+    if legacy_priority_nodes:
+        # первый legacy local answer + nextAction = главный
         for n in nodes:
             n["execution_command"] = False
 
-        default_priority_nodes[0]["execution_command"] = True
+        legacy_priority_nodes[0]["execution_command"] = True
         return nodes
 
     # =========================
