@@ -181,7 +181,7 @@ timer_create:
 
 timer_info:
   name: Timer info
-  description: List Dialog Custom UI timers. Returns JSON items with uuid, clientId, total timer duration (count_timer/total_seconds), and remaining timer duration (remaining_timer/remaining_seconds).
+  description: List Dialog Custom UI timers. Returns JSON items with uuid, clientId, current remaining timer duration (time/remaining_timer/remaining_seconds), and original timer duration (count_timer/total_seconds).
   fields:
     clientId:
       name: Client ID
