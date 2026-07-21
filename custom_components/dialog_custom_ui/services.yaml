@@ -46,22 +46,18 @@ alarm_create:
   fields:
     hh:
       name: HH
-      description: Alarm hour.
+      description: Alarm hour. Accepts a number or a Home Assistant template/variable.
       required: false
+      example: "{{ alarm_hh }}"
       selector:
-        number:
-          min: 0
-          max: 23
-          mode: box
+        text:
     mm:
       name: MM
-      description: Alarm minute.
+      description: Alarm minute. Accepts a number or a Home Assistant template/variable.
       required: false
+      example: "{{ alarm_mm }}"
       selector:
-        number:
-          min: 0
-          max: 59
-          mode: box
+        text:
     clientId:
       name: Client ID
       description: Optional client identifier. Defaults to integration client_id.
@@ -151,28 +147,25 @@ timer_create:
   fields:
     hh:
       name: HH
-      description: Timer hours.
+      description: Timer hours. Accepts a number or a Home Assistant template/variable.
       required: false
+      example: "{{ timer_hh }}"
       selector:
-        number:
-          min: 0
-          mode: box
+        text:
     mm:
       name: MM
-      description: Timer minutes.
+      description: Timer minutes. Accepts a number or a Home Assistant template/variable.
       required: false
+      example: "{{ timer_mm }}"
       selector:
-        number:
-          min: 0
-          mode: box
+        text:
     ss:
       name: SS
-      description: Timer seconds.
+      description: Timer seconds. Accepts a number or a Home Assistant template/variable.
       required: false
+      example: "{{ timer_ss }}"
       selector:
-        number:
-          min: 0
-          mode: box
+        text:
     clientId:
       name: Client ID
       description: Optional client identifier. Defaults to integration client_id.
