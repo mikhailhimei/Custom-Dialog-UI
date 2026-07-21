@@ -228,6 +228,9 @@ def _coerce_items_from_runtime_holder(holder: Any) -> list[dict[str, Any]]:
                     "ha_managed": True,
                     "time": {
                         "count_timer": _seconds_to_duration(max(1, total_seconds)),
+                        "remaining_timer": _seconds_to_duration(max(0, remaining_seconds)),
+                        "total_seconds": max(1, total_seconds),
+                        "remaining_seconds": max(0, remaining_seconds),
                         "date_end": _format_datetime(ends_at, timezone_name),
                     },
                 }

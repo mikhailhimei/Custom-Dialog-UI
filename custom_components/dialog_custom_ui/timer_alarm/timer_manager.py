@@ -190,6 +190,8 @@ class DialogTimerManager:
             remaining_seconds = _safe_int(entry.get("remaining_seconds"))
             paused = bool(entry.get("paused"))
             ends_at = float(entry.get("ends_at") or (now_ts + remaining_seconds))
+            if not paused:
+                remaining_seconds = max(0, int(ends_at - now_ts))
             items.append(
                 {
                     "id": timer_id,
@@ -201,6 +203,9 @@ class DialogTimerManager:
                     "ha_managed": True,
                     "time": {
                         "count_timer": _seconds_to_duration(max(1, total_seconds)),
+                        "remaining_timer": _seconds_to_duration(max(0, remaining_seconds)),
+                        "total_seconds": max(1, total_seconds),
+                        "remaining_seconds": max(0, remaining_seconds),
                         "date_end": _format_datetime(ends_at, timezone_name),
                     },
                 }

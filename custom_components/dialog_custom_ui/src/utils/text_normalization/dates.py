@@ -46,28 +46,34 @@ def day_number_to_text(day: int) -> str:
     return f"{num2words(day, lang='ru', to='ordinal', gender='neuter')} число"
 
 
-def time_to_text(hour: int, minute: int, prefix: str = "") -> str:
+def time_to_text(hour: int, minute: int, second: int = 0, prefix: str = "") -> str:
     prefix = prefix.lower()
 
     if prefix in ("с", "до"):
         case = "gent"
         hour_word = "часов"
         minute_word = "минут"
+        second_word = "секунд"
     elif prefix == "к":
         case = "datv"
         hour_word = "часам"
         minute_word = "минутам"
+        second_word = "секундам"
     else:
         case = None
         hour_word = "часов"
         minute_word = "минут"
+        second_word = "секунд"
 
-    hour_text = num2words(hour, lang="ru")
+    parts = []
 
-    if case:
-        hour_text = inflect_number_text(hour_text, case)
+    if hour != 0:
+        hour_text = num2words(hour, lang="ru")
 
-    result = f"{hour_text} {hour_word}"
+        if case:
+            hour_text = inflect_number_text(hour_text, case)
+
+        parts.append(f"{hour_text} {hour_word}")
 
     if minute != 0:
         minute_text = num2words(minute, lang="ru")
@@ -75,16 +81,29 @@ def time_to_text(hour: int, minute: int, prefix: str = "") -> str:
         if case:
             minute_text = inflect_number_text(minute_text, case)
 
-        result += f" {minute_text} {minute_word}"
+        parts.append(f"{minute_text} {minute_word}")
 
-    return result
+    if second != 0:
+        second_text = num2words(second, lang="ru")
+
+        if case:
+            second_text = inflect_number_text(second_text, case)
+
+        parts.append(f"{second_text} {second_word}")
+
+    if not parts:
+        parts.append(f"{num2words(0, lang='ru')} {minute_word}")
+
+    return " ".join(parts)
 
 
 def mark_time(match: re.Match) -> str:
     if match.group(1):
-        return f"__TIME__{match.group(1)}|{match.group(2)}:{match.group(3)}__"
+        seconds = match.group(4) or "00"
+        return f"__TIME__{match.group(1)}|{match.group(2)}:{match.group(3)}:{seconds}__"
 
-    return f"__TIME__|{match.group(4)}:{match.group(5)}__"
+    seconds = match.group(7) or "00"
+    return f"__TIME__|{match.group(5)}:{match.group(6)}:{seconds}__"
 
 
 def replace_date_match(match: re.Match) -> str:
@@ -115,8 +134,8 @@ def replace_date_match(match: re.Match) -> str:
 
 def restore_time(match: re.Match) -> str:
     prefix = match.group(1) or ""
-    hour, minute = map(int, match.group(2).split(":"))
-    result = time_to_text(hour, minute, prefix)
+    hour, minute, second = map(int, match.group(2).split(":"))
+    result = time_to_text(hour, minute, second, prefix)
 
     if prefix:
         return f"{prefix} {result}"
