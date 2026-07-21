@@ -23,7 +23,7 @@ import styles from "@/pages/GlobalsPage.module.scss";
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
   actionType: "",
-  answerType: "ha_storage",
+  answerType: "default",
   voiceCommands: [""],
   nextDirectControl: [{ uuid: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],

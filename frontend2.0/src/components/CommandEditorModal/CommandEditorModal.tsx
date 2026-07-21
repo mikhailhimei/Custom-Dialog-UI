@@ -20,7 +20,7 @@ import styles from "./CommandEditorModal.module.scss";
 const createComponent = (): ComponentDialog => ({
   endStatus: true,
   actionType: "",
-  answerType: "ha_storage",
+  answerType: "default",
   voiceCommands: [""],
   nextDirectControl: [{ uuid: "", actionType: "", title: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],

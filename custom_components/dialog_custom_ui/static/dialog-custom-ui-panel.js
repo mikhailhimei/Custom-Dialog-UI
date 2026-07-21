@@ -9058,6 +9058,7 @@ const Cg = "_field_1qtfn_1", Ng = "_label_1qtfn_7", xg = "_select_1qtfn_13", Gs 
         `
   }
 ), o && /* @__PURE__ */ s.createElement("span", { className: fl.errorText }, o)), Ag = [
+  { label: "default", value: "default" },
   { label: "ha_storage", value: "ha_storage" }
 ], Fg = [
   { label: "all", value: "all" },
@@ -9077,7 +9078,7 @@ const Cg = "_field_1qtfn_1", Ng = "_label_1qtfn_7", xg = "_select_1qtfn_13", Gs 
 }, Rd = () => ({
   endStatus: !0,
   actionType: "",
-  answerType: "ha_storage",
+  answerType: "default",
   voiceCommands: [""],
   nextDirectControl: [{ uuid: "", actionType: "", title: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
@@ -9394,7 +9395,7 @@ const Cg = "_field_1qtfn_1", Ng = "_label_1qtfn_7", xg = "_select_1qtfn_13", Gs 
 }, qg = () => ({
   endStatus: !0,
   actionType: "",
-  answerType: "ha_storage",
+  answerType: "default",
   voiceCommands: [""],
   nextDirectControl: [{ uuid: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],
@@ -9497,7 +9498,7 @@ const Cg = "_field_1qtfn_1", Ng = "_label_1qtfn_7", xg = "_select_1qtfn_13", Gs 
 }, Kg = () => ({
   endStatus: !0,
   actionType: "",
-  answerType: "ha_storage",
+  answerType: "default",
   voiceCommands: [""],
   nextDirectControl: [{ uuid: "" }],
   voiceResponseArray: [{ actionType: "", voiceResponse: "" }],

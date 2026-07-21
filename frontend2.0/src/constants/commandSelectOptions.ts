@@ -1,4 +1,5 @@
 export const ANSWER_TYPE_OPTIONS = [
+  { label: "default", value: "default" },
   { label: "ha_storage", value: "ha_storage" }
 ];
 

@@ -4,7 +4,7 @@
   "key": "dialog_custom_ui_assistant_settings",
   "data": [
     {
-      "actionType": "default_main",
+      "actionType": "default",
       "endStatus": false,
       "title": "Если ничего не нашел",
       "voiceResponse": "Извините я вас не поняла"
