@@ -345,17 +345,25 @@ class DialogTimerAlarmManager:
             result["deviceId"] = device_id
         return result
 
-    def _yaml_json_response(self, action_type: str, items: list[dict[str, str]]) -> dict[str, Any]:
+    def _yaml_json_response(self, action_type: str, items: list[dict[str, Any]]) -> dict[str, Any]:
         return {"actionType": action_type, "message": json.dumps(items, ensure_ascii=False), "items": items}
 
-    def _yaml_timer_info_items(self, client_id: str) -> list[dict[str, str]]:
-        items: list[dict[str, str]] = []
+    def _yaml_timer_info_items(self, client_id: str) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
         for item in self.timer_manager.get_active_items():
             if client_id and _normalize_value(item.get("clientId")) != client_id:
                 continue
+
+            time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
+            remaining_timer = _normalize_value(time_data.get("remaining_timer"))
+            count_timer = _normalize_value(time_data.get("count_timer"))
             entry = {
                 "uuid": _normalize_value(item.get("id")),
-                "time": _normalize_value((item.get("time") or {}).get("count_timer")),
+                "time": remaining_timer,
+                "remaining_timer": remaining_timer,
+                "count_timer": count_timer,
+                "remaining_seconds": time_data.get("remaining_seconds", 0),
+                "total_seconds": time_data.get("total_seconds", 0),
                 "clientId": _normalize_value(item.get("clientId")),
             }
             device_id = _normalize_value(item.get("deviceId") or item.get("device_id"))

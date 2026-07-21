@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useSettings } from "../../hooks/settings/useSettings";
+import { useDialogApi } from "@/context/DialogContext";
 import { RemoteSettings, Settings, TimerAlarmSettings, YandexTTS } from "../../types/scripts";
 
 import { Button } from "../../components/ui/Button/Button";
@@ -135,6 +136,7 @@ export const SettingsPage = () => {
   const [initialData, setInitialData] = useState<Settings>(EMPTY_SETTINGS);
 
   const { settings, musicOptions, saveSettings } = useSettings();
+  const api = useDialogApi();
 
   useEffect(() => {
     if (!settings) return;
@@ -154,6 +156,14 @@ export const SettingsPage = () => {
 
     saveSettings(payload);
     setInitialData(settingsData);
+  };
+
+  const handleDownloadScripts = async () => {
+    downloadJson("dialog-custom-ui-scripts.json", await api._getAllShort("get_script_actions_short"));
+  };
+
+  const handleDownloadScenarios = async () => {
+    downloadJson("dialog-custom-ui-scenarios.json", await api._getAllShort("get_assistant_sub_commands_short"));
   };
 
   return (
@@ -212,16 +222,19 @@ export const SettingsPage = () => {
               onChange={(timer_alarm) => setSettingsData({ ...settingsData, timer_alarm })}
             />
           </Accordion>
+
+          <Accordion title="Скачать">
+            <Button onClick={handleDownloadScripts}>Скачать скрипты</Button>
+            <Button onClick={handleDownloadScenarios}>Скачать сценарии</Button>
+            <Button onClick={() => downloadJson("dialog-custom-ui-tts.json", settingsData.yandex_tts)}>Скачать TTS</Button>
+            <Button onClick={() => downloadJson("dialog-custom-ui-settings.json", settingsData)}>Скачать настройки</Button>
+          </Accordion>
         </div>
 
         {!isMobile ? <div className={styles.actions}>
-          <Button onClick={() => downloadJson("dialog-custom-ui-tts.json", settingsData.yandex_tts)}>Скачать TTS</Button>
-          <Button onClick={() => downloadJson("dialog-custom-ui-settings.json", settingsData)}>Скачать настройки</Button>
           <Button onClick={handleSave}>Сохранить</Button>
         </div> :
           <BottomSlideButton>
-            <Button onClick={() => downloadJson("dialog-custom-ui-tts.json", settingsData.yandex_tts)}>Скачать TTS</Button>
-            <Button onClick={() => downloadJson("dialog-custom-ui-settings.json", settingsData)}>Скачать настройки</Button>
             <Button
               variant="primary"
               onClick={handleSave}

@@ -19,8 +19,6 @@ import { NavigationTabs } from '@/components/NavigationTabs/NavigationTabs';
 import { MobileNavigation } from "@/components/MobileNavigation/MobileNavigation";
 import { Loader } from "@/components/ui/Loader";
 import { BottomSlideButton } from "@/components/ui/BottomSlideButton/BottomSlideButton"
-import { downloadJson } from "@/utils/downloadJson";
-
 import styles from "../GlobalsPage.module.scss";
 
 
@@ -61,7 +59,6 @@ export const ScriptsPage = () => {
     updateScript,
 
     getScriptAction,
-    getAllScripts,
     deleteScriptAction,
   } = useApiScripts();
 
@@ -146,10 +143,6 @@ export const ScriptsPage = () => {
     await deleteScriptAction(uuid)
   }
 
-  const handleDownloadScripts = async () => {
-    downloadJson("dialog-custom-ui-scripts.json", await getAllScripts());
-  }
-
   return (
     <>
 
@@ -178,7 +171,6 @@ export const ScriptsPage = () => {
           <div className={styles.actions}>
             {!isMobile ? (
               <>
-                <Button onClick={handleDownloadScripts}>Скачать скрипты</Button>
                 <Button
                   variant="primary"
                   onClick={openCreateModal}
@@ -188,7 +180,6 @@ export const ScriptsPage = () => {
               </>
             ) : (
               <BottomSlideButton>
-                <Button onClick={handleDownloadScripts}>Скачать скрипты</Button>
                 <Button
                   variant="primary"
                   onClick={openCreateModal}
