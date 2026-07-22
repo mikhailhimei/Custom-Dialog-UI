@@ -156,6 +156,8 @@ class DialogAlarmManager:
         normalized_repeat_days = _normalize_repeat_days(repeat_days) if normalized_repeat_type == "custom" else []
 
         for existing in self._alarms.values():
+            if _normalize_value(existing.get("client_id")) != client_id:
+                continue
             existing_device_id = _normalize_value(existing.get("device_id"))
             if device_id and existing_device_id and existing_device_id != device_id:
                 continue
@@ -165,15 +167,15 @@ class DialogAlarmManager:
                 continue
             if _normalize_repeat_days(existing.get("repeat_days")) != normalized_repeat_days:
                 continue
-            if _normalize_value(existing.get("status")).lower() != "off":
-                continue
 
-            existing["status"] = "on"
-            existing["time"] = alarm_time
-            existing["device_id"] = device_id
-            self._remember_alarm_preset(alarm_time)
-            self._ensure_alarm_tick_task()
-            self._mark_updated()
+            if _normalize_value(existing.get("status")).lower() == "off":
+                existing["status"] = "on"
+                existing["time"] = alarm_time
+                existing["device_id"] = device_id
+                self._remember_alarm_preset(alarm_time)
+                self._ensure_alarm_tick_task()
+                self._mark_updated()
+
             if execution_command:
                 return {
                     "actionType": "success",
@@ -181,7 +183,7 @@ class DialogAlarmManager:
                     "device_id": device_id,
                     "message": f"{alarm_time}",
                 }
-            
+
             return
 
         alarm_id = f"ha_alarm:{client_id}:{uuid.uuid4().hex[:8]}"
