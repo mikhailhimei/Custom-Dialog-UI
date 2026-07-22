@@ -4,7 +4,7 @@ import re
 from num2words import num2words
 
 from ..reverse_map import get_subsection
-from .inflections import inflect_number_text
+from .inflections import inflect_number_text, num_with_word
 
 _MONTHS_MAP = get_subsection("genitive_day", "months_map")
 _MONTH_MARKERS = get_subsection("genitive_day", "month_markers")
@@ -61,38 +61,35 @@ def time_to_text(hour: int, minute: int, second: int = 0, prefix: str = "") -> s
         second_word = "секундам"
     else:
         case = None
-        hour_word = "часов"
-        minute_word = "минут"
-        second_word = "секунд"
+        hour_word = "час"
+        minute_word = "минута"
+        second_word = "секунда"
 
     parts = []
 
     if hour != 0:
-        hour_text = num2words(hour, lang="ru")
-
         if case:
-            hour_text = inflect_number_text(hour_text, case)
-
-        parts.append(f"{hour_text} {hour_word}")
+            hour_text = inflect_number_text(num2words(hour, lang="ru"), case)
+            parts.append(f"{hour_text} {hour_word}")
+        else:
+            parts.append(num_with_word(hour, hour_word))
 
     if minute != 0:
-        minute_text = num2words(minute, lang="ru")
-
         if case:
-            minute_text = inflect_number_text(minute_text, case)
-
-        parts.append(f"{minute_text} {minute_word}")
+            minute_text = inflect_number_text(num2words(minute, lang="ru"), case)
+            parts.append(f"{minute_text} {minute_word}")
+        else:
+            parts.append(num_with_word(minute, minute_word))
 
     if second != 0:
-        second_text = num2words(second, lang="ru")
-
         if case:
-            second_text = inflect_number_text(second_text, case)
-
-        parts.append(f"{second_text} {second_word}")
+            second_text = inflect_number_text(num2words(second, lang="ru"), case)
+            parts.append(f"{second_text} {second_word}")
+        else:
+            parts.append(num_with_word(second, second_word))
 
     if not parts:
-        parts.append(f"{num2words(0, lang='ru')} {minute_word}")
+        parts.append(num_with_word(0, minute_word))
 
     return " ".join(parts)
 
