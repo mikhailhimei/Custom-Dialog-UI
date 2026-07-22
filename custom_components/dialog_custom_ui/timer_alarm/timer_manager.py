@@ -26,10 +26,12 @@ class DialogTimerManager:
         hass: HomeAssistant,
         mark_updated: Callable[[], None],
         default_media_content_id: Callable[[], str],
+        on_timer_worked: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self.hass = hass
         self._mark_updated = mark_updated
         self._default_media_content_id = default_media_content_id
+        self._on_timer_worked = on_timer_worked
         self._timers: dict[str, dict[str, Any]] = {}
 
     async def async_stop(self) -> None:
@@ -364,6 +366,7 @@ class DialogTimerManager:
                 return
             device_ref = timer_entry.get("device_id")
             await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-0.7")
+            await self._async_dispatch_timer_worked(timer_entry)
             
         except asyncio.CancelledError:
             return
@@ -375,6 +378,26 @@ class DialogTimerManager:
             if expired:
                 self._timers.pop(timer_id, None)
                 self._mark_updated()
+
+    async def _async_dispatch_timer_worked(self, timer_entry: dict[str, Any]) -> None:
+        if self._on_timer_worked is None:
+            return
+        payload = {
+            "parent_type": "timer_worked",
+            "client_id": _normalize_value(timer_entry.get("client_id")),
+            "clientId": _normalize_value(timer_entry.get("client_id")),
+            "device_id": _normalize_value(timer_entry.get("device_id")),
+            "deviceId": _normalize_value(timer_entry.get("device_id")),
+            "timer_id": _normalize_value(timer_entry.get("id")),
+            "id": _normalize_value(timer_entry.get("id")),
+            "type": "timer",
+            "data": {
+                "total_seconds": max(1, _safe_int(timer_entry.get("total_seconds"))),
+            },
+        }
+        result = self._on_timer_worked(payload)
+        if asyncio.iscoroutine(result):
+            await result
 
     def _timers_for_client(self, client_id: str) -> list[dict[str, Any]]:
         if client_id:

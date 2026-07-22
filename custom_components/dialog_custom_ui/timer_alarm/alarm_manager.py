@@ -69,11 +69,13 @@ class DialogAlarmManager:
         mark_updated: Callable[[], None],
         default_media_content_id: Callable[[], str],
         persistence: AlarmPersistence | None = None,
+        on_alarm_worked: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self.hass = hass
         self._mark_updated = mark_updated
         self._default_media_content_id = default_media_content_id
         self._persistence = persistence
+        self._on_alarm_worked = on_alarm_worked
         self._alarms: dict[str, dict[str, Any]] = {}
         self._alarm_presets: set[str] = set()
         self._triggered_alarm_keys: set[str] = set()
@@ -436,9 +438,31 @@ class DialogAlarmManager:
         device_ref = _normalize_value(alarm.get("device_id"))
         volume_start = _coerce_volume_start(alarm.get("volume_start"))
         await audio_notification(self.hass, device_ref, self._default_media_content_id(), f"{volume_start}-0.7")
+        await self._async_dispatch_alarm_worked(alarm)
         if _normalize_repeat_type(alarm.get("repeat_type")) == "once":
             alarm["status"] = "off"
         self._mark_updated()
+
+    async def _async_dispatch_alarm_worked(self, alarm: dict[str, Any]) -> None:
+        if self._on_alarm_worked is None:
+            return
+        alarm_time = _normalize_value(alarm.get("time"))
+        payload = {
+            "parent_type": "alarm_worked",
+            "client_id": _normalize_value(alarm.get("client_id")),
+            "clientId": _normalize_value(alarm.get("client_id")),
+            "device_id": _normalize_value(alarm.get("device_id")),
+            "deviceId": _normalize_value(alarm.get("device_id")),
+            "alarm_id": _normalize_value(alarm.get("id")),
+            "id": _normalize_value(alarm.get("id")),
+            "type": "alarm",
+            "data": {
+                "time": alarm_time,
+            },
+        }
+        result = self._on_alarm_worked(payload)
+        if asyncio.iscoroutine(result):
+            await result
 
     def _alarms_for_client(self, client_id: str) -> list[dict[str, Any]]:
         if client_id:
