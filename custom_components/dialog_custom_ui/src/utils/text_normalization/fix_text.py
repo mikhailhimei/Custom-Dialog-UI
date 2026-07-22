@@ -25,7 +25,7 @@ def fix_text(text: str) -> str:
     )
 
     text = re.sub(
-        r"(?m)^\s*([1-9]\d*)\.(?!\d)",
+        r"(?:(?<=^)|(?<=\s))([1-9]\d*)\.(?!\d)",
         lambda m: f"Номер {num2words(int(m.group(1)), lang='ru')}",
         text,
     )
