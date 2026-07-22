@@ -175,22 +175,26 @@ class DialogTimerAlarmManager:
         hass: HomeAssistant,
         append_log: Callable[[str, str], None],
         post_save_commands: Callable[[dict[str, Any], dict[str, Any]], Awaitable[None]],
+        dispatch_worked_payload: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
         storage_key_suffix: str = "global",
     ) -> None:
         self.hass = hass
         self._append_log = append_log
         self._post_save_commands = post_save_commands
+        self._dispatch_worked_payload = dispatch_worked_payload
 
         self.timer_manager = DialogTimerManager(
             hass,
             self._mark_updated,
             lambda: self._media_content_id_for("timer"),
+            self._dispatch_worked_payload,
         )
         self.alarm_manager = DialogAlarmManager(
             hass,
             self._mark_updated,
             lambda: self._media_content_id_for("alarm"),
             None,
+            self._dispatch_worked_payload,
         )
 
         self._timers = self.timer_manager._timers

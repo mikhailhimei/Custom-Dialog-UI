@@ -86,6 +86,7 @@ class DialogCommandCoordinator:
             hass,
             self._append_log,
             self._post_save_commands,
+            self._dispatch_timer_alarm_worked_payload,
             storage_key_suffix=entry.entry_id,
         )
         _LOGGER.debug("DialogCommandCoordinator initialized for entry %s", self.entry.entry_id)
@@ -209,6 +210,14 @@ class DialogCommandCoordinator:
                     scenario_name,
                 )
                 self._append_log("error", f"script run failed: {e}")
+
+    async def _dispatch_timer_alarm_worked_payload(self, payload: dict[str, Any]) -> None:
+        _LOGGER.info(
+            "Timer/alarm worked payload for entry %s: %s",
+            self.entry.entry_id,
+            payload,
+        )
+        await self._handle_payload([payload])
 
     async def _post_save_commands(self, options: dict[str, str], payload: dict[str, str]) -> None:
 
