@@ -420,12 +420,20 @@ class DialogTimerAlarmManager:
         return {"client_id": client_id, "device_id": device_id, "actionType": "success", "message": alarm_id}
 
     def _yaml_alarm_time_from_config(self, config: dict[str, Any]) -> str:
-        hour = _safe_config_int(config.get("hh"))
-        minute = _safe_config_int(config.get("mm"))
+        hour = max(0, min(_safe_config_int(config.get("hh")), 23))
+        minute = max(0, min(_safe_config_int(config.get("mm")), 59))
         convert_day_period = _normalize_value(config.get("convert_day_period")).lower() in {"1", "true", "yes", "on"}
         if not convert_day_period and 1 <= hour <= 11:
-            hour += 12
-        return f"{max(0, min(hour, 23)):02d}:{max(0, min(minute, 59)):02d}"
+            now = dt_util.now()
+            morning_hour = hour
+            evening_hour = hour + 12
+            if (now.hour, now.minute) < (morning_hour, minute):
+                hour = morning_hour
+            elif (now.hour, now.minute) < (evening_hour, minute):
+                hour = evening_hour
+            else:
+                hour = morning_hour
+        return f"{hour:02d}:{minute:02d}"
 
     async def _apply_yaml_alarm_repeat_config(self, client_id: str, device_id: str, alarm_time: str, config: dict[str, Any]) -> None:
         repeat_type = _normalize_repeat_type(config.get("repeat_type"))
