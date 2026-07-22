@@ -130,6 +130,8 @@ class DialogAlarmManager:
         client_id: str,
         device_id: str,
         execution_command: bool,
+        repeat_type: Any = None,
+        repeat_days: Any = None,
     ) -> dict[str, Any] | None:
         if not client_id and execution_command:
             return {
@@ -150,21 +152,30 @@ class DialogAlarmManager:
                 }
             return None
 
+        normalized_repeat_type = _normalize_repeat_type(repeat_type)
+        normalized_repeat_days = _normalize_repeat_days(repeat_days) if normalized_repeat_type == "custom" else []
+
         for existing in self._alarms.values():
+            if _normalize_value(existing.get("client_id")) != client_id:
+                continue
             existing_device_id = _normalize_value(existing.get("device_id"))
             if device_id and existing_device_id and existing_device_id != device_id:
                 continue
             if _normalize_value(existing.get("time")) != alarm_time:
                 continue
-            if _normalize_value(existing.get("status")).lower() != "off":
+            if _normalize_repeat_type(existing.get("repeat_type")) != normalized_repeat_type:
+                continue
+            if _normalize_repeat_days(existing.get("repeat_days")) != normalized_repeat_days:
                 continue
 
-            existing["status"] = "on"
-            existing["time"] = alarm_time
-            existing["device_id"] = device_id
-            self._remember_alarm_preset(alarm_time)
-            self._ensure_alarm_tick_task()
-            self._mark_updated()
+            if _normalize_value(existing.get("status")).lower() == "off":
+                existing["status"] = "on"
+                existing["time"] = alarm_time
+                existing["device_id"] = device_id
+                self._remember_alarm_preset(alarm_time)
+                self._ensure_alarm_tick_task()
+                self._mark_updated()
+
             if execution_command:
                 return {
                     "actionType": "success",
@@ -172,7 +183,7 @@ class DialogAlarmManager:
                     "device_id": device_id,
                     "message": f"{alarm_time}",
                 }
-            
+
             return
 
         alarm_id = f"ha_alarm:{client_id}:{uuid.uuid4().hex[:8]}"
@@ -183,8 +194,8 @@ class DialogAlarmManager:
             "status": "on",
             "time": alarm_time,
             "volume_start": 0.3,
-            "repeat_type": _normalize_repeat_type(None),
-            "repeat_days": [],
+            "repeat_type": normalized_repeat_type,
+            "repeat_days": normalized_repeat_days,
             "created_at": datetime.now().timestamp(),
         }
         self._remember_alarm_preset(alarm_time)
