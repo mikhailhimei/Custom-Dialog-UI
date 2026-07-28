@@ -3,13 +3,22 @@ import re
 
 from num2words import num2words
 
-from ..reverse_map import get_subsection
+from ..reverse_map import get_section, get_subsection
 from .inflections import inflect_number_text, num_with_word
 
 _MONTHS_MAP = get_subsection("genitive_day", "months_map")
 _MONTH_MARKERS = get_subsection("genitive_day", "month_markers")
 MONTHS_REV = {v: k for k, v in _MONTHS_MAP.items()}
 MONTH_MARKERS = {**_MONTH_MARKERS, **_MONTHS_MAP}
+_TIME_PREFIXES = get_section("time_prefixes")
+GENITIVE_TIME_PREFIXES = tuple(_TIME_PREFIXES.get("genitive", ()))
+DATIVE_TIME_PREFIXES = tuple(_TIME_PREFIXES.get("dative", ()))
+PLAIN_TIME_PREFIXES = tuple(_TIME_PREFIXES.get("plain", ()))
+TIME_PREFIXES = tuple(dict.fromkeys((*GENITIVE_TIME_PREFIXES, *DATIVE_TIME_PREFIXES, *PLAIN_TIME_PREFIXES)))
+
+
+def time_prefix_pattern() -> str:
+    return "|".join(re.escape(prefix) for prefix in TIME_PREFIXES)
 
 
 def year_to_text(year: int) -> str:
@@ -49,12 +58,12 @@ def day_number_to_text(day: int) -> str:
 def time_to_text(hour: int, minute: int, second: int = 0, prefix: str = "") -> str:
     prefix = prefix.lower()
 
-    if prefix in ("с", "до"):
+    if prefix in GENITIVE_TIME_PREFIXES:
         case = "gent"
         hour_word = "часов"
         minute_word = "минут"
         second_word = "секунд"
-    elif prefix == "к":
+    elif prefix in DATIVE_TIME_PREFIXES:
         case = "datv"
         hour_word = "часам"
         minute_word = "минутам"
@@ -95,12 +104,12 @@ def time_to_text(hour: int, minute: int, second: int = 0, prefix: str = "") -> s
 
 
 def mark_time(match: re.Match) -> str:
-    if match.group(1):
-        seconds = match.group(4) or "00"
-        return f"__TIME__{match.group(1)}|{match.group(2)}:{match.group(3)}:{seconds}__"
+    prefix = match.group("prefix") or ""
+    hour = match.group("prefixed_hour") or match.group("hour")
+    minute = match.group("prefixed_minute") or match.group("minute")
+    seconds = match.group("prefixed_second") or match.group("second") or "00"
 
-    seconds = match.group(7) or "00"
-    return f"__TIME__|{match.group(5)}:{match.group(6)}:{seconds}__"
+    return f"__TIME__{prefix}|{hour}:{minute}:{seconds}__"
 
 
 def replace_date_match(match: re.Match) -> str:
