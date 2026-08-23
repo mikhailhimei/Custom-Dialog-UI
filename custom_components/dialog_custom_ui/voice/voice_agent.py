@@ -75,16 +75,16 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         text = str(data.get("text") or "")
         should_continue = not bool(data.get("end_session", True))
 
-        if not text:
-            await audio_notification(self._hass, application_id, "completed.mp3", 1.0, wait_until_finished=True)
+        #if not text:
+       #     await audio_notification(self._hass, application_id, "completed.mp3", 1.0, wait_until_finished=True)
 
         response = intent.IntentResponse(language=user_input.language)
         response.async_set_speech(text)
 
-        if text and should_continue:
-            self._hass.async_create_task(
-                self._async_play_drop_after_speech(application_id, text),
-            )
+        #if text and should_continue:
+         #   self._hass.async_create_task(
+          #      self._async_play_drop_after_speech(application_id, text),
+           # )
 
         return ConversationResult(
             response=response,
@@ -93,9 +93,10 @@ class DialogCustomUiVoiceAgent(AbstractConversationAgent):
         )
 
     async def _async_play_drop_after_speech(self, application_id: str, text: str) -> None:
-        speech_delay = self._estimate_speech_duration(text)
-        await asyncio.sleep(speech_delay)
-        await audio_notification(self._hass, application_id, "listen.mp3", 1.0)
+        pass
+        #speech_delay = self._estimate_speech_duration(text)
+        #await asyncio.sleep(speech_delay)
+        #await audio_notification(self._hass, application_id, "listen.mp3", 1.0)
 
     @staticmethod
     def _estimate_speech_duration(text: str) -> float:
