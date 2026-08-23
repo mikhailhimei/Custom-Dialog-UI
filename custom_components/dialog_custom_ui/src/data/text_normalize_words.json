@@ -350,6 +350,19 @@
       "ночью"
     ]
   },
+  "time_prefixes": {
+    "genitive": [
+      "с",
+      "до",
+      "около"
+    ],
+    "dative": [
+      "к"
+    ],
+    "plain": [
+      "в"
+    ]
+  },
   "time_units": {
     "minutes": [
       "минута",

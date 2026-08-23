@@ -6,6 +6,7 @@ from .dates import (
     day_month_to_text,
     day_number_to_text,
     mark_time,
+    time_prefix_pattern,
     replace_date_match,
     restore_time,
     year_to_text,
@@ -15,10 +16,11 @@ from .numbers import fix_marked_words
 
 
 def fix_text(text: str) -> str:
+    time_prefixes = time_prefix_pattern()
     text = re.sub(
-        r"(?<!\w)(с|в|до|к)\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\b"
+        rf"(?<!\w)(?P<prefix>{time_prefixes})\s+(?P<prefixed_hour>\d{{1,2}}):(?P<prefixed_minute>\d{{2}})(?::(?P<prefixed_second>\d{{2}}))?\b"
         r"|"
-        r"(?<!\w)(\d{1,2}):(\d{2})(?::(\d{2}))?\b",
+        r"(?<!\w)(?P<hour>\d{1,2}):(?P<minute>\d{2})(?::(?P<second>\d{2}))?\b",
         mark_time,
         text,
         flags=re.IGNORECASE,
@@ -71,7 +73,7 @@ def fix_text(text: str) -> str:
     )
 
     text = re.sub(
-        r"__TIME__(с|в|до|к)?\|(\d{1,2}:\d{2}:\d{2})__",
+        rf"__TIME__({time_prefixes})?\|(\d{{1,2}}:\d{{2}}:\d{{2}})__",
         restore_time,
         text,
         flags=re.IGNORECASE,
