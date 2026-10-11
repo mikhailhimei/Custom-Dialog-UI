@@ -204,6 +204,7 @@ class DialogTimerManager:
                     "deviceId": _normalize_value(entry.get("device_id")),
                     "ha_managed": True,
                     "time": {
+                        "created_at": float(entry.get("created_at") or 0),
                         "count_timer": _seconds_to_duration(max(1, total_seconds)),
                         "remaining_timer": _seconds_to_duration(max(0, remaining_seconds)),
                         "total_seconds": max(1, total_seconds),
@@ -236,6 +237,8 @@ class DialogTimerManager:
                     "deviceId": _normalize_value(item.get("deviceId")),
                     "status": _normalize_value(item.get("status")) or "on",
                     "time": {
+                        "created_at": time_data.get("created_at", 0),
+                        "total_seconds": time_data.get("total_seconds", 1),
                         "count_timer": paused_duration
                         or _normalize_value(time_data.get("count_timer"))
                         or "00:30:00",
@@ -275,7 +278,7 @@ class DialogTimerManager:
                 entry = self._timers[timer_id]
                 entry["client_id"] = client_id
                 entry["device_id"] = device_id
-                entry["total_seconds"] = max(1, duration)
+                entry["total_seconds"] = max(1, _safe_int(time_data.get("total_seconds")) or duration)
                 entry["remaining_seconds"] = max(1, duration)
                 entry["paused"] = paused
                 if paused:
@@ -291,7 +294,9 @@ class DialogTimerManager:
                 device_id=device_id,
                 total_seconds=duration,
                 paused=paused,
+                created_at=time_data.get("created_at"),
             )
+            self._timers[timer_id]["total_seconds"] = max(1, _safe_int(time_data.get("total_seconds")) or duration)
             changed = True
 
         if changed:
@@ -304,12 +309,13 @@ class DialogTimerManager:
         device_id: str,
         total_seconds: int,
         paused: bool,
+        created_at: float | None = None,
     ) -> None:
         entry: dict[str, Any] = {
             "id": timer_id,
             "client_id": client_id,
             "device_id": device_id,
-            "created_at": datetime.now().timestamp(),
+            "created_at": float(created_at or datetime.now().timestamp()),
             "total_seconds": max(1, total_seconds),
             "remaining_seconds": max(1, total_seconds),
             "paused": bool(paused),

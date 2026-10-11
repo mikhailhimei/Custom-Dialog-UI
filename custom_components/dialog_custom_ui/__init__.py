@@ -32,7 +32,7 @@ from .voice.voice_agent import DialogCustomUiVoiceAgent
 from .voice.yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
 
-PLATFORMS = ["tts"]
+PLATFORMS = ["tts", "sensor"]
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration domain."""
