@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import uuid
 from datetime import datetime
 from typing import Any, Callable
@@ -98,8 +99,10 @@ class DialogTimerManager:
                 "message": "Не удалось установить таймер: отсутствует client_id",
             }
 
-        timers = self._timers_for_client(client_id)
-        if not timers and execution_command:
+        timers = self._timers_for_client(client_id, device_id)
+        if not timers and not execution_command:
+            return None
+        if not timers:
             return {
                 "client_id": client_id,
                 "device_id": device_id,
@@ -140,8 +143,10 @@ class DialogTimerManager:
         count: int,
         execution_command: bool,
     ) -> dict[str, Any] | None:
-        timers = self._timers_for_client(client_id)
-        if not timers and execution_command:
+        timers = self._timers_for_client(client_id, device_id)
+        if not timers and not execution_command:
+            return None
+        if not timers:
             return {
                 "client_id": client_id,
                 "device_id": device_id,
@@ -159,7 +164,7 @@ class DialogTimerManager:
             }
 
     async def async_handle_timer_resume(self, client_id: str, device_id: str, count: int) -> None:
-        timers = self._timers_for_client(client_id)
+        timers = self._timers_for_client(client_id, device_id)
         if not timers:
             return
         index = len(timers) - 1 if count is None else min(max(count - 1, 0), len(timers) - 1)
@@ -173,7 +178,7 @@ class DialogTimerManager:
     ) -> dict[str, Any] | None:
         if not client_id:
             return
-        timers = self._timers_for_client(client_id)
+        timers = self._timers_for_client(client_id, device_id)
         count_timer, text_timer = self._timer_count_message(timers)
         if execution_command:
             return {
@@ -193,7 +198,7 @@ class DialogTimerManager:
             paused = bool(entry.get("paused"))
             ends_at = float(entry.get("ends_at") or (now_ts + remaining_seconds))
             if not paused:
-                remaining_seconds = max(0, int(ends_at - now_ts))
+                remaining_seconds = max(0, math.ceil(ends_at - now_ts))
             items.append(
                 {
                     "id": timer_id,
@@ -213,7 +218,7 @@ class DialogTimerManager:
                     },
                 }
             )
-        items.sort(key=lambda item: _normalize_value(item.get("id")))
+        items.sort(key=lambda item: float(item["time"]["created_at"]))
         return items
 
     def get_active_items(self) -> list[dict[str, Any]]:
@@ -227,8 +232,6 @@ class DialogTimerManager:
         result: list[dict[str, Any]] = []
         for item in self.get_timer_items():
             time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
-            paused_remaining = _safe_int(time_data.get("remaining_seconds"))
-            paused_duration = _seconds_to_duration(paused_remaining) if paused_remaining > 0 else ""
             result.append(
                 {
                     "id": _normalize_value(item.get("id")),
@@ -239,68 +242,75 @@ class DialogTimerManager:
                     "time": {
                         "created_at": time_data.get("created_at", 0),
                         "total_seconds": time_data.get("total_seconds", 1),
-                        "count_timer": paused_duration
-                        or _normalize_value(time_data.get("count_timer"))
-                        or "00:30:00",
+                        "count_timer": time_data["count_timer"],
+                        "remaining_seconds": time_data["remaining_seconds"],
+                        "date_end": time_data["date_end"],
                     },
                 }
             )
         return result
 
     async def apply_ui_items(self, incoming_timers: dict[str, dict[str, Any]]) -> None:
-        existing_ids = set(self._timers)
-        requested_ids = set(incoming_timers)
-        for timer_id in existing_ids - requested_ids:
-            entry = self._timers.pop(timer_id, None)
-            if entry is not None:
-                self._cancel_timer_task(entry)
+        for timer_id in set(self._timers) - set(incoming_timers):
+            self._cancel_timer_task(self._timers.pop(timer_id))
 
-        changed = False
         for timer_id, item in incoming_timers.items():
             time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
+            paused = _normalize_value(item.get("status")).lower() == "paused"
             duration = _duration_to_seconds(_normalize_value(time_data.get("count_timer")))
+            total = _safe_int(time_data.get("total_seconds")) or duration
+            remaining = _safe_int(time_data.get("remaining_seconds")) if "remaining_seconds" in time_data else duration
             date_end = _normalize_value(time_data.get("date_end"))
-            if date_end:
+            if date_end and not paused:
                 end_dt = _parse_datetime(date_end, "")
                 if end_dt is not None:
-                    duration = max(0, int(end_dt.timestamp() - datetime.now().timestamp()))
-            if duration <= 0:
-                duration = _safe_int(time_data.get("remaining_seconds")) or _safe_int(time_data.get("total_seconds"))
-            if duration <= 0:
-                continue
+                    remaining = max(0, math.ceil(end_dt.timestamp() - datetime.now().timestamp()))
 
             client_id = _normalize_value(item.get("clientId") or item.get("userId"))
             device_id = _normalize_value(item.get("deviceId"))
-            status = _normalize_value(item.get("status")).lower()
-            paused = status == "paused"
-
-            if timer_id in self._timers:
-                entry = self._timers[timer_id]
-                entry["client_id"] = client_id
-                entry["device_id"] = device_id
-                entry["total_seconds"] = max(1, _safe_int(time_data.get("total_seconds")) or duration)
-                entry["remaining_seconds"] = max(1, duration)
-                entry["paused"] = paused
-                if paused:
+            entry = self._timers.get(timer_id)
+            if entry is not None:
+                # Synchronizing storage or editing another timer must not restart
+                # this timer or change its creation order/original duration.
+                for key, value in (("client_id", client_id), ("device_id", device_id)):
+                    if entry[key] != value:
+                        entry[key] = value
+                # A duration-only UI edit can change the remaining interval,
+                # while creation time and original duration stay immutable.
+                if (
+                    not date_end
+                    and "remaining_seconds" not in time_data
+                    and duration > 0
+                    and duration != entry.get("ui_duration", entry["total_seconds"])
+                ):
                     self._cancel_timer_task(entry)
-                else:
-                    self._schedule_timer(entry)
-                changed = True
+                    entry["ui_duration"] = duration
+                    entry["remaining_seconds"] = duration
+                    entry["paused"] = paused
+                    if not paused:
+                        self._schedule_timer(entry)
+                if paused != entry["paused"]:
+                    if paused:
+                        await self._pause_timer(timer_id)
+                    else:
+                        await self._resume_timer(timer_id)
                 continue
 
+            if remaining <= 0 or total <= 0:
+                continue
             self._create_timer(
                 timer_id=timer_id,
                 client_id=client_id,
                 device_id=device_id,
-                total_seconds=duration,
+                total_seconds=total,
+                remaining_seconds=remaining,
                 paused=paused,
                 created_at=time_data.get("created_at"),
             )
-            self._timers[timer_id]["total_seconds"] = max(1, _safe_int(time_data.get("total_seconds")) or duration)
-            changed = True
 
-        if changed:
-            self._mark_updated()
+        # A UI save may have supplied a legacy duration-only record. Write
+        # runtime metadata back even when the countdown itself did not change.
+        self._mark_updated()
 
     def _create_timer(
         self,
@@ -310,17 +320,19 @@ class DialogTimerManager:
         total_seconds: int,
         paused: bool,
         created_at: float | None = None,
+        remaining_seconds: int | None = None,
     ) -> None:
+        remaining = total_seconds if remaining_seconds is None else remaining_seconds
         entry: dict[str, Any] = {
             "id": timer_id,
             "client_id": client_id,
             "device_id": device_id,
             "created_at": float(created_at or datetime.now().timestamp()),
             "total_seconds": max(1, total_seconds),
-            "remaining_seconds": max(1, total_seconds),
+            "remaining_seconds": max(1, remaining),
             "paused": bool(paused),
             "task": None,
-            "ends_at": datetime.now().timestamp() + max(1, total_seconds),
+            "ends_at": datetime.now().timestamp() + max(1, remaining),
         }
         self._timers[timer_id] = entry
         if not paused:
@@ -341,7 +353,7 @@ class DialogTimerManager:
         if entry is None or bool(entry.get("paused")):
             return
         ends_at = float(entry.get("ends_at") or datetime.now().timestamp())
-        entry["remaining_seconds"] = max(1, int(ends_at - datetime.now().timestamp()))
+        entry["remaining_seconds"] = max(0, math.ceil(ends_at - datetime.now().timestamp()))
         entry["paused"] = True
         self._cancel_timer_task(entry)
         self._mark_updated()
@@ -405,17 +417,12 @@ class DialogTimerManager:
         if asyncio.iscoroutine(result):
             await result
 
-    def _timers_for_client(self, client_id: str) -> list[dict[str, Any]]:
-        if client_id:
-            items = [
-                entry
-                for entry in self._timers.values()
-                if _normalize_value(entry.get("client_id")) == client_id
-            ]
-            if not items:
-                items = list(self._timers.values())
-        else:
-            items = list(self._timers.values())
+    def _timers_for_client(self, client_id: str, device_id: str = "") -> list[dict[str, Any]]:
+        items = [
+            entry for entry in self._timers.values()
+            if (not client_id or _normalize_value(entry.get("client_id")) == client_id)
+            and (not device_id or _normalize_value(entry.get("device_id")) == device_id)
+        ]
         items.sort(key=lambda item: float(item.get("created_at") or 0.0))
         return items
 
@@ -430,7 +437,7 @@ class DialogTimerManager:
             remaining = max(0, _safe_int(item.get("remaining_seconds")))
             if not bool(item.get("paused")):
                 ends_at = float(item.get("ends_at") or now_ts)
-                remaining = max(0, int(ends_at - now_ts))
+                remaining = max(0, math.ceil(ends_at - now_ts))
             number = f"{index}. на {_seconds_to_minute_phrase(total_seconds)} осталось"
             lines.append(f"{number if count else ''} {_seconds_to_minute_phrase(max(1, remaining))}")
         return count, "\n".join(lines)

@@ -160,7 +160,11 @@ async def _async_handle_timer_alarm_script(hass: HomeAssistant, kind: str, actio
 
     options = _get_options(entry, get_cached_settings(hass))
     client_id = _normalize_value(call.data.get(ATTR_CLIENT_ID)) or _normalize_value(options.get("client_id"))
-    device_id = _normalize_value(call.data.get(ATTR_DEVICE_ID))
+    camel_device = _normalize_value(call.data.get(ATTR_DEVICE_ID))
+    snake_device = _normalize_value(call.data.get("device_id"))
+    if camel_device and snake_device and camel_device != snake_device:
+        raise HomeAssistantError("deviceId and device_id refer to different devices")
+    device_id = camel_device or snake_device
     config = dict(call.data)
     config[ATTR_ACTION] = action
     if kind == "alarm":
@@ -221,6 +225,7 @@ _ALARM_CREATE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_MM, default=0): vol.Any(str, int),
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
         vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Optional("device_id"): vol.Coerce(str),
         vol.Optional(ATTR_REPEAT_TYPE, default="once"): _REPEAT_SCHEMA,
         vol.Optional(ATTR_REPEAT_DAYS, default=""): vol.Any(str, [str]),
         vol.Optional(ATTR_CONVERT_DAY_PERIOD, default=False): vol.Boolean(),
@@ -240,6 +245,7 @@ _TIMER_CREATE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_SS, default=0): vol.Any(str, int),
         vol.Optional(ATTR_CLIENT_ID): vol.Coerce(str),
         vol.Optional(ATTR_DEVICE_ID): vol.Coerce(str),
+        vol.Optional("device_id"): vol.Coerce(str),
     }
 )
 

@@ -6,7 +6,7 @@ from collections import deque
 
 from homeassistant.components import conversation
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_IP_ADDRESS
+from homeassistant.const import CONF_IP_ADDRESS, Platform
 from homeassistant.core import HomeAssistant
 
 from .src.api.logs_api import async_register_logs_websockets
@@ -32,7 +32,7 @@ from .voice.voice_agent import DialogCustomUiVoiceAgent
 from .voice.yandex_tts import SERVICE_SPEAK, async_register_tts_service
 
 
-PLATFORMS = ["tts", "sensor"]
+PLATFORMS = [Platform.SENSOR, Platform.TTS]
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration domain."""
@@ -72,12 +72,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DialogCommandCoordinator(hass, entry)
     hass.data[DOMAIN][entry.entry_id] = coordinator
     hass.data[DOMAIN]["coordinator"] = coordinator
-    await coordinator.async_start()
- 
-    await hass.config_entries.async_forward_entry_setups(
-        entry,
-        PLATFORMS,
-    )
+    try:
+        await coordinator.async_start()
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except Exception:
+        # A retry must not leave a second manager, heartbeat or timer tasks.
+        await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+        await coordinator.async_stop()
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+        if hass.data[DOMAIN].get("coordinator") is coordinator:
+            hass.data[DOMAIN].pop("coordinator", None)
+        raise
 
     conversation.async_set_agent(
             hass,
@@ -99,11 +104,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         PLATFORMS,
     )
 
+    if not unload_ok:
+        return False
+
+    conversation.async_unset_agent(hass, entry)
     coordinator: DialogCommandCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+    if hass.data[DOMAIN].get("coordinator") is coordinator:
+        hass.data[DOMAIN].pop("coordinator", None)
     await coordinator.async_stop()
     if hass.services.has_service(DOMAIN, SERVICE_SPEAK):
         hass.services.async_remove(DOMAIN, SERVICE_SPEAK)
-    if not hass.config_entries.async_entries(DOMAIN):
+    if not any(isinstance(value, DialogCommandCoordinator) for value in hass.data[DOMAIN].values()):
         async_unregister_services(hass)
     return True
 

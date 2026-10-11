@@ -110,7 +110,7 @@ def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_
     return {
         "id": _normalize_value(timer_request.get("uuid")),
         "type": "timer",
-        "status": "on",
+        "status": _normalize_value(timer_request.get("status")) or "on",
         "clientId": shared_client_id,
         "userId": shared_client_id,
         "deviceId": _normalize_value(timer_request.get("device_id")),
@@ -145,6 +145,7 @@ def _timer_item_to_request(item: dict[str, Any]) -> dict[str, Any]:
         "uuid": timer_id,
         "name": _normalize_value(item.get("name")) or "Таймер",
         "action_type": "create_timer",
+        "status": _normalize_value(item.get("status")) or "on",
         "device_id": _normalize_value(item.get("deviceId") or item.get("device_id")),
         "timer_time": timer_time,
     }
@@ -202,6 +203,8 @@ class DialogTimerAlarmManager:
         self._alarm_presets = self.alarm_manager._alarm_presets
         self._last_updated: str | None = None
         self._restored = False
+        self._save_task = None
+        self._save_pending = False
         self._runtime_state_key = f"timer_alarm_runtime:{id(self)}"
         self._active_builtin_type = "timer"
 
@@ -233,9 +236,12 @@ class DialogTimerAlarmManager:
         self._restored = True
 
     async def async_stop(self) -> None:
+        if self._save_task is not None:
+            await self._save_task
         await self.timer_manager.async_stop()
         await self.alarm_manager.async_stop()
         self._remove_runtime_state()
+        self._restored = False
 
     async def async_handle_builtin(
         self,
@@ -276,7 +282,11 @@ class DialogTimerAlarmManager:
         if isinstance(commands, dict) and _normalize_value(commands.get("actionType")).lower() == "error":
             return False
 
-        await self._persist_voice_request(payload, commands)
+        if parent_type == "alarm_start":
+            await self._persist_voice_request(payload, commands)
+        else:
+            # Persist the runtime UUID and metadata; do not append a second timer.
+            await self._async_save_to_request_storages()
         await self._post_save_commands(options, commands)
         return True
 
@@ -521,7 +531,14 @@ class DialogTimerAlarmManager:
         self._last_updated = dt_util.now().isoformat()
         self._persist_items_to_entry()
         self._publish_runtime_state()
-        self.hass.async_create_task(self._async_save_to_request_storages())
+        self._save_pending = True
+        if self._save_task is None or self._save_task.done():
+            self._save_task = self.hass.async_create_task(self._async_flush_request_storages())
+
+    async def _async_flush_request_storages(self) -> None:
+        while self._save_pending:
+            self._save_pending = False
+            await self._async_save_to_request_storages()
 
     async def _async_save_to_request_storages(self) -> None:
         try:

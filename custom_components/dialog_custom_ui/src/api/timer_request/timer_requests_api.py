@@ -82,6 +82,7 @@ def _normalize_timer_request_payload(data: dict[str, Any], uuid_value: str | Non
         "uuid": _normalize_value(uuid_value or data.get("uuid")),
         "name": _normalize_value(data.get("name")),
         "action_type": action_type,
+        "status": _normalize_value(data.get("status")) or "on",
         "device_id": _normalize_value(data.get("device_id")),
         "timer_time": data.get("timer_time") if action_type == "create_timer" else "",
         "volume_start": _coerce_volume_start(data.get("volume_start")),
@@ -98,7 +99,7 @@ def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_
     return {
         "id": _normalize_value(timer_request.get("uuid")),
         "type": "timer",
-        "status": "on",
+        "status": _normalize_value(timer_request.get("status")) or "on",
         "clientId": shared_client_id,
         "userId": shared_client_id,
         "deviceId": _normalize_value(timer_request.get("device_id")),
@@ -123,11 +124,15 @@ async def _sync_timer_requests_to_runtime(
         if _normalize_value(item.get("id"))
     }
 
+    seen = set()
     for value in hass.data.get(DOMAIN, {}).values():
         manager = getattr(value, "timer_alarm_manager", None)
         timer_manager = getattr(manager, "timer_manager", None)
         if timer_manager is None or not hasattr(timer_manager, "apply_ui_items"):
             continue
+        if id(timer_manager) in seen:
+            continue
+        seen.add(id(timer_manager))
         await timer_manager.apply_ui_items(incoming_timers)
 
 
@@ -150,8 +155,6 @@ async def _save(hass, timer_requests, connection, msg) -> bool:
 @websocket_api.async_response
 async def _ws_get_timer_requests_short(hass, connection, msg):
     timer_requests = await async_load_timer_requests(hass)
-
-    await _sync_timer_requests_to_runtime(hass, timer_requests)
 
     page = msg.get("page", 1)
     page_size = msg.get("page_size", 10)
