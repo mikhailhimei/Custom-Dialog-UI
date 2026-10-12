@@ -5,7 +5,8 @@ export interface TimerRequest {
   name: string;
   action_type: "create_timer" | "delete_timer";
   device_id: string;
-  timer_time: string | { count_timer?: string; date_end?: string };
+  status?: "on" | "paused";
+  timer_time: number | string | { count_timer?: string; date_end?: string; created_at?: number; total_seconds?: number; remaining_seconds?: number };
   volume_start?: number;
 }
 

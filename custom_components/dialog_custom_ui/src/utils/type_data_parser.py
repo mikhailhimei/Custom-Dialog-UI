@@ -36,7 +36,7 @@ _SPACED_CLOCK_TIME_PATTERN = re.compile(
     r"\b(?P<hour>[01]?\d|2[0-3])\s+(?P<minut>[0-5]?\d)(?:\s+(?P<second>[0-5]?\d))?\b"
 )
 _HOUR_MINUTE_UNITS_PATTERN = re.compile(
-    r"\b(?P<hour>[01]?\d|2[0-3])\s*(?:час(?:а|ов)?|ч)\s*(?P<minut>[0-5]?\d)\s*(?:мин(?:ут(?:а|ы)?)?|м)\b"
+    r"\b(?P<hour>[01]?\d|2[0-3])\s*(?:час(?:а|ов)?|ч)\s*(?P<minut>[0-5]?\d)\s*(?:мин(?:ут(?:а|ы|у)?)?|м)\b"
 )
 _HOUR_ONLY_PATTERN = re.compile(r"\b(?P<hour>[01]?\d|2[0-3])\s*(?:час(?:а|ов)?|ч)\b")
 
@@ -337,9 +337,9 @@ def _parse_duration_time(command_text: str) -> dict | None:
 
     for value in re.findall(r"(\d+)\s*(?:час(?:а|ов)?|ч)\b", text):
         hour += int(value)
-    for value in re.findall(r"(\d+)\s*(?:мин(?:ут(?:а|ы)?)?|м)\b", text):
+    for value in re.findall(r"(\d+)\s*(?:мин(?:ут(?:а|ы|у)?)?|м)\b", text):
         minut += int(value)
-    for value in re.findall(r"(\d+)\s*(?:сек(?:унд(?:а|ы)?)?|с)\b", text):
+    for value in re.findall(r"(\d+)\s*(?:сек(?:унд(?:а|ы|у)?)?|с)\b", text):
         second += int(value)
     for value in re.findall(r"(\d+)\s*(?:дн(?:я|ей)?|д)\b", text):
         hour += int(value) * 24
@@ -379,6 +379,16 @@ def _parse_type_time(value, now=None):
             return {"hour": hour, "minut": minut, "second": second, "times_of_day": bool(times_of_day)}
 
     command_text = sanitize_location_text(" ".join(str(value or "").strip().split()))
+    # Explicit durations must win over bare-hour/clock heuristics. In
+    # particular, accusative "минуту" is a minute, and mixed units must
+    # retain their seconds rather than stopping at the first hour match.
+    has_duration_units = re.search(
+        r"\d+\s*(?:час(?:а|ов)?|ч|мин(?:ут(?:а|ы|у)?)?|м|сек(?:унд(?:а|ы|у)?)?|с|дн(?:я|ей)?|д|нед(?:еля|ели|ель)?|н|мес(?:яц(?:а|ев)?)?)\b",
+        command_text,
+        re.IGNORECASE,
+    )
+    if has_duration_units and not _has_times_of_day_marker(command_text):
+        return _parse_duration_time(command_text)
     clock_time = _parse_clock_time(command_text, now)
     if clock_time is not None:
         return clock_time

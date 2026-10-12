@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Speaker, Trash2 } from "lucide-react";
 
+import { timerTotalSeconds } from "../../utils/timerTime";
 import { useTimerAlarmRequests } from "../../hooks/useTimerAlarmRequests";
 import { Modal } from "@/components/ui/Modal/Modal";
 import { Button } from "@/components/ui/Button/Button";
@@ -43,16 +44,16 @@ export const TimerPage = () => {
   const [remainingById, setRemainingById] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    setRemainingById((current) => Object.fromEntries(timers.map((timer) => [timer.uuid, current[timer.uuid] ?? toTimerSeconds(timer.timer_time)])));
+    setRemainingById(Object.fromEntries(timers.map((timer) => [timer.uuid, toTimerSeconds(timer.timer_time, timer.status)])));
   }, [timers, toTimerSeconds]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      setRemainingById((current) => Object.fromEntries(Object.entries(current).map(([uuid, seconds]) => [uuid, Math.max(0, seconds - 1)])));
+      setRemainingById((current) => Object.fromEntries(Object.entries(current).map(([uuid, seconds]) => [uuid, timers.find((timer) => timer.uuid === uuid)?.status === "paused" ? seconds : Math.max(0, seconds - 1)])));
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, []);
+  }, [timers]);
 
   const deviceName = useMemo(() => new Map(devices.map((device) => [device.id, device.name])), [devices]);
   const totalSeconds = parseTotalSeconds(duration.hours, duration.minutes, duration.seconds);
@@ -111,7 +112,8 @@ export const TimerPage = () => {
 
         <div className={pageStyles.grid}>
           {timers.length ? timers.map((timer) => {
-            const initialSeconds = toTimerSeconds(timer.timer_time);
+            const initialSeconds = toTimerSeconds(timer.timer_time, timer.status);
+            const originalSeconds = timerTotalSeconds(timer.timer_time);
             return (
               <div className={pageStyles.card} key={timer.uuid}>
                 <div className={pageStyles.cardHeader}>
@@ -119,7 +121,7 @@ export const TimerPage = () => {
                     <Speaker className={pageStyles.cardIcon} size={26} />
                     <div>
                       <h2 className={pageStyles.cardTitle}>{formatLeft(remainingById[timer.uuid] ?? initialSeconds)}</h2>
-                      <div className={pageStyles.meta}>Заведен на {formatLeft(initialSeconds)} • {deviceName.get(timer.device_id) || timer.device_id}</div>
+                      <div className={pageStyles.meta}>Заведен на {formatLeft(originalSeconds)} • {deviceName.get(timer.device_id) || timer.device_id}</div>
                     </div>
                   </div>
                   <Button variant="ghost" onClick={() => stopTimer(timer)}><Trash2 size={16} /></Button>

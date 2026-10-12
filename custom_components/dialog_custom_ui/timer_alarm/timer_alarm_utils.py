@@ -71,7 +71,7 @@ def _default_timezone_name() -> str:
 def _format_datetime(timestamp_value: float, timezone_name: str) -> str:
     tz = dt_util.now().tzinfo or datetime.now().astimezone().tzinfo
     dt_value = datetime.fromtimestamp(float(timestamp_value), tz=tz)
-    return dt_value.strftime("%Y-%m-%d %H:%M:%S")
+    return dt_value.isoformat(timespec="seconds")
 
 
 def _parse_datetime(value: str, timezone_name: str) -> datetime | None:
