@@ -6,10 +6,14 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 _LOGGER = logging.getLogger(__name__)
 
 
-def _resolve_media_player_entity_id(hass, device_ref) -> str:
+def _resolve_media_player_entity_id(hass, device_ref, *, log_warnings=True) -> str:
     """Resolve only the specified device; never fall back to another speaker."""
     device_ref = str(device_ref or "").strip()
     registry = er.async_get(hass)
+
+    def warning(*args):
+        if log_warnings:
+            _LOGGER.warning(*args)
 
     def playable(entity_id):
         entry = registry.async_get(entity_id)
@@ -23,7 +27,7 @@ def _resolve_media_player_entity_id(hass, device_ref) -> str:
     if device_ref.startswith("media_player."):
         if playable(device_ref):
             return device_ref
-        _LOGGER.warning("Playback entity %s is missing, disabled or unavailable", device_ref)
+        warning("Playback entity %s is missing, disabled or unavailable", device_ref)
         return ""
 
     # A timer can reference a registry device ID or any entity of that device
@@ -32,7 +36,7 @@ def _resolve_media_player_entity_id(hass, device_ref) -> str:
     device_id = reference.device_id if reference is not None else device_ref
     device = dr.async_get(hass).async_get(device_id) if device_id else None
     if device is None:
-        _LOGGER.warning("Playback reference %s does not resolve to a Home Assistant device", device_ref)
+        warning("Playback reference %s does not resolve to a Home Assistant device", device_ref)
         return ""
     players = [entry for entry in er.async_entries_for_device(registry, device.id)
                if entry.entity_id.startswith("media_player.")]
@@ -40,15 +44,15 @@ def _resolve_media_player_entity_id(hass, device_ref) -> str:
     if len(available) == 1:
         return available[0]
     if len(available) > 1:
-        _LOGGER.warning("Device %s has multiple available media players: %s; specify a media_player entity_id",
+        warning("Device %s has multiple available media players: %s; specify a media_player entity_id",
                         device.id, available)
     elif players:
-        _LOGGER.warning("Device %s has no available media player (entity, disabled, state): %s",
+        warning("Device %s has no available media player (entity, disabled, state): %s",
                         device.id, [(entry.entity_id, entry.disabled,
                                      hass.states.get(entry.entity_id).state if hass.states.get(entry.entity_id) else "missing")
                                     for entry in players])
     else:
-        _LOGGER.warning("Device %s (%s) has no registered media_player entity",
+        warning("Device %s (%s) has no registered media_player entity",
                         device.id, device.name_by_user or device.name or "unnamed")
     return ""
 

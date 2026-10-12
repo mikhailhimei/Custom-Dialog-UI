@@ -83,6 +83,7 @@ def _normalize_timer_request_payload(data: dict[str, Any], uuid_value: str | Non
         "name": _normalize_value(data.get("name")),
         "action_type": action_type,
         "status": _normalize_value(data.get("status")) or "on",
+        "client_id": _normalize_value(data.get("client_id")),
         "device_id": _normalize_value(data.get("device_id")),
         "timer_time": data.get("timer_time") if action_type == "create_timer" else "",
         "volume_start": _coerce_volume_start(data.get("volume_start")),
@@ -100,8 +101,8 @@ def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_
         "id": _normalize_value(timer_request.get("uuid")),
         "type": "timer",
         "status": _normalize_value(timer_request.get("status")) or "on",
-        "clientId": shared_client_id,
-        "userId": shared_client_id,
+        "clientId": _normalize_value(timer_request.get("client_id")) or shared_client_id,
+        "userId": _normalize_value(timer_request.get("client_id")) or shared_client_id,
         "deviceId": _normalize_value(timer_request.get("device_id")),
         "time": (
             timer_time

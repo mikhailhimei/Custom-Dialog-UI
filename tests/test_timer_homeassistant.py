@@ -49,26 +49,26 @@ async def test_full_setup_service_poll_unload_and_restart(tmp_path):
         assert entry.state is ConfigEntryState.LOADED
         state = hass.states.get(ENTITY)
         assert state is not None and state.state == "0"
-        assert isinstance(state.attributes["payload"], str)
-        before = json.loads(state.attributes["payload"])["_updated_at"]
+        assert isinstance(state.attributes["payload"], list)
+        before = state.attributes["_updated_at"]
         await asyncio.sleep(2.2)
-        assert json.loads(hass.states.get(ENTITY).attributes["payload"])["_updated_at"] > before
+        assert hass.states.get(ENTITY).attributes["_updated_at"] > before
         await hass.services.async_call(DOMAIN, "timer_create", {"clientId": "test", "deviceId": "voice", "ss": 120}, blocking=True)
         manager = hass.data[DOMAIN][entry.entry_id].timer_alarm_manager.timer_manager
         timer_id = next(iter(manager._timers))
         await asyncio.sleep(2.2)
-        payload = json.loads(hass.states.get(ENTITY).attributes["payload"])
-        assert 115 <= payload["voice"]["remaining_seconds"] < 120
+        payload = hass.states.get(ENTITY).attributes["payload"]
+        assert 115 <= payload[0]["remaining_seconds"] < 120
         await manager._pause_timer(timer_id)
         await asyncio.sleep(2.2)
-        payload = json.loads(hass.states.get(ENTITY).attributes["payload"])
-        expected = payload["voice"]
+        payload = hass.states.get(ENTITY).attributes["payload"]
+        expected = payload[0]
         assert expected["paused"]
-        before = payload["_updated_at"]
+        before = hass.states.get(ENTITY).attributes["_updated_at"]
         await asyncio.sleep(1.2)
-        payload = json.loads(hass.states.get(ENTITY).attributes["payload"])
-        assert payload["_updated_at"] > before
-        assert payload["voice"] == expected
+        payload = hass.states.get(ENTITY).attributes["payload"]
+        assert hass.states.get(ENTITY).attributes["_updated_at"] > before
+        assert payload[0] == expected
         await hass.async_block_till_done()
         registry_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_voice_timers")
         assert registry_id == ENTITY
@@ -89,8 +89,9 @@ async def test_full_setup_service_poll_unload_and_restart(tmp_path):
         entries = hass.config_entries.async_entries(DOMAIN)
         assert len(entries) == 1 and entries[0].state is ConfigEntryState.LOADED
         assert hass.states.get(ENTITY).state == "1"
-        payload = json.loads(hass.states.get(ENTITY).attributes["payload"])
-        assert payload["voice"] == expected
+        payload = hass.states.get(ENTITY).attributes["payload"]
+        assert payload[0] == expected
+        assert payload[0]["client_id"] == "test"
         assert len([s for s in hass.states.async_all("sensor") if s.entity_id.startswith(ENTITY)]) == 1
     finally:
         await hass.async_stop()
@@ -114,20 +115,20 @@ async def test_two_voice_timers_sensor_continues_after_one_expires(tmp_path):
         task = wrapper.timer_manager._timers[newest]["task"]
         with patch("custom_components.dialog_custom_ui.timer_alarm.timer_manager.audio_notification", new_callable=AsyncMock) as sound:
             await asyncio.sleep(1.2)
-            assert json.loads(hass.states.get(ENTITY).attributes["payload"])["voice-device"]["id"] == newest
+            assert hass.states.get(ENTITY).attributes["payload"][0]["id"] == newest
             await task
             await asyncio.sleep(1.2)
             state = hass.states.get(ENTITY)
-            remaining = json.loads(state.attributes["payload"])
+            remaining = state.attributes["payload"]
             assert state.state == "1"
-            assert remaining["voice-device"]["id"] == older
-            assert 110 <= remaining["voice-device"]["remaining_seconds"] < 120
-            stamp = remaining["_updated_at"]
+            assert remaining[0]["id"] == older
+            assert 110 <= remaining[0]["remaining_seconds"] < 120
+            stamp = state.attributes["_updated_at"]
             await asyncio.sleep(1.2)
-            after = json.loads(hass.states.get(ENTITY).attributes["payload"])
-            assert after["voice-device"]["id"] == older
-            assert after["_updated_at"] > stamp
-            assert after["voice-device"]["remaining_seconds"] < remaining["voice-device"]["remaining_seconds"]
+            after = hass.states.get(ENTITY).attributes["payload"]
+            assert after[0]["id"] == older
+            assert hass.states.get(ENTITY).attributes["_updated_at"] > stamp
+            assert after[0]["remaining_seconds"] < remaining[0]["remaining_seconds"]
             sound.assert_awaited_once()
     finally:
         await hass.async_stop()
@@ -167,6 +168,7 @@ async def test_alarm_sensor_setup_updates_restore_and_unload(tmp_path):
     hass = await boot(tmp_path)
     try:
         await expect(hass, "on", 1)
+        assert hass.states.get(alarm_entity).attributes["payload"][0]["client_id"] == "test"
         entries = hass.config_entries.async_entries(DOMAIN)
         entry = entries[0]
         wrapper = hass.data[DOMAIN][entry.entry_id].timer_alarm_manager

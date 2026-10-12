@@ -73,47 +73,13 @@ def _normalize_repeat_days(value: Any) -> list[str]:
 _LOGGER = logging.getLogger(__name__)
 
 
-def _build_voice_request_payload(payload: dict[str, Any]) -> dict[str, Any] | None:
-    parent_type = _normalize_value(payload.get("parent_type")).lower()
-    if parent_type == "timer_start":
-        timer = _extract_timer_parts(payload.get("children_direct_type"))
-        if timer is None:
-            return None
-        timer_time = f"{timer['hour']:02d}:{timer['minut']:02d}:{timer['second']:02d}"
-        return {
-            "uuid": str(uuid.uuid4()),
-            "name": f"Таймер {timer_time}",
-            "action_type": "create_timer",
-            "device_id": _normalize_value(payload.get("device_id")),
-            "timer_time": timer_time,
-        }
-
-    if parent_type == "alarm_start":
-        alarm_time = _extract_alarm_time(payload.get("children_direct_type"))
-        if not alarm_time:
-            return None
-        return {
-            "uuid": str(uuid.uuid4()),
-            "name": f"Будильник {alarm_time}",
-            "action_type": "create_alarm",
-            "device_id": _normalize_value(payload.get("device_id")),
-            "status": "on",
-            "time": alarm_time,
-            "volume_start": 0.3,
-            "repeat_type": "once",
-            "repeat_days": [],
-        }
-
-    return None
-
-
 def _timer_request_to_runtime_item(timer_request: dict[str, Any], shared_client_id: str) -> dict[str, Any]:
     return {
         "id": _normalize_value(timer_request.get("uuid")),
         "type": "timer",
         "status": _normalize_value(timer_request.get("status")) or "on",
-        "clientId": shared_client_id,
-        "userId": shared_client_id,
+        "clientId": _normalize_value(timer_request.get("client_id")) or shared_client_id,
+        "userId": _normalize_value(timer_request.get("client_id")) or shared_client_id,
         "deviceId": _normalize_value(timer_request.get("device_id")),
         "time": (
             timer_request.get("timer_time")
@@ -128,8 +94,8 @@ def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_
         "id": _normalize_value(alarm_request.get("uuid")),
         "type": "alarm",
         "status": _normalize_value(alarm_request.get("status")) or "on",
-        "clientId": shared_client_id,
-        "userId": shared_client_id,
+        "clientId": _normalize_value(alarm_request.get("client_id")) or shared_client_id,
+        "userId": _normalize_value(alarm_request.get("client_id")) or shared_client_id,
         "deviceId": _normalize_value(alarm_request.get("device_id")),
         "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
         "volume_start": alarm_request.get("volume_start", 0.3),
@@ -147,6 +113,7 @@ def _timer_item_to_request(item: dict[str, Any]) -> dict[str, Any]:
         "name": _normalize_value(item.get("name")) or "Таймер",
         "action_type": "create_timer",
         "status": _normalize_value(item.get("status")) or "on",
+        "client_id": _normalize_value(item.get("clientId") or item.get("userId")),
         "device_id": _normalize_value(item.get("deviceId") or item.get("device_id")),
         "timer_time": timer_time,
     }
@@ -160,6 +127,7 @@ def _alarm_item_to_request(item: dict[str, Any]) -> dict[str, Any]:
         "uuid": alarm_id,
         "name": _normalize_value(item.get("name")) or f"Будильник {alarm_time}",
         "action_type": "create_alarm",
+        "client_id": _normalize_value(item.get("clientId") or item.get("userId")),
         "device_id": _normalize_value(item.get("deviceId") or item.get("device_id")),
         "status": _normalize_value(item.get("status")) or "on",
         "time": alarm_time,
@@ -283,35 +251,11 @@ class DialogTimerAlarmManager:
         if isinstance(commands, dict) and _normalize_value(commands.get("actionType")).lower() == "error":
             return False
 
-        if parent_type == "alarm_start":
-            await self._persist_voice_request(payload, commands)
-        else:
-            # Persist the runtime UUID and metadata; do not append a second timer.
-            await self._async_save_to_request_storages()
+        # Persist the runtime IDs and client metadata for both kinds. A
+        # separate voice request UUID would create a duplicate on restoration.
+        await self._async_save_to_request_storages()
         await self._post_save_commands(options, commands)
         return True
-
-    async def _persist_voice_request(self, payload: dict[str, Any], commands: dict[str, Any] | None) -> None:
-        if not isinstance(payload, dict):
-            return
-
-        if isinstance(commands, dict) and _normalize_value(commands.get("actionType")).lower() == "error":
-            return
-
-        request_payload = _build_voice_request_payload(payload)
-        if request_payload is None:
-            return
-
-        if request_payload.get("action_type") == "create_timer":
-            timer_requests = await async_load_timer_requests(self.hass)
-            timer_requests.append(request_payload)
-            await async_save_timer_requests(self.hass, timer_requests)
-            return
-
-        alarm_requests = await async_load_alarm_requests(self.hass)
-        alarm_requests.append(request_payload)
-        await async_save_alarm_requests(self.hass, alarm_requests)
-
 
     async def async_handle_yaml_script_action(
         self,

@@ -122,7 +122,7 @@ async def test_expired_storage_is_not_restarted(runtime):
 
 
 @pytest.mark.asyncio
-async def test_sensor_registry_alias_count_string_and_empty_heartbeat(runtime):
+async def test_sensor_object_records_devices_and_empty_heartbeat(runtime):
     hass, manager = runtime
     await dr.async_load(hass)
     await er.async_load(hass)
@@ -144,24 +144,26 @@ async def test_sensor_registry_alias_count_string_and_empty_heartbeat(runtime):
     create(manager, "other", 30, second.id)
     await sensor.async_update()
     assert sensor.native_value == 2
-    assert isinstance(sensor.extra_state_attributes["payload"], str)
-    payload = json.loads(sensor.extra_state_attributes["payload"])
-    assert payload[first.id]["id"] == payload[entity.entity_id]["id"] == payload["home-assistant-voice-0ab77d"]["id"] == "new"
-    assert payload["other-voice"]["id"] == "other"
+    assert isinstance(sensor.extra_state_attributes["payload"], list)
+    payload = {record["device_id"]: record for record in sensor.extra_state_attributes["payload"]}
+    assert len(payload) == 2
+    assert payload[first.id]["id"] == "new"
+    assert payload[first.id]["client_id"] == "client"
+    assert payload[second.id]["id"] == "other"
     duplicate = config_entry("esphome", {"device_name": "home-assistant-voice-0ab77d"})
     hass.config_entries._entries[duplicate.entry_id] = duplicate
     devices.async_get_or_create(config_entry_id=duplicate.entry_id, identifiers={("esphome", "third")})
     await sensor.async_update()
-    payload = json.loads(sensor.extra_state_attributes["payload"])
+    payload = {record["device_id"]: record for record in sensor.extra_state_attributes["payload"]}
     assert "home-assistant-voice-0ab77d" not in payload
     assert payload[first.id]["id"] == "new"
     await manager.async_stop()
     with patch("custom_components.dialog_custom_ui.sensor.time.time", return_value=123):
         await sensor.async_update()
-    assert json.loads(sensor.extra_state_attributes["payload"]) == {"_updated_at": 123}
+    assert sensor.extra_state_attributes == {"payload": [], "_updated_at": 123}
     with patch("custom_components.dialog_custom_ui.sensor.time.time", return_value=124):
         await sensor.async_update()
-    assert json.loads(sensor.extra_state_attributes["payload"]) == {"_updated_at": 124}
+    assert sensor.extra_state_attributes == {"payload": [], "_updated_at": 124}
 
 
 @pytest.mark.asyncio
@@ -257,21 +259,22 @@ async def test_sensor_device_key_survives_switch_from_voice_to_ui_timer(runtime,
     create(manager, "ui", 10, player.entity_id, total=120)
     create(manager, "voice", 20, device.id, total=1)
     await sensor.async_update()
-    assert json.loads(sensor.extra_state_attributes["payload"])[device.id]["id"] == "voice"
+    assert sensor.extra_state_attributes["payload"][0]["id"] == "voice"
     if finish == "expire":
         with patch("custom_components.dialog_custom_ui.timer_alarm.timer_manager.audio_notification", new_callable=AsyncMock):
             await manager._timers["voice"]["task"]
     else:
         await manager.apply_ui_items({item["id"]: item for item in manager.get_timer_items() if item["id"] != "voice"})
     await sensor.async_update()
-    payload = json.loads(sensor.extra_state_attributes["payload"])
-    assert payload[device.id]["id"] == "ui"
-    assert payload[player.entity_id]["id"] == "ui"
-    assert payload["home-assistant-voice-0ab77d"]["id"] == "ui"
+    payload = sensor.extra_state_attributes["payload"]
+    assert len(payload) == 1
+    assert payload[0]["id"] == "ui"
+    assert payload[0]["device_id"] == device.id
     assert sensor.native_value == 1
     await manager.apply_ui_items({})
     await sensor.async_update()
-    assert set(json.loads(sensor.extra_state_attributes["payload"])) == {"_updated_at"}
+    assert sensor.extra_state_attributes["payload"] == []
+    assert "_updated_at" in sensor.extra_state_attributes
 
 
 @pytest.mark.asyncio
@@ -306,6 +309,8 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
     from custom_components.dialog_custom_ui.sensor import DialogAlarmSensor
     from custom_components.dialog_custom_ui.timer_alarm.alarm_manager import DialogAlarmManager
     hass, _ = runtime
+    await dr.async_load(hass)
+    await er.async_load(hass)
     entry = config_entry()
     changed = Mock()
     alarms = DialogAlarmManager(hass, changed, lambda: "alarm.mp3")
@@ -314,7 +319,7 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
     try:
         await sensor.async_update()
         assert sensor.native_value == "off"
-        assert sensor.extra_state_attributes == {"active_count": 0}
+        assert sensor.extra_state_attributes == {"active_count": 0, "payload": []}
         future = (datetime.now() + timedelta(minutes=10)).strftime("%H:%M")
         item = {"id": "one", "deviceId": "voice", "status": "on", "time": {"time": future}}
         await alarms.apply_ui_items({"one": item})
@@ -324,7 +329,8 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
         for _ in range(3):
             await sensor.async_update()
         assert sensor.native_value == "on"
-        assert sensor.extra_state_attributes == {"active_count": 1}
+        assert sensor.extra_state_attributes["active_count"] == 1
+        assert sensor.extra_state_attributes["payload"] == [{"id": "one", "media": "", "client_id": "", "device_id": "voice", "status": "on"}]
         assert alarms._alarms["one"] == before
         assert changed.call_count == calls
         assert alarms._alarm_tick_task is task
@@ -332,6 +338,7 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
         await sensor.async_update()
         assert sensor.native_value == "off"
         assert sensor.extra_state_attributes["active_count"] == 0
+        assert sensor.extra_state_attributes["payload"][0]["status"] == "off"
         calls = changed.call_count
         await alarms.apply_ui_items({})
         assert changed.call_count == calls + 1
@@ -342,3 +349,41 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
         assert not sensor.available
     finally:
         await alarms.async_stop()
+
+
+@pytest.mark.parametrize("kind", ["timer", "alarm"])
+def test_request_storage_keeps_client_id_instead_of_rebinding_to_shared_client(kind):
+    from custom_components.dialog_custom_ui.timer_alarm import timer_alarm_manager_wrapper as wrapper
+    from custom_components.dialog_custom_ui.src.api.timer_request import timer_requests_api
+    from custom_components.dialog_custom_ui.src.api.alarm_request import alarm_requests_api
+    item = {"id": "record", "clientId": "voice-client", "deviceId": "voice-device", "status": "on", "time": {"count_timer": "00:05:00", "time": "08:00"}}
+    encode = getattr(wrapper, f"_{kind}_item_to_request")
+    decode = getattr(wrapper, f"_{kind}_request_to_runtime_item")
+    request = encode(item)
+    assert request["client_id"] == "voice-client"
+    assert decode(request, "different-default")["clientId"] == "voice-client"
+    api = timer_requests_api if kind == "timer" else alarm_requests_api
+    normalized = getattr(api, f"_normalize_{kind}_request_payload")(request)
+    assert normalized["client_id"] == "voice-client"
+    assert getattr(api, f"_{kind}_request_to_runtime_item")(normalized, "different-default")["clientId"] == "voice-client"
+
+
+@pytest.mark.asyncio
+async def test_voice_alarm_keeps_original_id_and_client_when_persisted(runtime):
+    from custom_components.dialog_custom_ui.timer_alarm.timer_alarm_manager_wrapper import _alarm_item_to_request
+    hass, _ = runtime
+    wrapper = DialogTimerAlarmManager(hass, lambda *args: None, AsyncMock())
+    wrapper.alarm_manager._mark_updated = lambda: None
+    captured = []
+    async def save():
+        captured[:] = [_alarm_item_to_request(item) for item in wrapper.get_alarm_items()]
+    try:
+        future = datetime.now() + timedelta(minutes=10)
+        with patch.object(wrapper, "_async_save_to_request_storages", side_effect=save):
+            await wrapper.async_handle_builtin({"parent_type": "alarm_start", "client_id": "alarm-client", "device_id": "voice", "execution_command": True,
+                "children_direct_type": [{"valueType": "time", "value": {"hour": future.hour, "minut": future.minute}}]}, {})
+        assert len(captured) == 1
+        assert captured[0]["uuid"] == wrapper.get_alarm_items()[0]["id"]
+        assert captured[0]["client_id"] == "alarm-client"
+    finally:
+        await wrapper.async_stop()

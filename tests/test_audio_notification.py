@@ -158,3 +158,32 @@ async def test_playback_error_is_reported_with_target_and_file(speaker, caplog):
     assert "missing media file" in caplog.text
     assert player.entity_id in caplog.text
     assert "missing.mp3" in caplog.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("use_entity", [False, True])
+async def test_sensors_publish_object_records_with_media_client_and_device(speaker, runtime, use_entity, caplog):
+    from custom_components.dialog_custom_ui.sensor import DialogTimersSensor, DialogAlarmSensor
+    from custom_components.dialog_custom_ui.const import DOMAIN
+    hass, device, player, _, _ = speaker
+    _, timers = runtime
+    entry = config_entry()
+    ref = player.entity_id if use_entity else device.id
+    timers._create_timer("timer", "timer-client", ref, 300, True)
+    alarm_items = [{"id": "alarm", "deviceId": ref, "clientId": "alarm-client", "status": "off"},
+                   {"id": "unknown", "deviceId": "unknown-device", "clientId": "other-client", "status": "on"}]
+    hass.data[DOMAIN] = {entry.entry_id: SimpleNamespace(timer_alarm_manager=SimpleNamespace(
+        get_timer_items=timers.get_timer_items, get_alarm_items=lambda: alarm_items))}
+    timer_sensor = DialogTimersSensor(hass, entry)
+    alarm_sensor = DialogAlarmSensor(hass, entry)
+    await timer_sensor.async_update()
+    await alarm_sensor.async_update()
+    assert timer_sensor.extra_state_attributes["payload"] == [{
+        "id": "timer", "media": player.entity_id, "client_id": "timer-client",
+        "device_id": device.id, "total_seconds": 300, "remaining_seconds": 300, "paused": True}]
+    assert alarm_sensor.extra_state_attributes["payload"] == [
+        {"id": "alarm", "media": player.entity_id, "client_id": "alarm-client", "device_id": device.id, "status": "off"},
+        {"id": "unknown", "media": "", "client_id": "other-client", "device_id": "unknown-device", "status": "on"}]
+    assert alarm_sensor.native_value == "on"
+    assert alarm_sensor.extra_state_attributes["active_count"] == 1
+    assert "does not resolve" not in caplog.text

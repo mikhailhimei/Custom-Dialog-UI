@@ -119,6 +119,7 @@ def _normalize_alarm_request_payload(data: dict[str, Any], uuid_value: str | Non
         "uuid": _normalize_value(uuid_value or data.get("uuid")),
         "name": _normalize_value(data.get("name")),
         "action_type": _normalize_value(data.get("action_type")),
+        "client_id": _normalize_value(data.get("client_id")),
         "device_id": _normalize_value(data.get("device_id")),
         "status": _normalize_value(data.get("status")),
         "time": _normalize_value(data.get("time")),
@@ -139,8 +140,8 @@ def _alarm_request_to_runtime_item(alarm_request: dict[str, Any], shared_client_
             if action_type == "delete_alarm"
             else (_normalize_value(alarm_request.get("status")) or "on")
         ),
-        "clientId": shared_client_id,
-        "userId": shared_client_id,
+        "clientId": _normalize_value(alarm_request.get("client_id")) or shared_client_id,
+        "userId": _normalize_value(alarm_request.get("client_id")) or shared_client_id,
         "deviceId": _normalize_value(alarm_request.get("device_id")),
         "time": {"time": _normalize_value(alarm_request.get("time")) or "08:00"},
         "volume_start": _coerce_volume_start(alarm_request.get("volume_start")),

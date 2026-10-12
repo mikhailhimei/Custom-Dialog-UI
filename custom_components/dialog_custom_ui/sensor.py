@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN, SIGNAL_TIMER_ALARM_UPDATED
+from .audio_notification import _resolve_media_player_entity_id
 from .timer_alarm.timer_display import latest_device_timers
 
 SCAN_INTERVAL = timedelta(seconds=1)
@@ -53,45 +53,38 @@ class DialogTimersSensor(DialogRuntimeSensor):
         self._attr_available = coordinator is not None
         if coordinator is None:
             return
-        timers = latest_device_timers(coordinator.timer_alarm_manager.get_timer_items())
-        devices = dr.async_get(self.hass)
+        items = coordinator.timer_alarm_manager.get_timer_items()
         entities = er.async_get(self.hass)
-        groups = {}
-        refs = {}
-        for device_ref, timer in timers.items():
-            entity = entities.async_get(device_ref)
-            device_id = entity.device_id if entity else device_ref
-            device = devices.async_get(device_id) if device_id else None
-            # Entity IDs and registry device IDs can refer to the same column.
-            key = device.id if device else device_ref
-            refs[device_ref] = key
-            previous = groups.get(key)
-            if previous is None or previous["created_at"] <= timer["created_at"]:
-                groups[key] = timer
-
-        # Preserve the original deviceId for manual firmware subscriptions.
-        payload = {ref: groups[key] for ref, key in refs.items() if ref != "_updated_at"}
-        # Keep the canonical device key even when the surviving timer uses
-        # a media_player entity ID instead of the voice command's device ID.
-        for key, timer in groups.items():
-            payload.setdefault(key, timer)
-        aliases = {}
-        # Check ownership even for columns without timers: duplicate names
-        # must never make both columns subscribe to one column's progress.
-        for config_entry in self.hass.config_entries.async_entries("esphome"):
-            linked = dr.async_entries_for_config_entry(devices, config_entry.entry_id)
-            node_name = config_entry.data.get("device_name")
-            if node_name and node_name != "_updated_at":
-                aliases.setdefault(node_name, set()).update(device.id for device in linked)
-        for node_name, owners in aliases.items():
-            if len(owners) == 1 and node_name not in payload:
-                key = next(iter(owners))
-                if key in groups:
-                    payload[node_name] = groups[key]
-        payload["_updated_at"] = int(time.time())
-        self._attr_native_value = len(groups)
+        # Canonicalize references before choosing the latest timer so voice
+        # device IDs and UI entity IDs share one record for the same device.
+        normalized = []
+        source_by_id = {}
+        for item in items:
+            ref = str(item.get("deviceId") or "").strip()
+            if not ref:
+                continue
+            entity = entities.async_get(ref)
+            device_id = entity.device_id if entity and entity.device_id else ref
+            source_by_id[item["id"]] = item
+            normalized.append({**item, "deviceId": device_id})
+        selected = latest_device_timers(normalized)
+        records = []
+        for device_id, timer in selected.items():
+            source = source_by_id[timer["id"]]
+            ref = str(source.get("deviceId") or "").strip()
+            records.append({
+                "id": timer["id"],
+                "media": _resolve_media_player_entity_id(self.hass, ref, log_warnings=False),
+                "client_id": str(source.get("clientId") or source.get("userId") or ""),
+                "device_id": device_id,
+                "total_seconds": timer["total_seconds"],
+                "remaining_seconds": timer["remaining_seconds"],
+                "paused": timer["paused"],
+            })
+        self._attr_native_value = len(records)
         self._attr_extra_state_attributes = {
-            "payload": json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            "payload": records,
+            "_updated_at": int(time.time()),
         }
 
 
@@ -113,4 +106,17 @@ class DialogAlarmSensor(DialogRuntimeSensor):
         alarms = coordinator.timer_alarm_manager.get_alarm_items()
         active_count = sum(item.get("status") == "on" for item in alarms)
         self._attr_native_value = "on" if active_count else "off"
-        self._attr_extra_state_attributes = {"active_count": active_count}
+        entities = er.async_get(self.hass)
+        records = []
+        for alarm in alarms:
+            ref = str(alarm.get("deviceId") or "").strip()
+            entity = entities.async_get(ref)
+            device_id = entity.device_id if entity and entity.device_id else ref
+            records.append({
+                "id": alarm["id"],
+                "media": _resolve_media_player_entity_id(self.hass, ref, log_warnings=False),
+                "client_id": str(alarm.get("clientId") or alarm.get("userId") or ""),
+                "device_id": device_id,
+                "status": alarm["status"],
+            })
+        self._attr_extra_state_attributes = {"active_count": active_count, "payload": records}
