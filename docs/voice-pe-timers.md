@@ -145,3 +145,11 @@ TZ=Asia/Yekaterinburg node --test tests/test_timer_frontend.mjs
 Фронтенд требует Node.js 24 и `npm ci`. Для проверки сборки без изменения
 отслеживаемых файлов: `npm run build -- --outDir /tmp/dialog-frontend-check`.
 Изолированная среда уже содержит checkout; отдельный Git worktree не требуется.
+
+## Передача в ESPHome
+
+Атрибут `payload` остаётся списком для интерфейса и автоматизаций. Для подписки
+ESPHome используйте `payload_json` обоих датчиков: это JSON-строка с теми же
+записями. Home Assistant передаёт обычный список в ESPHome через `str(list)`,
+поэтому `payload` не подходит для JSON-парсера прошивки.
+Обновите интеграцию, перезапустите Home Assistant, затем обновите прошивку.
