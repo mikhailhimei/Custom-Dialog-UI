@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import timedelta
 
@@ -85,7 +84,6 @@ class DialogTimersSensor(DialogRuntimeSensor):
         self._attr_native_value = len(records)
         self._attr_extra_state_attributes = {
             "payload": records,
-            "payload_json": json.dumps(records, ensure_ascii=False, separators=(",", ":")),
             "_updated_at": int(time.time()),
         }
 
@@ -124,5 +122,4 @@ class DialogAlarmSensor(DialogRuntimeSensor):
         self._attr_extra_state_attributes = {
             "active_count": active_count,
             "payload": records,
-            "payload_json": json.dumps(records, ensure_ascii=False, separators=(",", ":")),
         }

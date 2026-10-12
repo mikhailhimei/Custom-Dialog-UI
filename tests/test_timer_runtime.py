@@ -146,7 +146,6 @@ async def test_sensor_object_records_devices_and_empty_heartbeat(runtime):
     assert sensor.native_value == 2
     assert isinstance(sensor.extra_state_attributes["payload"], list)
     payload = {record["device_id"]: record for record in sensor.extra_state_attributes["payload"]}
-    assert json.loads(sensor.extra_state_attributes["payload_json"]) == sensor.extra_state_attributes["payload"]
     assert len(payload) == 2
     assert payload[first.id]["id"] == "new"
     assert payload[first.id]["client_id"] == "client"
@@ -161,10 +160,10 @@ async def test_sensor_object_records_devices_and_empty_heartbeat(runtime):
     await manager.async_stop()
     with patch("custom_components.dialog_custom_ui.sensor.time.time", return_value=123):
         await sensor.async_update()
-    assert sensor.extra_state_attributes == {"payload": [], "payload_json": "[]", "_updated_at": 123}
+    assert sensor.extra_state_attributes == {"payload": [], "_updated_at": 123}
     with patch("custom_components.dialog_custom_ui.sensor.time.time", return_value=124):
         await sensor.async_update()
-    assert sensor.extra_state_attributes == {"payload": [], "payload_json": "[]", "_updated_at": 124}
+    assert sensor.extra_state_attributes == {"payload": [], "_updated_at": 124}
 
 
 @pytest.mark.asyncio
@@ -320,7 +319,7 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
     try:
         await sensor.async_update()
         assert sensor.native_value == "off"
-        assert sensor.extra_state_attributes == {"active_count": 0, "payload": [], "payload_json": "[]"}
+        assert sensor.extra_state_attributes == {"active_count": 0, "payload": []}
         future = (datetime.now() + timedelta(minutes=10)).strftime("%H:%M")
         item = {"id": "one", "deviceId": "voice", "status": "on", "time": {"time": future}}
         await alarms.apply_ui_items({"one": item})
@@ -329,7 +328,6 @@ async def test_alarm_sensor_is_read_only_and_reports_enabled_alarms(runtime):
         before = dict(alarms._alarms["one"])
         for _ in range(3):
             await sensor.async_update()
-        assert json.loads(sensor.extra_state_attributes["payload_json"]) == sensor.extra_state_attributes["payload"]
         assert sensor.native_value == "on"
         assert sensor.extra_state_attributes["active_count"] == 1
         assert sensor.extra_state_attributes["payload"] == [{"id": "one", "media": "", "client_id": "", "device_id": "voice", "status": "on"}]
