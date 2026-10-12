@@ -10,6 +10,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .alarm_manager import DialogAlarmManager
 from ..normalize import _normalize_value
@@ -18,7 +19,7 @@ from ..utils import _get_entry, _get_manager, _get_options, _extract_count
 from ..storage.alarm_requests_storage import async_load_alarm_requests, async_save_alarm_requests
 from ..storage.settings_storage import get_cached_settings
 from ..storage.timer_requests_storage import async_load_timer_requests, async_save_timer_requests
-from ..const import DOMAIN, WS_GET_TIMER_ALARM_CONFIG, WS_SAVE_TIMER_ALARM_CONFIG
+from ..const import DOMAIN, SIGNAL_TIMER_ALARM_UPDATED, WS_GET_TIMER_ALARM_CONFIG, WS_SAVE_TIMER_ALARM_CONFIG
 from .timer_alarm_utils import (
     _ALARM_PREFIX,
     _FALLBACK_TIMER_MEDIA_CONTENT_ID,
@@ -531,6 +532,7 @@ class DialogTimerAlarmManager:
         self._last_updated = dt_util.now().isoformat()
         self._persist_items_to_entry()
         self._publish_runtime_state()
+        async_dispatcher_send(self.hass, SIGNAL_TIMER_ALARM_UPDATED)
         self._save_pending = True
         if self._save_task is None or self._save_task.done():
             self._save_task = self.hass.async_create_task(self._async_flush_request_storages())

@@ -1,6 +1,7 @@
 """Constants for Dialog Custom UI."""
 
 DOMAIN = "dialog_custom_ui"
+SIGNAL_TIMER_ALARM_UPDATED = f"{DOMAIN}_timer_alarm_updated"
 PANEL_URL_PATH = "dialog-custom-ui"
 PANEL_TITLE = "Диалог"
 PANEL_ICON = "mdi:message-cog"

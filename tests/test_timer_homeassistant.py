@@ -94,3 +94,91 @@ async def test_full_setup_service_poll_unload_and_restart(tmp_path):
         assert len([s for s in hass.states.async_all("sensor") if s.entity_id.startswith(ENTITY)]) == 1
     finally:
         await hass.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_two_voice_timers_sensor_continues_after_one_expires(tmp_path):
+    (tmp_path / "custom_components").symlink_to(Path(__file__).resolve().parents[1] / "custom_components", target_is_directory=True)
+    hass = await boot(tmp_path)
+    try:
+        entry = config_entry()
+        await hass.config_entries.async_add(entry)
+        wrapper = hass.data[DOMAIN][entry.entry_id].timer_alarm_manager
+        payload = {"parent_type": "timer_start", "client_id": "voice-client", "device_id": "voice-device", "execution_command": True}
+        def command(seconds):
+            return {**payload, "children_direct_type": [{"valueType": "time", "mapping_type": "timer", "value": {"hour": 0, "minut": 0, "second": seconds}}]}
+        await wrapper.async_handle_builtin(command(120), {})
+        older = next(iter(wrapper.timer_manager._timers))
+        await wrapper.async_handle_builtin(command(3), {})
+        newest = next(key for key in wrapper.timer_manager._timers if key != older)
+        task = wrapper.timer_manager._timers[newest]["task"]
+        with patch("custom_components.dialog_custom_ui.timer_alarm.timer_manager.audio_notification", new_callable=AsyncMock) as sound:
+            await asyncio.sleep(1.2)
+            assert json.loads(hass.states.get(ENTITY).attributes["payload"])["voice-device"]["id"] == newest
+            await task
+            await asyncio.sleep(1.2)
+            state = hass.states.get(ENTITY)
+            remaining = json.loads(state.attributes["payload"])
+            assert state.state == "1"
+            assert remaining["voice-device"]["id"] == older
+            assert 110 <= remaining["voice-device"]["remaining_seconds"] < 120
+            stamp = remaining["_updated_at"]
+            await asyncio.sleep(1.2)
+            after = json.loads(hass.states.get(ENTITY).attributes["payload"])
+            assert after["voice-device"]["id"] == older
+            assert after["_updated_at"] > stamp
+            assert after["voice-device"]["remaining_seconds"] < remaining["voice-device"]["remaining_seconds"]
+            sound.assert_awaited_once()
+    finally:
+        await hass.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_alarm_sensor_setup_updates_restore_and_unload(tmp_path):
+    from datetime import datetime, timedelta
+    (tmp_path / "custom_components").symlink_to(Path(__file__).resolve().parents[1] / "custom_components", target_is_directory=True)
+    alarm_entity = "sensor.dialog_custom_ui_alarm"
+    async def expect(hass, value, count):
+        for _ in range(100):
+            state = hass.states.get(alarm_entity)
+            if state is not None and state.state == value and state.attributes.get("active_count") == count:
+                return
+            await asyncio.sleep(0.01)
+        assert False, f"Alarm sensor did not reach {value}/{count}: {hass.states.get(alarm_entity)}"
+    hass = await boot(tmp_path)
+    try:
+        entry = config_entry()
+        await hass.config_entries.async_add(entry)
+        await expect(hass, "off", 0)
+        future = datetime.now() + timedelta(minutes=10)
+        await hass.services.async_call(DOMAIN, "alarm_create", {"clientId": "test", "deviceId": "voice", "hh": future.hour, "mm": future.minute}, blocking=True)
+        await expect(hass, "on", 1)
+        wrapper = hass.data[DOMAIN][entry.entry_id].timer_alarm_manager
+        alarm = wrapper.get_alarm_items()[0]
+        await wrapper.alarm_manager.apply_ui_items({alarm["id"]: {**alarm, "status": "off"}})
+        await expect(hass, "off", 0)
+        await wrapper.alarm_manager.apply_ui_items({alarm["id"]: alarm})
+        await expect(hass, "on", 1)
+    finally:
+        await hass.async_stop()
+    assert (tmp_path / ".storage/dialog_custom_ui_alarm_requests").exists()
+    saved = json.loads((tmp_path / ".storage/dialog_custom_ui_alarm_requests").read_text())["data"]["alarm_requests"]
+    assert len(saved) == 1 and saved[0]["status"] == "on", saved
+    hass = await boot(tmp_path)
+    try:
+        await expect(hass, "on", 1)
+        entries = hass.config_entries.async_entries(DOMAIN)
+        entry = entries[0]
+        wrapper = hass.data[DOMAIN][entry.entry_id].timer_alarm_manager
+        await wrapper.alarm_manager.apply_ui_items({})
+        await expect(hass, "off", 0)
+        assert await hass.config_entries.async_unload(entry.entry_id)
+        assert hass.states.get(alarm_entity).state == "unavailable"
+        # Removed entities must detach mutation listeners.
+        from homeassistant.helpers.dispatcher import async_dispatcher_send
+        from custom_components.dialog_custom_ui.const import SIGNAL_TIMER_ALARM_UPDATED
+        async_dispatcher_send(hass, SIGNAL_TIMER_ALARM_UPDATED)
+        await asyncio.sleep(0.05)
+        assert hass.states.get(alarm_entity).state == "unavailable"
+    finally:
+        await hass.async_stop()

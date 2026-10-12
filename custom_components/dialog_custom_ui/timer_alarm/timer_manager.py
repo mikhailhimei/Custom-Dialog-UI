@@ -34,11 +34,15 @@ class DialogTimerManager:
         self._default_media_content_id = default_media_content_id
         self._on_timer_worked = on_timer_worked
         self._timers: dict[str, dict[str, Any]] = {}
+        self._notification_tasks: set[asyncio.Task] = set()
 
     async def async_stop(self) -> None:
         for entry in list(self._timers.values()):
             task = entry.get("task")
             if isinstance(task, asyncio.Task):
+                task.cancel()
+        for task in list(self._notification_tasks):
+            if task is not asyncio.current_task():
                 task.cancel()
         self._timers.clear()
 
@@ -346,7 +350,10 @@ class DialogTimerManager:
         entry["ends_at"] = datetime.now().timestamp() + remaining
         entry["paused"] = False
         timer_id = _normalize_value(entry.get("id"))
-        entry["task"] = self.hass.async_create_task(self._async_wait_and_fire_timer(timer_id))
+        entry["task"] = self.hass.async_create_background_task(
+            self._async_wait_and_fire_timer(timer_id),
+            f"Dialog Custom UI timer {timer_id}", eager_start=False,
+        )
 
     async def _pause_timer(self, timer_id: str) -> None:
         entry = self._timers.get(_normalize_value(timer_id))
@@ -375,27 +382,28 @@ class DialogTimerManager:
         timer_entry = self._timers.get(timer_id)
         if timer_entry is None:
             return
-        expired = False
+        current_task = asyncio.current_task()
         try:
             await asyncio.sleep(max(1, _safe_int(timer_entry.get("remaining_seconds"))))
-            expired = True
-            timer_entry = self._timers.get(timer_id)
-            if timer_entry is None:
+            if self._timers.get(timer_id) is not timer_entry:
                 return
+            if current_task is not None:
+                self._notification_tasks.add(current_task)
+            # Publish the surviving timer before awaiting playback or user
+            # scenarios. A slow notification must not delay state updates.
+            self._timers.pop(timer_id)
+            timer_entry["task"] = None
+            self._mark_updated()
             device_ref = timer_entry.get("device_id")
             await audio_notification(self.hass, device_ref, self._default_media_content_id(), "0.3-0.7")
             await self._async_dispatch_timer_worked(timer_entry)
-            
         except asyncio.CancelledError:
             return
         finally:
-            current_entry = self._timers.get(timer_id)
-            current_task = asyncio.current_task()
-            if current_entry is not None and current_entry.get("task") is current_task:
-                current_entry["task"] = None
-            if expired:
-                self._timers.pop(timer_id, None)
-                self._mark_updated()
+            if current_task is not None:
+                self._notification_tasks.discard(current_task)
+            if self._timers.get(timer_id) is timer_entry and timer_entry.get("task") is current_task:
+                timer_entry["task"] = None
 
     async def _async_dispatch_timer_worked(self, timer_entry: dict[str, Any]) -> None:
         if self._on_timer_worked is None:

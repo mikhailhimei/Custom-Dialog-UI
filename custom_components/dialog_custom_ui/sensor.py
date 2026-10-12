@@ -7,25 +7,44 @@ import time
 from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_TIMER_ALARM_UPDATED
 from .timer_alarm.timer_display import latest_device_timers
 
 SCAN_INTERVAL = timedelta(seconds=1)
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
-    async_add_entities([DialogTimersSensor(hass, entry)], update_before_add=True)
+    async_add_entities([DialogTimersSensor(hass, entry), DialogAlarmSensor(hass, entry)], update_before_add=True)
 
 
-class DialogTimersSensor(SensorEntity):
-    _attr_name = "Dialog Custom UI Timers"
-    _attr_icon = "mdi:timer-outline"
+class DialogRuntimeSensor(SensorEntity):
+    """Refresh after mutations; periodic polling remains a safety net."""
 
     def __init__(self, hass, entry):
         self.hass = hass
         self._entry = entry
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, SIGNAL_TIMER_ALARM_UPDATED, self._runtime_updated,
+        ))
+
+    @callback
+    def _runtime_updated(self):
+        self.async_schedule_update_ha_state(force_refresh=True)
+
+
+class DialogTimersSensor(DialogRuntimeSensor):
+    _attr_name = "Dialog Custom UI Timers"
+    _attr_icon = "mdi:timer-outline"
+
+    def __init__(self, hass, entry):
+        super().__init__(hass, entry)
         # Keep the existing ID so upgrades reuse the entity registry entry.
         self._attr_unique_id = f"{entry.entry_id}_voice_timers"
 
@@ -52,6 +71,10 @@ class DialogTimersSensor(SensorEntity):
 
         # Preserve the original deviceId for manual firmware subscriptions.
         payload = {ref: groups[key] for ref, key in refs.items() if ref != "_updated_at"}
+        # Keep the canonical device key even when the surviving timer uses
+        # a media_player entity ID instead of the voice command's device ID.
+        for key, timer in groups.items():
+            payload.setdefault(key, timer)
         aliases = {}
         # Check ownership even for columns without timers: duplicate names
         # must never make both columns subscribe to one column's progress.
@@ -70,3 +93,24 @@ class DialogTimersSensor(SensorEntity):
         self._attr_extra_state_attributes = {
             "payload": json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
         }
+
+
+class DialogAlarmSensor(DialogRuntimeSensor):
+    """Report enabled scheduled alarms without starting or playing anything."""
+
+    _attr_name = "Dialog Custom UI Alarm"
+    _attr_icon = "mdi:alarm"
+
+    def __init__(self, hass, entry):
+        super().__init__(hass, entry)
+        self._attr_unique_id = f"{entry.entry_id}_alarm_status"
+
+    async def async_update(self):
+        coordinator = self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id)
+        self._attr_available = coordinator is not None
+        if coordinator is None:
+            return
+        alarms = coordinator.timer_alarm_manager.get_alarm_items()
+        active_count = sum(item.get("status") == "on" for item in alarms)
+        self._attr_native_value = "on" if active_count else "off"
+        self._attr_extra_state_attributes = {"active_count": active_count}

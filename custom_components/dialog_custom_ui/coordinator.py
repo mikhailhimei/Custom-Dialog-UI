@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.core import Event, HassJob, HomeAssistant, callback
 
 from .utils import _get_options, _normalize_value
 from .normalize import unwrap_payload, normalize_payload
@@ -76,6 +76,7 @@ class DialogCommandCoordinator:
         self.hass = hass
         self.entry = entry
         self._unsub_active_command = None
+        self._unsub_shutdown = None
         self.external_event_bridge = ExternalEventBridge(
             hass,
             entry,
@@ -126,7 +127,21 @@ class DialogCommandCoordinator:
             forward_dialog_messages=remote_active_search_enabled,
         )
 
+        # Flush before the integration-stop stage: Store.async_save writes
+        # immediately here rather than deferring another snapshot to shutdown.
+        # Reload/unload removes this job in async_stop.
+        self._unsub_shutdown = self.hass.async_add_shutdown_job(
+            HassJob(self._async_shutdown, "Dialog Custom UI shutdown"),
+        )
+
+    async def _async_shutdown(self):
+        self._unsub_shutdown = None
+        await self.async_stop()
+
     async def async_stop(self):
+        if self._unsub_shutdown:
+            self._unsub_shutdown()
+            self._unsub_shutdown = None
         if self._unsub_active_command:
             _LOGGER.info("Stopping DialogCommandCoordinator for entry %s", self.entry.entry_id)
             self._append_log("info", "coordinator stopping")

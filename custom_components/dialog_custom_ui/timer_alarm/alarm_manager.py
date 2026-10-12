@@ -348,7 +348,7 @@ class DialogAlarmManager:
         for alarm_id in existing_ids - requested_ids:
             self._alarms.pop(alarm_id, None)
 
-        changed = False
+        changed = bool(existing_ids - requested_ids)
         for alarm_id, item in incoming_alarms.items():
             time_data = item.get("time") if isinstance(item.get("time"), dict) else {}
             alarm_time = _normalize_value(time_data.get("time")) or "08:00"
@@ -397,7 +397,9 @@ class DialogAlarmManager:
     def _ensure_alarm_tick_task(self) -> None:
         if self._alarm_tick_task is not None and not self._alarm_tick_task.done():
             return
-        self._alarm_tick_task = self.hass.async_create_task(self._alarm_tick_loop())
+        self._alarm_tick_task = self.hass.async_create_background_task(
+            self._alarm_tick_loop(), "Dialog Custom UI alarm tick", eager_start=False,
+        )
 
     async def _alarm_tick_loop(self) -> None:
         while True:
